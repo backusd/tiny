@@ -2,6 +2,9 @@
 <Project>
   <ProjectOutputs>
     <ProjectOutput>
+      <FullPath>C:\dev\tiny\bin\Debug-x64\tiny-app\tiny-app.dll</FullPath>
+    </ProjectOutput>
+    <ProjectOutput>
       <FullPath>C:\dev\tiny\bin\Debug-x64\tiny\tiny.dll</FullPath>
     </ProjectOutput>
     <ProjectOutput>

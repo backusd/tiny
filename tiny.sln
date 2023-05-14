@@ -7,6 +7,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "tiny", "tiny\tiny.vcxproj",
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "sandbox", "sandbox\sandbox.vcxproj", "{4984B379-BF18-4E27-9902-89CFD312CCFB}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "tiny-app", "tiny-app\tiny-app.vcxproj", "{C2DB5B62-C3F4-49D1-BBDE-A9F13F55F121}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -21,6 +23,10 @@ Global
 		{4984B379-BF18-4E27-9902-89CFD312CCFB}.Debug|x64.Build.0 = Debug|x64
 		{4984B379-BF18-4E27-9902-89CFD312CCFB}.Release|x64.ActiveCfg = Release|x64
 		{4984B379-BF18-4E27-9902-89CFD312CCFB}.Release|x64.Build.0 = Release|x64
+		{C2DB5B62-C3F4-49D1-BBDE-A9F13F55F121}.Debug|x64.ActiveCfg = Debug|x64
+		{C2DB5B62-C3F4-49D1-BBDE-A9F13F55F121}.Debug|x64.Build.0 = Debug|x64
+		{C2DB5B62-C3F4-49D1-BBDE-A9F13F55F121}.Release|x64.ActiveCfg = Release|x64
+		{C2DB5B62-C3F4-49D1-BBDE-A9F13F55F121}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
