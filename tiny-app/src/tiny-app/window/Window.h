@@ -2,12 +2,11 @@
 #include "pch.h"
 #include "tiny-app/Core.h"
 #include "tiny-app/input/KeyCode.h"
-#include "WindowTemplate.h"
-#include "WindowProperties.h"
 #include "tiny-app/event/ApplicationEvent.h"
 #include "tiny-app/event/KeyEvent.h"
 #include "tiny-app/event/MouseEvent.h"
-//#include "tiny-app/Utils/Timer.h"
+#include "WindowTemplate.h"
+#include "WindowProperties.h"
 
 namespace tiny
 {

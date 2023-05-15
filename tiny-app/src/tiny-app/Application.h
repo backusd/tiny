@@ -25,28 +25,32 @@ public:
 	int Run();
 
 protected:
+	virtual void Update() = 0;
+	virtual void Render() = 0;
+	virtual void Present() = 0;
+
 	// Application Events
-	std::function<void(WindowResizeEvent& e)> m_OnWindowResizeFn = [](WindowResizeEvent&) {};
-	std::function<void(WindowCreateEvent& e)> m_OnWindowCreateFn = [](WindowCreateEvent&) {};
-	std::function<void(WindowCloseEvent& e)> m_OnWindowCloseFn = [](WindowCloseEvent&) {};
-	std::function<void(AppTickEvent& e)> m_OnAppTickFn = [](AppTickEvent&) {};
-	std::function<void(AppUpdateEvent& e)> m_OnAppUpdateFn = [](AppUpdateEvent&) {};
-	std::function<void(AppRenderEvent& e)> m_OnAppRenderFn = [](AppRenderEvent&) {};
+	virtual void OnWindowResize(WindowResizeEvent& e) = 0;
+	virtual void OnWindowCreate(WindowCreateEvent& e) = 0;
+	virtual void OnWindowClose(WindowCloseEvent& e) = 0;
+	virtual void OnAppTick(AppTickEvent& e) = 0;
+	virtual void OnAppUpdate(AppUpdateEvent& e) = 0;
+	virtual void OnAppRender(AppRenderEvent& e) = 0;
 
 	// Key Events
-	std::function<void(CharEvent& e)> m_OnCharFn = [](CharEvent&) {};
-	std::function<void(KeyPressedEvent& e)> m_OnKeyPressedFn = [](KeyPressedEvent&) {};
-	std::function<void(KeyReleasedEvent& e)> m_OnKeyReleasedFn = [](KeyReleasedEvent&) {};
+	virtual void OnChar(CharEvent& e) = 0;
+	virtual void OnKeyPressed(KeyPressedEvent& e) = 0;
+	virtual void OnKeyReleased(KeyReleasedEvent& e) = 0;
 
 	// Mouse Events
-	std::function<void(MouseMoveEvent& e)> m_OnMouseMoveFn = [](MouseMoveEvent&) {};
-	std::function<void(MouseEnterEvent& e)> m_OnMouseEnterFn = [](MouseEnterEvent&) {};
-	std::function<void(MouseLeaveEvent& e)> m_OnMouseLeaveFn = [](MouseLeaveEvent&) {};
-	std::function<void(MouseScrolledEvent& e)> m_OnMouseScrolledVerticalFn = [](MouseScrolledEvent&) {};
-	std::function<void(MouseScrolledEvent& e)> m_OnMouseScrolledHorizontalFn = [](MouseScrolledEvent&) {};
-	std::function<void(MouseButtonPressedEvent& e)> m_OnMouseButtonPressedFn = [](MouseButtonPressedEvent&) {};
-	std::function<void(MouseButtonReleasedEvent& e)> m_OnMouseButtonReleasedFn = [](MouseButtonReleasedEvent&) {};
-	std::function<void(MouseButtonDoubleClickEvent& e)> m_OnMouseButtonDoubleClickFn = [](MouseButtonDoubleClickEvent&) {};
+	virtual void OnMouseMove(MouseMoveEvent& e) = 0;
+	virtual void OnMouseEnter(MouseEnterEvent& e) = 0;
+	virtual void OnMouseLeave(MouseLeaveEvent& e) = 0;
+	virtual void OnMouseScrolledVertical(MouseScrolledEvent& e) = 0;
+	virtual void OnMouseScrolledHorizontal(MouseScrolledEvent& e) = 0;
+	virtual void OnMouseButtonPressed(MouseButtonPressedEvent& e) = 0;
+	virtual void OnMouseButtonReleased(MouseButtonReleasedEvent& e) = 0;
+	virtual void OnMouseButtonDoubleClick(MouseButtonDoubleClickEvent& e) = 0;
 
 private:
 	std::unique_ptr<Window> m_window;
