@@ -35,6 +35,12 @@ Application::Application()
 
 int Application::Run()
 {
+	LOG_CORE_ERROR("{}", "error");
+	LOG_CORE_WARN("{}", "warn");
+	LOG_CORE_INFO("{}", "info");
+	LOG_CORE_TRACE("{}", "trace");
+
+
 	while (true)
 	{
 		// process all messages pending, but to not block for new messages
