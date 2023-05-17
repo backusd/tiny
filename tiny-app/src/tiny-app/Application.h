@@ -1,65 +1,15 @@
 #pragma once
 #include "pch.h"
 #include "Core.h"
+#include "Log.h"
 #include "tiny-app/window/Window.h"
 #include "tiny-app/event/MouseEvent.h"
 #include "tiny-app/event/KeyEvent.h"
 #include "tiny-app/event/ApplicationEvent.h"
 
-
 namespace tiny
 {
-// Drop this warning because the private members are not accessible by the client application, but 
-// the compiler will complain that they don't have a DLL interface
-// See: https://stackoverflow.com/questions/767579/exporting-classes-containing-std-objects-vector-map-etc-from-a-dll
-//#pragma warning( push )
-//#pragma warning( disable : 4251 ) // needs to have dll-interface to be used by clients of class
-//class TINY_APP_API Application
-//{
-//public:
-//	Application();
-//	Application(const Application&) = delete;
-//	Application& operator=(const Application&) = delete;
-//	virtual ~Application() {};
-//
-//	int Run();
-//
-//protected:
-//	virtual void Update() = 0;
-//	virtual void Render() = 0;
-//	virtual void Present() = 0;
-//
-//	// Application Events
-//	virtual void OnWindowResize(WindowResizeEvent& e) = 0;
-//	virtual void OnWindowCreate(WindowCreateEvent& e) = 0;
-//	virtual void OnWindowClose(WindowCloseEvent& e) = 0;
-//	virtual void OnAppTick(AppTickEvent& e) = 0;
-//	virtual void OnAppUpdate(AppUpdateEvent& e) = 0;
-//	virtual void OnAppRender(AppRenderEvent& e) = 0;
-//
-//	// Key Events
-//	virtual void OnChar(CharEvent& e) = 0;
-//	virtual void OnKeyPressed(KeyPressedEvent& e) = 0;
-//	virtual void OnKeyReleased(KeyReleasedEvent& e) = 0;
-//
-//	// Mouse Events
-//	virtual void OnMouseMove(MouseMoveEvent& e) = 0;
-//	virtual void OnMouseEnter(MouseEnterEvent& e) = 0;
-//	virtual void OnMouseLeave(MouseLeaveEvent& e) = 0;
-//	virtual void OnMouseScrolledVertical(MouseScrolledEvent& e) = 0;
-//	virtual void OnMouseScrolledHorizontal(MouseScrolledEvent& e) = 0;
-//	virtual void OnMouseButtonPressed(MouseButtonPressedEvent& e) = 0;
-//	virtual void OnMouseButtonReleased(MouseButtonReleasedEvent& e) = 0;
-//	virtual void OnMouseButtonDoubleClick(MouseButtonDoubleClickEvent& e) = 0;
-//
-//private:
-//	std::unique_ptr<Window> m_window;
-//};
-//#pragma warning( pop )
-
-
-
-class TINY_APP_API IApplication
+class IApplication
 {
 public:
 	IApplication() = default;
@@ -70,8 +20,6 @@ public:
 	virtual int Run() = 0;
 };
 
-#pragma warning( push )
-#pragma warning( disable : 4251 )
 template<class Derived>
 class Application : public IApplication
 {
@@ -80,6 +28,29 @@ public:
 	{
 		m_window = std::make_unique<Window>();
 		TINY_ASSERT(m_window != nullptr, "Failed to create Window");
+
+		// Application Events
+		m_window->m_OnWindowResizeFn = [this](WindowResizeEvent& e) { static_cast<Derived*>(this)->OnWindowResize(e); };
+		m_window->m_OnWindowCreateFn = [this](WindowCreateEvent& e) { static_cast<Derived*>(this)->OnWindowCreate(e); };
+		m_window->m_OnWindowCloseFn = [this](WindowCloseEvent& e) { static_cast<Derived*>(this)->OnWindowClose(e); };
+		m_window->m_OnAppTickFn = [this](AppTickEvent& e) { static_cast<Derived*>(this)->OnAppTick(e); };
+		m_window->m_OnAppUpdateFn = [this](AppUpdateEvent& e) { static_cast<Derived*>(this)->OnAppUpdate(e); };
+		m_window->m_OnAppRenderFn = [this](AppRenderEvent& e) { static_cast<Derived*>(this)->OnAppRender(e); };
+		
+		// Key Events
+		m_window->m_OnCharFn = [this](CharEvent& e) { static_cast<Derived*>(this)->OnChar(e); };
+		m_window->m_OnKeyPressedFn = [this](KeyPressedEvent& e) { static_cast<Derived*>(this)->OnKeyPressed(e); };
+		m_window->m_OnKeyReleasedFn = [this](KeyReleasedEvent& e) { static_cast<Derived*>(this)->OnKeyReleased(e); };
+		
+		// Mouse Events
+		m_window->m_OnMouseMoveFn = [this](MouseMoveEvent& e) { static_cast<Derived*>(this)->OnMouseMove(e); };
+		m_window->m_OnMouseEnterFn = [this](MouseEnterEvent& e) { static_cast<Derived*>(this)->OnMouseEnter(e); };
+		m_window->m_OnMouseLeaveFn = [this](MouseLeaveEvent& e) { static_cast<Derived*>(this)->OnMouseLeave(e); };
+		m_window->m_OnMouseScrolledVerticalFn = [this](MouseScrolledEvent& e) { static_cast<Derived*>(this)->OnMouseScrolledVertical(e); };
+		m_window->m_OnMouseScrolledHorizontalFn = [this](MouseScrolledEvent& e) { static_cast<Derived*>(this)->OnMouseScrolledHorizontal(e); };
+		m_window->m_OnMouseButtonPressedFn = [this](MouseButtonPressedEvent& e) { static_cast<Derived*>(this)->OnMouseButtonPressed(e); };
+		m_window->m_OnMouseButtonReleasedFn = [this](MouseButtonReleasedEvent& e) { static_cast<Derived*>(this)->OnMouseButtonReleased(e); };
+		m_window->m_OnMouseButtonDoubleClickFn = [this](MouseButtonDoubleClickEvent& e) { static_cast<Derived*>(this)->OnMouseButtonDoubleClick(e); };
 	}
 	Application(const Application&) = delete;
 	Application& operator=(const Application&) = delete;
@@ -98,16 +69,13 @@ public:
 				return *ecode;
 			}
 
-			derived->Update();
-			derived->Render();
-			derived->Present();
+			derived->DoFrame();
 		}
 	}
 
 private:
 	std::unique_ptr<Window> m_window;
 };
-#pragma warning( pop )
 
 // To be defined in CLIENT
 IApplication* CreateApplication();

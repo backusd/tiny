@@ -118,7 +118,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\pch.cpp" />
-    <ClCompile Include="src\tiny-app\Application.cpp" />
     <ClCompile Include="src\tiny-app\Log.cpp" />
     <ClCompile Include="src\tiny-app\utils\TranslateErrorCode.cpp" />
     <ClCompile Include="src\tiny-app\window\Window.cpp" />

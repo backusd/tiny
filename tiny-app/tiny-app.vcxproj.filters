@@ -77,9 +77,6 @@
     <ClCompile Include="src\pch.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\tiny-app\Application.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\tiny-app\utils\TranslateErrorCode.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
