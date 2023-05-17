@@ -28,7 +28,9 @@ enum class Cursor
 	UP_ARROW = 13
 };
 
-class Window : public WindowTemplate<Window>
+#pragma warning( push )
+#pragma warning( disable : 4251 )
+class TINY_APP_API Window : public WindowTemplate<Window>
 {
 public:
 	Window(const WindowProperties& props = WindowProperties()) noexcept;
@@ -107,6 +109,7 @@ public:
 private:
 	static const std::array<HCURSOR, 14> m_cursors;
 };
+#pragma warning( pop )
 }
 
 template <>

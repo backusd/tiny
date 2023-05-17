@@ -7,15 +7,14 @@ namespace tiny
 {
 	namespace log
 	{
-		void core_error(const std::string& msg) noexcept;
-		void core_warn(const std::string& msg) noexcept;
-		void core_info(const std::string& msg) noexcept;
-		void core_trace(const std::string& msg) noexcept;
-
-		void error(const std::string& msg) noexcept;
-		void warn(const std::string& msg) noexcept;
-		void info(const std::string& msg) noexcept;
-		void trace(const std::string& msg) noexcept;
+		void TINY_APP_API core_error(const std::string& msg) noexcept;
+		void TINY_APP_API core_warn(const std::string& msg) noexcept;
+		void TINY_APP_API core_info(const std::string& msg) noexcept;
+		void TINY_APP_API core_trace(const std::string& msg) noexcept;
+		void TINY_APP_API error(const std::string& msg) noexcept;
+		void TINY_APP_API warn(const std::string& msg) noexcept;
+		void TINY_APP_API info(const std::string& msg) noexcept;
+		void TINY_APP_API trace(const std::string& msg) noexcept;
 	}
 }
 
