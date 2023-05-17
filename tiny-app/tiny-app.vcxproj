@@ -96,7 +96,7 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="src\pch.h" />
+    <ClInclude Include="src\tiny-app-pch.h" />
     <ClInclude Include="src\tiny-app.h" />
     <ClInclude Include="src\tiny-app\Application.h" />
     <ClInclude Include="src\tiny-app\Core.h" />
@@ -117,7 +117,7 @@
     <ClInclude Include="src\tiny-app\window\WindowTemplate.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\pch.cpp" />
+    <ClCompile Include="src\tiny-app-pch.cpp" />
     <ClCompile Include="src\tiny-app\Log.cpp" />
     <ClCompile Include="src\tiny-app\utils\TranslateErrorCode.cpp" />
     <ClCompile Include="src\tiny-app\window\Window.cpp" />

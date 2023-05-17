@@ -1,4 +1,4 @@
-#include "pch.h"
+#include "tiny-app-pch.h"
 #include "Window.h"
 #include "WindowMessageMap.h"
 #include "tiny-app/Log.h"

@@ -1,5 +1,5 @@
 #pragma once
-#include "pch.h"
+#include "tiny-app-pch.h"
 #include "Core.h"
 #include "Log.h"
 #include "tiny-app/window/Window.h"

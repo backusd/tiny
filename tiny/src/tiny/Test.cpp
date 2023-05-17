@@ -1,4 +1,4 @@
-#include "pch.h"
+#include "tiny-pch.h"
 #include "Test.h"
 
 namespace tiny

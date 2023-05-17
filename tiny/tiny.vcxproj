@@ -102,13 +102,13 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="src\pch.h" />
+    <ClInclude Include="src\tiny-pch.h" />
     <ClInclude Include="src\tiny.h" />
     <ClInclude Include="src\tiny\Core.h" />
     <ClInclude Include="src\tiny\Test.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\pch.cpp" />
+    <ClCompile Include="src\tiny-pch.cpp" />
     <ClCompile Include="src\tiny\Test.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

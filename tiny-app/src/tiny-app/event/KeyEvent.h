@@ -1,5 +1,5 @@
 #pragma once
-#include "pch.h"
+#include "tiny-app-pch.h"
 #include "Event.h"
 #include "tiny-app/input/KeyCode.h"
 
