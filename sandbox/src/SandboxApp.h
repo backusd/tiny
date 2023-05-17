@@ -39,8 +39,13 @@ public:
 	void OnMouseButtonDoubleClick(tiny::MouseButtonDoubleClickEvent& e) {}
 
 private:
-	void Update();
+	void Update(const tiny::Timer& timer);
 	void Render();
 	void Present();
+
+
+
+private:
+	tiny::Timer m_timer;
 };
 }

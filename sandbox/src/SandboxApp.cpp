@@ -3,14 +3,18 @@
 
 namespace sandbox
 {
-Sandbox::Sandbox()
+Sandbox::Sandbox() :
+    m_timer()
 {
+    m_timer.Reset();
 }
 bool Sandbox::DoFrame() noexcept
 {
 	try
 	{
-		Update();
+        m_timer.Tick();
+
+		Update(m_timer);
 		Render();
 		Present();        
 	}
@@ -39,7 +43,7 @@ bool Sandbox::DoFrame() noexcept
     return true;
 }
 
-void Sandbox::Update() 
+void Sandbox::Update(const tiny::Timer& timer) 
 {
 
 }
