@@ -1,6 +1,6 @@
 #pragma once
-#include "tiny-app-pch.h"
-#include "tiny-app/Core.h"
+#include "tiny-pch.h"
+#include "tiny/Core.h"
 
 namespace tiny
 {

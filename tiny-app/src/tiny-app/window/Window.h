@@ -33,7 +33,7 @@ enum class Cursor
 class TINY_APP_API Window : public WindowTemplate<Window>
 {
 public:
-	Window(const WindowProperties& props = WindowProperties()) noexcept;
+	Window(const WindowProperties& props = WindowProperties());
 	Window(const Window&) = delete;
 	Window& operator=(const Window&) = delete;
 	virtual ~Window();

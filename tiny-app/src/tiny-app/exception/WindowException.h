@@ -1,6 +1,6 @@
 #pragma once
 #include "tiny-app-pch.h"
-#include "TinyException.h"
+#include "TinyAppException.h"
 #include "tiny-app/utils/TranslateErrorCode.h"
 
 #define WINDOW_EXCEPT( hr ) WindowException( __LINE__,__FILE__,hr )
@@ -12,11 +12,11 @@ namespace tiny
 //       the class. This is important because you cannot DLL export std::exception. Therefore, doing it this way, it is
 //		 up to the client code to supply and link to their implementation of std::exception, which is good because then 
 //       there is no dependence on a specific standard library version/implementation.
-class WindowException : public TinyException
+class WindowException : public TinyAppException
 {
 public:
 	WindowException(unsigned int line, const char* file, HRESULT hr) noexcept :
-		TinyException(line, file),
+		TinyAppException(line, file),
 		m_hr(hr)
 	{}
 	WindowException(const WindowException&) = delete;

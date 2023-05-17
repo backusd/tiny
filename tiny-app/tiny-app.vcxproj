@@ -105,7 +105,7 @@
     <ClInclude Include="src\tiny-app\event\Event.h" />
     <ClInclude Include="src\tiny-app\event\KeyEvent.h" />
     <ClInclude Include="src\tiny-app\event\MouseEvent.h" />
-    <ClInclude Include="src\tiny-app\exception\TinyException.h" />
+    <ClInclude Include="src\tiny-app\exception\TinyAppException.h" />
     <ClInclude Include="src\tiny-app\exception\WindowException.h" />
     <ClInclude Include="src\tiny-app\input\MouseButton.h" />
     <ClInclude Include="src\tiny-app\Log.h" />

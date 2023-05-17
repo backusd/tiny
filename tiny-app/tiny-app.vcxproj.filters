@@ -36,7 +36,7 @@
     <ClInclude Include="src\tiny-app\window\WindowProperties.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\tiny-app\exception\TinyException.h">
+    <ClInclude Include="src\tiny-app\exception\TinyAppException.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\tiny-app\exception\WindowException.h">

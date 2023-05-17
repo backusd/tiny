@@ -24,7 +24,7 @@ template<class Derived>
 class Application : public IApplication
 {
 public:
-	Application() noexcept
+	Application()
 	{
 		m_window = std::make_unique<Window>();
 		TINY_ASSERT(m_window != nullptr, "Failed to create Window");
@@ -69,7 +69,12 @@ public:
 				return *ecode;
 			}
 
-			derived->DoFrame();
+			// Render a frame - If it failed, then exit
+			if (!derived->DoFrame())
+			{
+				MessageBox(nullptr, "DoFrame() returned false\nSee console output for details.", "DoFrame() failed", MB_OK | MB_ICONEXCLAMATION);
+				return -1;
+			}
 		}
 	}
 

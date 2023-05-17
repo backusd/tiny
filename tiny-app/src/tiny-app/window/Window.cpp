@@ -23,7 +23,7 @@ const std::array<HCURSOR, 14> tiny::Window::m_cursors = {
 
 namespace tiny
 {
-	Window::Window(const WindowProperties& props) noexcept :
+	Window::Window(const WindowProperties& props) :
 		WindowTemplate(props),
 		m_mouseIsInWindow(false),
 		m_mouseX(0.0f),
