@@ -2,7 +2,6 @@
 #include "tiny-pch.h"
 #include "tiny/Core.h"
 #include "tiny/exception/TinyException.h"
-#include "tiny/utils/TranslateErrorCode.h"
 
 // Not sure of a use case for this because we can always just call infoManager.Set() and even if the HRESULT is a failure, but no debug messages
 // are generated, we can still create a DeviceResourcesException with an empty messages vector
@@ -24,8 +23,6 @@
 	#define GFX_THROW_INFO_ONLY(call) call;
 
 #endif
-
-
 
 namespace tiny
 {

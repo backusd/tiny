@@ -397,8 +397,26 @@ void DeviceResources::LogOutputDisplayModes(IDXGIOutput* output, DXGI_FORMAT for
 }
 
 
+void DeviceResources::BindViewport() noexcept
+{
+	m_commandList->RSSetViewports(1, &m_viewport);
+}
+void DeviceResources::BindScissorRects() noexcept
+{
+	m_commandList->RSSetScissorRects(1, &m_scissorRect);
+}
 
+void DeviceResources::Present()
+{
+	// swap the back and front buffers
+	GFX_THROW_INFO(m_swapChain->Present(0, 0));
+	m_currBackBuffer = (m_currBackBuffer + 1) % SwapChainBufferCount;
 
+	// Wait until frame commands are complete.  This waiting is inefficient and is
+	// done for simplicity.  Later we will show how to organize our rendering code
+	// so we do not have to wait per frame.
+	FlushCommandQueue();
+}
 
 
 }

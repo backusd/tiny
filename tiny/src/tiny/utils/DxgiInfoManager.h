@@ -2,7 +2,6 @@
 #include "tiny-pch.h"
 #include "tiny/Core.h"
 #include "tiny/exception/TinyException.h"
-#include "tiny/utils/TranslateErrorCode.h"
 
 
 namespace tiny

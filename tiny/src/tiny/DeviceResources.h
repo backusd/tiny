@@ -16,14 +16,33 @@ public:
 	DeviceResources& operator=(const DeviceResources&) = delete;
 
 	void OnResize();
+	void FlushCommandQueue();
 
 	// Getters
 	ND inline bool Get4xMsaaState() const noexcept { return m_4xMsaaState; }
 	ND inline float AspectRatio() const noexcept { return static_cast<float>(m_width) / m_height; }
+	ND inline ID3D12GraphicsCommandList* GetCommandList() const noexcept { return m_commandList.Get(); }
+	ND inline ID3D12CommandAllocator* GetCommandAllocator() const noexcept { return m_directCmdListAlloc.Get(); }
+	ND inline ID3D12CommandQueue* GetCommandQueue() const noexcept { return m_commandQueue.Get(); }
+	ND inline ID3D12Device* GetDevice() const noexcept { return m_d3dDevice.Get(); }
+	ND inline DXGI_FORMAT GetBackBufferFormat() const noexcept { return m_backBufferFormat; }
+	ND inline DXGI_FORMAT GetDepthStencilFormat() const noexcept { return m_depthStencilFormat; }
+	ND inline bool MsaaEnabled() const noexcept { return m_4xMsaaState; }
+	ND inline UINT MsaaQuality() const noexcept { return m_4xMsaaQuality; }
+	ND inline IDXGISwapChain* GetSwapChain() const noexcept { return m_swapChain.Get(); }
 
+	ND ID3D12Resource* CurrentBackBuffer() const noexcept;
+	ND D3D12_CPU_DESCRIPTOR_HANDLE CurrentBackBufferView() const noexcept;
+	ND D3D12_CPU_DESCRIPTOR_HANDLE DepthStencilView() const noexcept;
 
 	// Setters
 	void Set4xMsaaState(bool value);
+
+
+	// Pipeline Methods
+	void BindViewport() noexcept;
+	void BindScissorRects() noexcept;
+	void Present();
 
 private:
 	void InitDirect3D();
@@ -31,11 +50,7 @@ private:
 	void CreateSwapChain();
 	void CreateRtvAndDsvDescriptorHeaps();
 
-	void FlushCommandQueue();
 
-	ID3D12Resource* CurrentBackBuffer() const noexcept;
-	D3D12_CPU_DESCRIPTOR_HANDLE CurrentBackBufferView() const noexcept;
-	D3D12_CPU_DESCRIPTOR_HANDLE DepthStencilView() const noexcept;
 
 	void LogAdapters();
 	void LogAdapterOutputs(IDXGIAdapter* adapter);

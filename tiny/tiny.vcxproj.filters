@@ -51,10 +51,16 @@
     <ClInclude Include="src\tiny\utils\DxgiInfoManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\tiny\utils\TranslateErrorCode.h">
+    <ClInclude Include="src\tiny\Log.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\tiny\Log.h">
+    <ClInclude Include="src\tiny\rendering\MeshGeometry.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\tiny\rendering\UploadBuffer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\tiny\utils\Utility.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -80,10 +86,10 @@
     <ClCompile Include="src\tiny\utils\DxgiInfoManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\tiny\utils\TranslateErrorCode.cpp">
+    <ClCompile Include="src\tiny\Log.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\tiny\Log.cpp">
+    <ClCompile Include="src\tiny\utils\Utility.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
