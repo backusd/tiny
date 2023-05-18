@@ -10,8 +10,15 @@ namespace tiny
 	{
 		std::string current_time_and_date()
 		{
-			auto const time = std::chrono::current_zone()->to_local(std::chrono::system_clock::now());
-			return std::format("{:%X}", time);
+			try
+			{
+				auto const time = std::chrono::current_zone()->to_local(std::chrono::system_clock::now());
+				return std::format("{:%X}", time);
+			}
+			catch (const std::runtime_error&)
+			{
+				return "Caught runtime error";
+			}
 		}
 
 		void core_error(const std::string& msg) noexcept

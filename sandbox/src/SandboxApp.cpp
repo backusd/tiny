@@ -6,6 +6,8 @@ namespace sandbox
 Sandbox::Sandbox() :
     m_timer()
 {
+    m_deviceResources = std::make_shared<tiny::DeviceResources>(GetHWND());
+
     m_timer.Reset();
 }
 bool Sandbox::DoFrame() noexcept
@@ -13,6 +15,7 @@ bool Sandbox::DoFrame() noexcept
 	try
 	{
         m_timer.Tick();
+        CalculateFrameStats();
 
 		Update(m_timer);
 		Render();
@@ -56,7 +59,62 @@ void Sandbox::Present()
 
 }
 
+void Sandbox::CalculateFrameStats()
+{
+    // Code computes the average frames per second, and also the 
+    // average time it takes to render one frame.  These stats 
+    // are appended to the window caption bar.
 
+    static int frameCnt = 0;
+    static float timeElapsed = 0.0f;
 
+    frameCnt++;
+
+    // Compute averages over one second period.
+    if ((m_timer.TotalTime() - timeElapsed) >= 1.0f)
+    {
+        float fps = (float)frameCnt; // fps = frameCnt / 1
+        float mspf = 1000.0f / fps;
+
+        std::string fpsStr = std::to_string(fps);
+        std::string mspfStr = std::to_string(mspf);
+
+        std::string windowText =
+            "    fps: " + fpsStr +
+            "   mspf: " + mspfStr;
+
+        SetWindowText(GetHWND(), windowText.c_str());
+
+        // Reset for next average.
+        frameCnt = 0;
+        timeElapsed += 1.0f;
+    }
+}
+
+// REQUIRED FOR CRTP - Application Events
+void Sandbox::OnWindowResize(tiny::WindowResizeEvent& e) 
+{
+    m_deviceResources->OnResize();
+}
+void Sandbox::OnWindowCreate(tiny::WindowCreateEvent& e) {}
+void Sandbox::OnWindowClose(tiny::WindowCloseEvent& e) {}
+void Sandbox::OnAppTick(tiny::AppTickEvent& e) {}
+void Sandbox::OnAppUpdate(tiny::AppUpdateEvent& e) {}
+void Sandbox::OnAppRender(tiny::AppRenderEvent& e) {}
+
+// REQUIRED FOR CRTP - Key Events
+void Sandbox::OnChar(tiny::CharEvent& e) {}
+void Sandbox::OnKeyPressed(tiny::KeyPressedEvent& e) {}
+void Sandbox::OnKeyReleased(tiny::KeyReleasedEvent& e) {}
+
+// REQUIRED FOR CRTP - Mouse Events
+void Sandbox::OnMouseMove(tiny::MouseMoveEvent& e) {}
+void Sandbox::OnMouseEnter(tiny::MouseEnterEvent& e) {}
+void Sandbox::OnMouseLeave(tiny::MouseLeaveEvent& e) {}
+void Sandbox::OnMouseScrolledVertical(tiny::MouseScrolledEvent& e) {}
+void Sandbox::OnMouseScrolledHorizontal(tiny::MouseScrolledEvent& e) {}
+void Sandbox::OnMouseButtonPressed(tiny::MouseButtonPressedEvent& e) {}
+void Sandbox::OnMouseButtonReleased(tiny::MouseButtonReleasedEvent& e) {}
+void Sandbox::OnMouseButtonDoubleClick(tiny::MouseButtonDoubleClickEvent& e) {}
 
 }

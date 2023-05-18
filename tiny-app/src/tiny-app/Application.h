@@ -28,7 +28,7 @@ public:
 	{
 		m_window = std::make_unique<Window>();
 		TINY_ASSERT(m_window != nullptr, "Failed to create Window");
-
+		
 		// Application Events
 		m_window->m_OnWindowResizeFn = [this](WindowResizeEvent& e) { static_cast<Derived*>(this)->OnWindowResize(e); };
 		m_window->m_OnWindowCreateFn = [this](WindowCreateEvent& e) { static_cast<Derived*>(this)->OnWindowCreate(e); };
@@ -55,6 +55,10 @@ public:
 	Application(const Application&) = delete;
 	Application& operator=(const Application&) = delete;
 	virtual ~Application() override {};
+
+	ND inline unsigned int GetWindowWidth() const noexcept { return m_window->GetWidth(); }
+	ND inline unsigned int GetWindowHeight() const noexcept { return m_window->GetHeight(); }
+	ND inline HWND GetHWND() const noexcept { return m_window->GetHWND(); }
 
 	virtual int Run() override
 	{

@@ -3,3 +3,4 @@
 
 #include "tiny/Test.h"
 #include "tiny/utils/Timer.h"
+#include "tiny/DeviceResources.h"

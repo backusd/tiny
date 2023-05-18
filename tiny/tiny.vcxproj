@@ -102,17 +102,31 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="src\tiny\DeviceResources.h" />
+    <ClInclude Include="src\tiny\exception\DeviceResourcesException.h" />
     <ClInclude Include="src\tiny\exception\TinyException.h" />
     <ClInclude Include="src\tiny-pch.h" />
     <ClInclude Include="src\tiny.h" />
     <ClInclude Include="src\tiny\Core.h" />
+    <ClInclude Include="src\tiny\Log.h" />
     <ClInclude Include="src\tiny\Test.h" />
+    <ClInclude Include="src\tiny\utils\d3dx12.h" />
+    <ClInclude Include="src\tiny\utils\DDSTextureLoader.h" />
+    <ClInclude Include="src\tiny\utils\DxgiInfoManager.h" />
+    <ClInclude Include="src\tiny\utils\MathHelper.h" />
     <ClInclude Include="src\tiny\utils\Timer.h" />
+    <ClInclude Include="src\tiny\utils\TranslateErrorCode.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\tiny-pch.cpp" />
+    <ClCompile Include="src\tiny\DeviceResources.cpp" />
+    <ClCompile Include="src\tiny\Log.cpp" />
     <ClCompile Include="src\tiny\Test.cpp" />
+    <ClCompile Include="src\tiny\utils\DDSTextureLoader.cpp" />
+    <ClCompile Include="src\tiny\utils\DxgiInfoManager.cpp" />
+    <ClCompile Include="src\tiny\utils\MathHelper.cpp" />
     <ClCompile Include="src\tiny\utils\Timer.cpp" />
+    <ClCompile Include="src\tiny\utils\TranslateErrorCode.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
