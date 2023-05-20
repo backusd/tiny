@@ -8,7 +8,7 @@ Sandbox::Sandbox() :
     m_timer()
 {
     m_deviceResources = std::make_shared<tiny::DeviceResources>(GetHWND());
-    TINY_CORE_ASSERT(m_deviceResources != nullptr, "Failed to create device resources");
+    TINY_ASSERT(m_deviceResources != nullptr, "Failed to create device resources");
 
     // ---------------------------------------------------------------------------
     DirectX::XMMATRIX P = DirectX::XMMatrixPerspectiveFovLH(0.25f * DirectX::XM_PI, m_deviceResources->AspectRatio(), 1.0f, 1000.0f);

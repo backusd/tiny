@@ -55,5 +55,49 @@ namespace tiny
 			std::string s(msg.begin(), msg.end());
 			core_trace(s);
 		}
+
+		// ==========================================================================
+
+		void log_error(const std::string& msg) noexcept
+		{
+			SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 4);
+			std::cout << "[" << current_time_and_date() << "] " << msg << std::endl;
+		}
+		void log_warn(const std::string& msg) noexcept
+		{
+			SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 6);
+			std::cout << "[" << current_time_and_date() << "] " << msg << std::endl;
+		}
+		void log_info(const std::string& msg) noexcept
+		{
+			SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 10);
+			std::cout << "[" << current_time_and_date() << "] " << msg << std::endl;
+		}
+		void log_trace(const std::string& msg) noexcept
+		{
+			SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 7);
+			std::cout << "[" << current_time_and_date() << "] " << msg << std::endl;
+		}
+
+		void log_error(const std::wstring& msg) noexcept
+		{
+			std::string s(msg.begin(), msg.end());
+			log_error(s);
+		}
+		void log_warn(const std::wstring& msg) noexcept
+		{
+			std::string s(msg.begin(), msg.end());
+			log_warn(s);
+		}
+		void log_info(const std::wstring& msg) noexcept
+		{
+			std::string s(msg.begin(), msg.end());
+			log_info(s);
+		}
+		void log_trace(const std::wstring& msg) noexcept
+		{
+			std::string s(msg.begin(), msg.end());
+			log_trace(s);
+		}
 	}
 }

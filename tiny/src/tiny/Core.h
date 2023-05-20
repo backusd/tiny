@@ -1,10 +1,12 @@
 #pragma once
 
-#ifdef TINY_DLL
-#define TINY_API __declspec(dllexport)
-#else
-#define TINY_API __declspec(dllimport)
-#endif 
+#define TINY_API
+
+//#ifdef TINY_DLL
+//#define TINY_API __declspec(dllexport)
+//#else
+//#define TINY_API __declspec(dllimport)
+//#endif 
 
 #define ND [[nodiscard]]
 
@@ -19,7 +21,9 @@
 #endif
 
 #ifdef _DEBUG
+#define TINY_ASSERT(x, ...) { if (!(x)) { LOG_ERROR("Assertion Failed: {0}", __VA_ARGS__); __debugbreak(); } }
 #define TINY_CORE_ASSERT(x, ...) { if (!(x)) { LOG_CORE_ERROR("Assertion Failed: {0}", __VA_ARGS__); __debugbreak(); } }
 #else
+#define TINY_ASSERT(x, ...)
 #define TINY_CORE_ASSERT(x, ...) 
 #endif

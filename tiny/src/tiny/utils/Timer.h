@@ -11,8 +11,8 @@ public:
 	Timer(const Timer&) = default;
 	Timer& operator=(const Timer&) = default;
 
-	ND inline float TotalTime() const; // in seconds
-	ND inline float DeltaTime() const; // in seconds
+	ND float TotalTime() const; // in seconds
+	ND float DeltaTime() const; // in seconds
 
 	void Reset(); // Call before message loop.
 	void Start(); // Call when unpaused.

@@ -47,7 +47,7 @@ namespace tiny
 
 	void Window::Init(const WindowProperties& props) noexcept
 	{
-		LOG_CORE_INFO("Creating window {0} ({1}, {2})", m_title, m_width, m_height);
+		LOG_APP_INFO("Creating window {0} ({1}, {2})", m_title, m_width, m_height);
 
 
 		// ... Create window ...
@@ -119,7 +119,7 @@ namespace tiny
 		case WM_KILLFOCUS:		return OnKillFocus(hWnd, msg, wParam, lParam);
 		case WM_DPICHANGED:
 
-			LOG_CORE_WARN("Received WM_DPICHANGED. Currently not handling this message");
+			LOG_APP_WARN("Received WM_DPICHANGED. Currently not handling this message");
 			break;
 		}
 
@@ -533,7 +533,7 @@ namespace tiny
 		for (unsigned int iii = 0; iii < m_cursors.size(); ++iii)
 		{
 			if (m_cursors[iii] == NULL)
-				LOG_CORE_ERROR("{}:{} cursor at index {} is NULL", __FILE__, __LINE__, iii);
+				LOG_APP_ERROR("{}:{} cursor at index {} is NULL", __FILE__, __LINE__, iii);
 		}
 	}
 	void Window::SetCursor(Cursor cursor) noexcept

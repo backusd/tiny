@@ -27,7 +27,7 @@ public:
 	Application()
 	{
 		m_window = std::make_unique<Window>();
-		TINY_ASSERT(m_window != nullptr, "Failed to create Window");
+		TINY_APP_ASSERT(m_window != nullptr, "Failed to create Window");
 		
 		// Application Events
 		m_window->m_OnWindowResizeFn = [this](WindowResizeEvent& e) { static_cast<Derived*>(this)->OnWindowResize(e); };

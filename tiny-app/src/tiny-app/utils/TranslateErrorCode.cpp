@@ -15,7 +15,7 @@ namespace tiny
 			nullptr,
 			hr,
 			MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-			reinterpret_cast<LPSTR>(&pMsgBuf),
+			reinterpret_cast<LPWSTR>(&pMsgBuf),
 			0,
 			nullptr
 		);
