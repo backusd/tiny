@@ -29,5 +29,7 @@
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="src\shaders\color.hlsl" />
+    <FxCompile Include="src\shaders\color_vs.hlsl" />
+    <FxCompile Include="src\shaders\color_ps.hlsl" />
   </ItemGroup>
 </Project>

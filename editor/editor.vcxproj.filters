@@ -61,8 +61,8 @@
     <Text Include="readme.txt" />
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="shaders\color.hlsl" />
-    <FxCompile Include="shaders\color_vs.hlsl" />
-    <FxCompile Include="shaders\color_ps.hlsl" />
+    <FxCompile Include="src\shaders\color.hlsl" />
+    <FxCompile Include="src\shaders\color_vs.hlsl" />
+    <FxCompile Include="src\shaders\color_ps.hlsl" />
   </ItemGroup>
 </Project>

@@ -75,10 +75,15 @@ WindowTemplate<T>::WindowTemplate(const WindowProperties& props) :
 		throw WINDOW_LAST_EXCEPT();
 	};
 
+	auto style = WS_EX_WINDOWEDGE;
+
+	std::wstring title(m_title.begin(), m_title.end());
+
 	// create window & get hWnd
-	m_hWnd = CreateWindow(
+	m_hWnd = CreateWindowExW(
+		style,
 		wndBaseClassName,
-		m_title.c_str(),
+		title.c_str(),
 		WS_options,
 		CW_USEDEFAULT,
 		CW_USEDEFAULT,

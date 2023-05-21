@@ -655,11 +655,8 @@ void DeviceResources::BuildRootSignature()
 }
 void DeviceResources::BuildShadersAndInputLayout()
 {
-	//m_vsByteCode = tiny::utility::CompileShader(L"ms-appx:///shaders/color.hlsl", nullptr, "VS", "vs_5_0");
-	//m_psByteCode = tiny::utility::CompileShader(L"ms-appx:///shaders/color.hlsl", nullptr, "PS", "ps_5_0");
-
-	D3DReadFileToBlob(L"color_vs.cso", m_vsByteCode.ReleaseAndGetAddressOf());
-	D3DReadFileToBlob(L"color_ps.cso", m_psByteCode.ReleaseAndGetAddressOf());
+	GFX_THROW_INFO(D3DReadFileToBlob(L"color_vs.cso", m_vsByteCode.ReleaseAndGetAddressOf()));
+	GFX_THROW_INFO(D3DReadFileToBlob(L"color_ps.cso", m_psByteCode.ReleaseAndGetAddressOf()));
 
 	m_inputLayout =
 	{
