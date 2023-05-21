@@ -76,7 +76,7 @@ public:
 			// Render a frame - If it failed, then exit
 			if (!derived->DoFrame())
 			{
-				MessageBox(nullptr, "DoFrame() returned false\nSee console output for details.", "DoFrame() failed", MB_OK | MB_ICONEXCLAMATION);
+				MessageBox(nullptr, L"DoFrame() returned false\nSee console output for details.", L"DoFrame() failed", MB_OK | MB_ICONEXCLAMATION);
 				return -1;
 			}
 		}

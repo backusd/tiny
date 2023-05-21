@@ -7,7 +7,13 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d">
 
-    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
-        <Button x:Name="myButton" Click="ClickHandler">Click Me</Button>
-    </StackPanel>
+    <SwapChainPanel x:Name="DXSwapChainPanel"
+                    SizeChanged="DXSwapChainPanel_SizeChanged"
+                    CompositionScaleChanged="DXSwapChainPanel_CompositionScaleChanged">
+        <!-- This grid defines the region to region to assign the viewport.
+             We require the SwapChainPanel to encompass the entire app window so that render target back buffer
+             can be made the same size as the entire app. From there, we can assign a subregion of the app as the
+             viewport where the 3D scene will be rendered to. -->
+        <Grid x:Name="ViewportGrid" SizeChanged="ViewportGrid_SizeChanged"  />
+    </SwapChainPanel>
 </Page>

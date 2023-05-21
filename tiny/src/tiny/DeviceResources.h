@@ -3,19 +3,38 @@
 #include "tiny/Core.h"
 #include "tiny/utils/DxgiInfoManager.h"
 #include "exception/DeviceResourcesException.h"
+#include "tiny/rendering/MeshGeometry.h"
+#include "tiny/rendering/UploadBuffer.h"
+
+
+
+
 
 namespace tiny
 {
+	struct Vertex
+	{
+		DirectX::XMFLOAT3 Pos;
+		DirectX::XMFLOAT4 Color;
+	};
+
+	struct ObjectConstants
+	{
+		DirectX::XMFLOAT4X4 WorldViewProj = tiny::MathHelper::Identity4x4();
+	};
+
 #pragma warning( push )
 #pragma warning( disable : 4251 )
 class TINY_API DeviceResources
 {
 public:
-	DeviceResources(HWND hWnd);
+	DeviceResources(); // Constructor to use in UWP when we don't have an HWND
+	DeviceResources(HWND hWnd, int height, int width); // Constructor to use when building for Win32 and we do have an HWND
 	DeviceResources(const DeviceResources&) = delete;
 	DeviceResources& operator=(const DeviceResources&) = delete;
 
-	void OnResize();
+
+	void OnResize(int height, int width);
 	void FlushCommandQueue();
 
 	// Getters
@@ -29,7 +48,7 @@ public:
 	ND inline DXGI_FORMAT GetDepthStencilFormat() const noexcept { return m_depthStencilFormat; }
 	ND inline bool MsaaEnabled() const noexcept { return m_4xMsaaState; }
 	ND inline UINT MsaaQuality() const noexcept { return m_4xMsaaQuality; }
-	ND inline IDXGISwapChain* GetSwapChain() const noexcept { return m_swapChain.Get(); }
+	ND inline IDXGISwapChain1* GetSwapChain() const noexcept { return m_swapChain.Get(); }
 
 	ND ID3D12Resource* CurrentBackBuffer() const noexcept;
 	ND D3D12_CPU_DESCRIPTOR_HANDLE CurrentBackBufferView() const noexcept;
@@ -45,7 +64,7 @@ public:
 	void Present();
 
 private:
-	void InitDirect3D();
+	void CreateDevice();
 	void CreateCommandObjects();
 	void CreateSwapChain();
 	void CreateRtvAndDsvDescriptorHeaps();
@@ -56,11 +75,8 @@ private:
 	void LogAdapterOutputs(IDXGIAdapter* adapter);
 	void LogOutputDisplayModes(IDXGIOutput* output, DXGI_FORMAT format);
 
-	ND std::tuple<int, int> GetWindowHeightWidth() const;
-
-
-
 	HWND m_hWnd;
+
 	int m_height;
 	int m_width;
 
@@ -68,9 +84,9 @@ private:
 	bool      m_4xMsaaState = false;    // 4X MSAA enabled
 	UINT      m_4xMsaaQuality = 0;      // quality level of 4X MSAA
 
-	Microsoft::WRL::ComPtr<IDXGIFactory4>  m_dxgiFactory;
-	Microsoft::WRL::ComPtr<IDXGISwapChain> m_swapChain;
-	Microsoft::WRL::ComPtr<ID3D12Device>   m_d3dDevice;
+	Microsoft::WRL::ComPtr<IDXGIFactory4>	m_dxgiFactory;
+	Microsoft::WRL::ComPtr<IDXGISwapChain1> m_swapChain;
+	Microsoft::WRL::ComPtr<ID3D12Device>	m_d3dDevice;
 
 	Microsoft::WRL::ComPtr<ID3D12Fence> m_fence;
 	UINT64 m_currentFence = 0;
@@ -105,6 +121,47 @@ public:
 private:
 	static DxgiInfoManager m_infoManager;
 #endif
+
+
+	// -------------------------------------------------------------------------------------
+public:
+	void Update();
+	void Render();
+
+
+private:
+	void InitializeSceneSpecific();
+
+	void BuildDescriptorHeaps();
+	void BuildConstantBuffers();
+	void BuildRootSignature();
+	void BuildShadersAndInputLayout();
+	void BuildBoxGeometry();
+	void BuildPSO();
+
+	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_rootSignature = nullptr;
+	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_cbvHeap = nullptr;
+
+	std::unique_ptr<UploadBuffer<ObjectConstants>> m_objectCB = nullptr;
+
+	std::unique_ptr<tiny::MeshGeometry> m_boxGeo = nullptr;
+
+	Microsoft::WRL::ComPtr<ID3DBlob> m_vsByteCode = nullptr;
+	Microsoft::WRL::ComPtr<ID3DBlob> m_psByteCode = nullptr;
+
+	std::vector<D3D12_INPUT_ELEMENT_DESC> m_inputLayout;
+
+	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_pso = nullptr;
+
+	DirectX::XMFLOAT4X4 m_world = tiny::MathHelper::Identity4x4();
+	DirectX::XMFLOAT4X4 m_view = tiny::MathHelper::Identity4x4();
+	DirectX::XMFLOAT4X4 m_proj = tiny::MathHelper::Identity4x4();
+
+	float m_theta = 1.5f * DirectX::XM_PI;
+	float m_phi = DirectX::XM_PIDIV4;
+	float m_radius = 5.0f;
+
+	POINT m_lastMousePos;
 };
 #pragma warning( pop )
 }

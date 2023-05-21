@@ -31,15 +31,24 @@ int main(int argc, char** argv)
     }
     catch (const tiny::TinyAppException& e)
     {
-        MessageBox(nullptr, e.what(), e.GetType(), MB_OK | MB_ICONEXCLAMATION);
+        std::string what_string(e.what());
+        std::wstring what_wstring(what_string.begin(), what_string.end());
+
+        std::string type_string(e.what());
+        std::wstring type_wstring(type_string.begin(), type_string.end());
+
+        MessageBox(nullptr, what_wstring.c_str(), type_wstring.c_str(), MB_OK | MB_ICONEXCLAMATION);
     }
     catch (const std::exception& e)
     {
-        MessageBox(nullptr, e.what(), "Standard Exception", MB_OK | MB_ICONEXCLAMATION);
+        std::string what_string(e.what());
+        std::wstring what_wstring(what_string.begin(), what_string.end());
+
+        MessageBox(nullptr, what_wstring.c_str(), L"Standard Exception", MB_OK | MB_ICONEXCLAMATION);
     }
     catch (...)
     {
-        MessageBox(nullptr, "No details available", "Unknown Exception", MB_OK | MB_ICONEXCLAMATION);
+        MessageBox(nullptr, L"No details available", L"Unknown Exception", MB_OK | MB_ICONEXCLAMATION);
     }
 
     return 0;

@@ -46,9 +46,9 @@ public:
 protected:
 	std::string TranslateErrorCode(HRESULT hr) const noexcept
 	{
-		std::string errorString;
+		std::wstring errorString;
 
-		char* pMsgBuf = nullptr;
+		wchar_t* pMsgBuf = nullptr;
 		// windows will allocate memory for err string and make our pointer point to it
 		DWORD nMsgLen = FormatMessage(
 			FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
@@ -63,7 +63,7 @@ protected:
 		// 0 string length returned indicates a failure
 		if (nMsgLen == 0)
 		{
-			errorString = "Unidentified error code";
+			errorString = L"Unidentified error code";
 		}
 		else
 		{
@@ -73,7 +73,8 @@ protected:
 			LocalFree(pMsgBuf);
 		}
 
-		return errorString;
+		std::string err(errorString.begin(), errorString.end());
+		return err;
 	}
 
 private:

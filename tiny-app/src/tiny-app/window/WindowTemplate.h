@@ -28,7 +28,7 @@ protected:
 	ND static LRESULT CALLBACK HandleMsgBase(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) noexcept;
 
 	// Window Class Data
-	static constexpr const char* wndBaseClassName = "Tiny Window";
+	static constexpr const wchar_t* wndBaseClassName = L"Tiny Window";
 	HINSTANCE m_hInst;
 
 	// Window Data

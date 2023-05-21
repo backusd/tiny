@@ -1,7 +1,6 @@
 #pragma once
 #include "tiny-pch.h"
 #include "tiny/Core.h"
-#include "tiny/DeviceResources.h"
 #include "tiny/utils/Utility.h"
 
 namespace tiny
@@ -28,15 +27,26 @@ public:
         auto _p = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
         auto _d = CD3DX12_RESOURCE_DESC::Buffer(m_elementByteSize * elementCount);
 
-        GFX_THROW_INFO(device->CreateCommittedResource(
+        device->CreateCommittedResource(
             &_p,
             D3D12_HEAP_FLAG_NONE,
             &_d,
             D3D12_RESOURCE_STATE_GENERIC_READ,
             nullptr,
-            IID_PPV_ARGS(&m_uploadBuffer)));
+            IID_PPV_ARGS(&m_uploadBuffer));
 
-        GFX_THROW_INFO(m_uploadBuffer->Map(0, nullptr, reinterpret_cast<void**>(&m_mappedData)));
+        m_uploadBuffer->Map(0, nullptr, reinterpret_cast<void**>(&m_mappedData));
+
+
+//        GFX_THROW_INFO(device->CreateCommittedResource(
+//            &_p,
+//            D3D12_HEAP_FLAG_NONE,
+//            &_d,
+//            D3D12_RESOURCE_STATE_GENERIC_READ,
+//            nullptr,
+//            IID_PPV_ARGS(&m_uploadBuffer)));
+//
+//        GFX_THROW_INFO(m_uploadBuffer->Map(0, nullptr, reinterpret_cast<void**>(&m_mappedData)));
 
         // We do not need to unmap until we are done with the resource. However, we must not write to
         // the resource while it is in use by the GPU (so we must use synchronization techniques).
