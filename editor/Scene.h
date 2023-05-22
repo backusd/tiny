@@ -24,7 +24,7 @@ public:
 
 
     // Rendering Stuff
-    inline void SetViewport(float top, float left, float height, float width) { m_deviceResources->SetViewport(top, left, height, width); }
+    inline void SetViewport(float top, float left, float height, float width) { m_app->SetViewport(top, left, height, width); }
 
 
 private:

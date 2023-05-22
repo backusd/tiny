@@ -45,13 +45,6 @@ void DeviceResources::Set4xMsaaState(bool value)
         CreateSwapChain();
     }
 }
-void DeviceResources::SetViewport(float top, float left, float height, float width) noexcept
-{
-	m_viewport.TopLeftX = left;
-	m_viewport.TopLeftY = top;
-	m_viewport.Height = height;
-	m_viewport.Width = width;
-}
 
 void DeviceResources::CreateDevice()
 {
@@ -356,19 +349,6 @@ void DeviceResources::OnResize(int height, int width)
 
 	// Wait until resize is complete.
 	FlushCommandQueue();
-
-	// Update the viewport transform to cover the client area.
-	m_viewport.TopLeftX = 0;
-	m_viewport.TopLeftY = 0;
-	m_viewport.Width = static_cast<float>(m_width);
-	m_viewport.Height = static_cast<float>(m_height);
-	m_viewport.MinDepth = 0.0f;
-	m_viewport.MaxDepth = 1.0f;
-
-	m_scissorRect = { 0, 0, m_width, m_height };
-
-
-
 }
 
 void DeviceResources::LogAdapters()
@@ -441,15 +421,6 @@ void DeviceResources::LogOutputDisplayModes(IDXGIOutput* output, DXGI_FORMAT for
 	}
 }
 
-
-void DeviceResources::BindViewport() noexcept
-{
-	m_commandList->RSSetViewports(1, &m_viewport);
-}
-void DeviceResources::BindScissorRects() noexcept
-{
-	m_commandList->RSSetScissorRects(1, &m_scissorRect);
-}
 
 void DeviceResources::Present()
 {

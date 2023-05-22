@@ -28,8 +28,11 @@ namespace tiny
 
 		void Update();
 		void Render();
+		void Present() { m_deviceResources->Present(); }
 
 		void OnResize(int height, int width);
+		void SetViewport(float top, float left, float height, float width) noexcept;
+			
 
 	private:
 		void BuildDescriptorHeaps();
@@ -63,6 +66,7 @@ namespace tiny
 		float m_phi = DirectX::XM_PIDIV4;
 		float m_radius = 5.0f;
 
-		//POINT m_lastMousePos;
+		D3D12_VIEWPORT m_viewport;
+		D3D12_RECT m_scissorRect;
 	};
 }

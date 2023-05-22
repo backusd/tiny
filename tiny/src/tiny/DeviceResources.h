@@ -40,14 +40,12 @@ public:
 	ND D3D12_CPU_DESCRIPTOR_HANDLE CurrentBackBufferView() const noexcept;
 	ND D3D12_CPU_DESCRIPTOR_HANDLE DepthStencilView() const noexcept;
 
+	ND inline int GetHeight() const noexcept { return m_height; }
+	ND inline int GetWidth() const noexcept { return m_width; }
+
 	// Setters
 	void Set4xMsaaState(bool value);
-	void SetViewport(float top, float left, float height, float width) noexcept;
 
-
-	// Pipeline Methods
-	void BindViewport() noexcept;
-	void BindScissorRects() noexcept;
 	void Present();
 
 private:
@@ -90,9 +88,6 @@ private:
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_dsvHeap;
 
-	D3D12_VIEWPORT m_viewport;
-	D3D12_RECT m_scissorRect;
-
 	UINT m_rtvDescriptorSize = 0;
 	UINT m_dsvDescriptorSize = 0;
 	UINT m_cbvSrvUavDescriptorSize = 0;
@@ -108,49 +103,6 @@ public:
 private:
 	static DxgiInfoManager m_infoManager;
 #endif
-
-
-	// -------------------------------------------------------------------------------------
-//public:
-//	void Update();
-//	void Render();
-//
-//
-//private:
-//	void InitializeSceneSpecific();
-//
-//	void BuildDescriptorHeaps();
-//	void BuildConstantBuffers();
-//	void BuildRootSignature();
-//	void BuildShadersAndInputLayout();
-//	void BuildBoxGeometry();
-//	void BuildPSO();
-//
-//	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_rootSignature = nullptr;
-//	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_cbvHeap = nullptr;
-//
-//	std::unique_ptr<UploadBuffer<ObjectConstants>> m_objectCB = nullptr;
-//
-//	std::unique_ptr<tiny::MeshGeometry> m_boxGeo = nullptr;
-//
-//	//Microsoft::WRL::ComPtr<ID3DBlob> m_vsByteCode = nullptr;
-//	//Microsoft::WRL::ComPtr<ID3DBlob> m_psByteCode = nullptr;
-//	std::unique_ptr<Shader> m_vertexShader = nullptr;
-//	std::unique_ptr<Shader> m_pixelShader = nullptr;
-//	  
-//	std::vector<D3D12_INPUT_ELEMENT_DESC> m_inputLayout;
-//	  
-//	Microsoft::WRL::ComPtr<ID3D12PipelineState> m_pso = nullptr;
-//
-//	DirectX::XMFLOAT4X4 m_world = tiny::MathHelper::Identity4x4();
-//	DirectX::XMFLOAT4X4 m_view = tiny::MathHelper::Identity4x4();
-//	DirectX::XMFLOAT4X4 m_proj = tiny::MathHelper::Identity4x4();
-//
-//	float m_theta = 1.5f * DirectX::XM_PI;
-//	float m_phi = DirectX::XM_PIDIV4;
-//	float m_radius = 5.0f;
-//
-//	POINT m_lastMousePos;
 };
 #pragma warning( pop )
 }

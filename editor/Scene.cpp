@@ -13,6 +13,12 @@ Scene::Scene(std::shared_ptr<tiny::DeviceResources> deviceResources, ISceneUICon
     m_haveFocus(false)
 {
     m_app = std::make_unique<tiny::TheApp>(m_deviceResources);
+    m_app->SetViewport(
+        0.0f,
+        0.0f,
+        static_cast<float>(m_deviceResources->GetHeight()),
+        static_cast<float>(m_deviceResources->GetWidth())
+    );
 }
 
 void Scene::OnResize(int height, int width)
@@ -20,6 +26,13 @@ void Scene::OnResize(int height, int width)
     // Make any necessary updates here, then start the render loop if necessary
     // ...
     m_app->OnResize(height, width);
+    m_app->SetViewport(
+        0.0f,
+        0.0f,
+        static_cast<float>(height),
+        static_cast<float>(width)
+    );
+
 
 
     if (m_renderLoopWorker == nullptr || m_renderLoopWorker.Status() != AsyncStatus::Started)
