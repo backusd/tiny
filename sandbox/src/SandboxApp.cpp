@@ -10,6 +10,8 @@ Sandbox::Sandbox() :
     m_deviceResources = std::make_shared<tiny::DeviceResources>(GetHWND(), GetWindowHeight(), GetWindowWidth());
     TINY_ASSERT(m_deviceResources != nullptr, "Failed to create device resources");
 
+    m_app = std::make_unique<tiny::TheApp>(m_deviceResources);
+
     m_timer.Reset();
 }
 bool Sandbox::DoFrame() noexcept
@@ -50,11 +52,11 @@ bool Sandbox::DoFrame() noexcept
 
 void Sandbox::Update(const tiny::Timer& timer) 
 {
-    m_deviceResources->Update();
+    m_app->Update();
 }
 void Sandbox::Render() 
 {
-    m_deviceResources->Render();
+    m_app->Render();
 }
 void Sandbox::Present() 
 {
@@ -97,6 +99,7 @@ void Sandbox::CalculateFrameStats()
 void Sandbox::OnWindowResize(tiny::WindowResizeEvent& e) 
 {
     m_deviceResources->OnResize(e.GetHeight(), e.GetWidth());
+    m_app->OnResize(e.GetHeight(), e.GetWidth());
 }
 void Sandbox::OnWindowCreate(tiny::WindowCreateEvent& e) {}
 void Sandbox::OnWindowClose(tiny::WindowCloseEvent& e) {}

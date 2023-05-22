@@ -12,13 +12,14 @@ Scene::Scene(std::shared_ptr<tiny::DeviceResources> deviceResources, ISceneUICon
     m_uiControl(uiControl),
     m_haveFocus(false)
 {
+    m_app = std::make_unique<tiny::TheApp>(m_deviceResources);
 }
 
-void Scene::CreateWindowSizeDependentResources()
+void Scene::OnResize(int height, int width)
 {
     // Make any necessary updates here, then start the render loop if necessary
     // ...
-
+    m_app->OnResize(height, width);
 
 
     if (m_renderLoopWorker == nullptr || m_renderLoopWorker.Status() != AsyncStatus::Started)
@@ -48,12 +49,12 @@ void Scene::StartRenderLoop()
                 timer.Tick();
 
                 // Update =========================================================================
-                m_deviceResources->Update();
+                m_app->Update();
                 
 
                 // Render =========================================================================
                 //
-                m_deviceResources->Render();
+                m_app->Render();
 
                 // Present ========================================================================
                 m_deviceResources->Present();

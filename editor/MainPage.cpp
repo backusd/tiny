@@ -134,8 +134,12 @@ namespace winrt::editor::implementation
     void MainPage::DXSwapChainPanel_SizeChanged(IInspectable const&, SizeChangedEventArgs const& e)
     {
         concurrency::critical_section::scoped_lock lock(m_scene->GetCriticalSection());
-        m_deviceResources->OnResize(static_cast<int>(e.NewSize().Height), static_cast<int>(e.NewSize().Width));
-        m_scene->CreateWindowSizeDependentResources();
+
+        int height = static_cast<int>(e.NewSize().Height);
+        int width = static_cast<int>(e.NewSize().Width);
+
+        m_deviceResources->OnResize(height, width);
+        m_scene->OnResize(height, width);
     }
     void MainPage::DXSwapChainPanel_CompositionScaleChanged(SwapChainPanel const& /*sender*/, IInspectable const&)
     {

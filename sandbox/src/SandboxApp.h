@@ -52,5 +52,8 @@ private:
 	tiny::Timer m_timer;
 	std::shared_ptr<tiny::DeviceResources> m_deviceResources;
 
+	// TEMPORARY: We use TheApp class to implement app-specific stuff in the library itself.
+	//            Eventually this should be removed, but it serves as an easy way to run the code on Win32 and UWP right now
+	std::unique_ptr<tiny::TheApp> m_app;
 };
 }
