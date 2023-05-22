@@ -1,5 +1,6 @@
 #include "tiny-pch.h"
 #include "Log.h"
+#include "tiny/utils/StringHelper.h"
 
 #include <iostream>
 #include <chrono>
@@ -37,23 +38,19 @@ namespace tiny
 
 		void core_error(const std::wstring& msg) noexcept
 		{
-			std::string s(msg.begin(), msg.end());
-			core_error(s);
+			core_error(utility::ToString(msg));
 		}		
 		void core_warn(const std::wstring& msg) noexcept
 		{
-			std::string s(msg.begin(), msg.end());
-			core_warn(s);
+			core_warn(utility::ToString(msg));
 		}		
 		void core_info(const std::wstring& msg) noexcept
 		{
-			std::string s(msg.begin(), msg.end());
-			core_info(s);
+			core_info(utility::ToString(msg));
 		}		
 		void core_trace(const std::wstring& msg) noexcept
 		{
-			std::string s(msg.begin(), msg.end());
-			core_trace(s);
+			core_trace(utility::ToString(msg));
 		}
 
 		// ==========================================================================
@@ -81,23 +78,19 @@ namespace tiny
 
 		void log_error(const std::wstring& msg) noexcept
 		{
-			std::string s(msg.begin(), msg.end());
-			log_error(s);
+			log_error(utility::ToString(msg));
 		}
 		void log_warn(const std::wstring& msg) noexcept
 		{
-			std::string s(msg.begin(), msg.end());
-			log_warn(s);
+			log_warn(utility::ToString(msg));
 		}
 		void log_info(const std::wstring& msg) noexcept
 		{
-			std::string s(msg.begin(), msg.end());
-			log_info(s);
+			log_info(utility::ToString(msg));
 		}
 		void log_trace(const std::wstring& msg) noexcept
 		{
-			std::string s(msg.begin(), msg.end());
-			log_trace(s);
+			log_trace(utility::ToString(msg));
 		}
 	}
 }

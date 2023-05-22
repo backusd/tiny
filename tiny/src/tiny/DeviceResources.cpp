@@ -30,13 +30,6 @@ DeviceResources::DeviceResources(HWND hWnd, int height, int width) :
 	m_height(height),
 	m_width(width)
 {
-//	RECT rect;
-//	if (GetClientRect(hWnd, &rect) == 0)
-//		throw DeviceResourcesException(__LINE__, __FILE__, GetLastError());
-//
-//	m_height = rect.bottom - rect.top;
-//	m_width = rect.right - rect.left;
-
 	CreateDevice();
 	CreateCommandObjects();
 	CreateRtvAndDsvDescriptorHeaps();
@@ -55,6 +48,13 @@ void DeviceResources::Set4xMsaaState(bool value)
         // Recreate the swapchain and buffers with new multisample settings.
         CreateSwapChain();
     }
+}
+void DeviceResources::SetViewport(float top, float left, float height, float width) noexcept
+{
+	m_viewport.TopLeftX = left;
+	m_viewport.TopLeftY = top;
+	m_viewport.Height = height;
+	m_viewport.Width = width;
 }
 
 void DeviceResources::CreateDevice()

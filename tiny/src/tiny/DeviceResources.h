@@ -6,10 +6,6 @@
 #include "tiny/rendering/MeshGeometry.h"
 #include "tiny/rendering/UploadBuffer.h"
 
-
-
-
-
 namespace tiny
 {
 	struct Vertex
@@ -56,6 +52,7 @@ public:
 
 	// Setters
 	void Set4xMsaaState(bool value);
+	void SetViewport(float top, float left, float height, float width) noexcept;
 
 
 	// Pipeline Methods

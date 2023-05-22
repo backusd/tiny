@@ -1,6 +1,7 @@
 #pragma once
 #include "tiny-pch.h"
 #include "tiny/Core.h"
+#include "tiny/utils/StringHelper.h"
 
 namespace tiny
 {
@@ -73,8 +74,7 @@ protected:
 			LocalFree(pMsgBuf);
 		}
 
-		std::string err(errorString.begin(), errorString.end());
-		return err;
+		return utility::ToString(errorString);
 	}
 
 private:

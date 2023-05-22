@@ -75,6 +75,7 @@ WindowTemplate<T>::WindowTemplate(const WindowProperties& props) :
 		throw WINDOW_LAST_EXCEPT();
 	};
 
+	// TODO: Look into other extended window styles
 	auto style = WS_EX_WINDOWEDGE;
 
 	std::wstring title(m_title.begin(), m_title.end());

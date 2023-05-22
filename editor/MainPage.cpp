@@ -78,9 +78,6 @@ namespace winrt::editor::implementation
         concurrency::critical_section::scoped_lock lock(m_scene->GetCriticalSection());
         m_scene->Suspend();
         m_scene->StopRenderLoop();
-        
-        // TODO:
-        //m_deviceResources->Trim();
     }
     void MainPage::OnResuming(const IInspectable&, const IInspectable&)
     {
@@ -114,26 +111,17 @@ namespace winrt::editor::implementation
     }
 
     // DisplayInformation
-    void MainPage::OnDpiChanged(const DisplayInformation& displayInfo, const IInspectable&)
+    void MainPage::OnDpiChanged(const DisplayInformation&, const IInspectable&)
     {
-        concurrency::critical_section::scoped_lock lock(m_scene->GetCriticalSection());
-        // TODO: 
-        //m_deviceResources->SetDpi(displayInfo.LogicalDpi());
-        //m_scene->CreateWindowSizeDependentResources();
+        // Not handling this at the moment because DPI changes seem to only be important for text rendering (D2D)
     }
-    void MainPage::OnOrientationChanged(const DisplayInformation& displayInfo, const IInspectable&)
+    void MainPage::OnOrientationChanged(const DisplayInformation&, const IInspectable&)
     {
-        concurrency::critical_section::scoped_lock lock(m_scene->GetCriticalSection());
-        // TODO: 
-        //m_deviceResources->SetCurrentOrientation(displayInfo.CurrentOrientation());
-        //m_scene->CreateWindowSizeDependentResources();
+        // Not handling because we are currently only support a standard orientation
     }
     void MainPage::OnStereoEnabledChanged(const DisplayInformation&, const IInspectable&)
     {
-        concurrency::critical_section::scoped_lock lock(m_scene->GetCriticalSection());
-        // TODO:
-        //m_deviceResources->UpdateStereoState();
-        //m_scene->CreateWindowSizeDependentResources();
+        // Not handling because we are not going into into a stereo enabled mode
     }
     void MainPage::OnDisplayContentsInvalidated(const DisplayInformation&, const IInspectable&)
     {
@@ -143,18 +131,15 @@ namespace winrt::editor::implementation
         //m_deviceResources->ValidateDevice();
     }
 
-    void MainPage::DXSwapChainPanel_SizeChanged(IInspectable const& sender, SizeChangedEventArgs const& e)
+    void MainPage::DXSwapChainPanel_SizeChanged(IInspectable const&, SizeChangedEventArgs const& e)
     {
         concurrency::critical_section::scoped_lock lock(m_scene->GetCriticalSection());
         m_deviceResources->OnResize(static_cast<int>(e.NewSize().Height), static_cast<int>(e.NewSize().Width));
         m_scene->CreateWindowSizeDependentResources();
     }
-    void MainPage::DXSwapChainPanel_CompositionScaleChanged(SwapChainPanel const& sender, IInspectable const& args)
+    void MainPage::DXSwapChainPanel_CompositionScaleChanged(SwapChainPanel const& /*sender*/, IInspectable const&)
     {
-        concurrency::critical_section::scoped_lock lock(m_scene->GetCriticalSection());
-        // TODO:
-        //m_deviceResources->SetCompositionScale(sender.CompositionScaleX(), sender.CompositionScaleY());
-        //m_scene->CreateWindowSizeDependentResources();
+        // Not worrying about this because I don't know what it does lol
     }
     void MainPage::ViewportGrid_SizeChanged(IInspectable const& sender, SizeChangedEventArgs const& e)
     {
