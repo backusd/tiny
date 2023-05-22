@@ -68,6 +68,8 @@ void DeviceResources::CreateDevice()
 	// Fallback to WARP device.
 	if (FAILED(hardwareResult))
 	{
+		LOG_CORE_WARN("{}", "Failed to create D3D12 device. Attempting to fallback to WARP device...");
+
 		ComPtr<IDXGIAdapter> pWarpAdapter;
 		GFX_THROW_INFO(m_dxgiFactory->EnumWarpAdapter(IID_PPV_ARGS(&pWarpAdapter)));
 
@@ -92,10 +94,13 @@ void DeviceResources::CreateDevice()
 	msQualityLevels.SampleCount = 4;
 	msQualityLevels.Flags = D3D12_MULTISAMPLE_QUALITY_LEVELS_FLAG_NONE;
 	msQualityLevels.NumQualityLevels = 0;
-	GFX_THROW_INFO(m_d3dDevice->CheckFeatureSupport(
-		D3D12_FEATURE_MULTISAMPLE_QUALITY_LEVELS,
-		&msQualityLevels,
-		sizeof(msQualityLevels)));
+	GFX_THROW_INFO(
+		m_d3dDevice->CheckFeatureSupport(
+			D3D12_FEATURE_MULTISAMPLE_QUALITY_LEVELS,
+			&msQualityLevels,
+			sizeof(msQualityLevels)
+		)
+	);
 
 	m_4xMsaaQuality = msQualityLevels.NumQualityLevels;
 	assert(m_4xMsaaQuality > 0 && "Unexpected MSAA quality level.");
@@ -112,16 +117,22 @@ void DeviceResources::CreateCommandObjects()
 	queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
 	GFX_THROW_INFO(m_d3dDevice->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&m_commandQueue)));
 
-	GFX_THROW_INFO(m_d3dDevice->CreateCommandAllocator(
-		D3D12_COMMAND_LIST_TYPE_DIRECT,
-		IID_PPV_ARGS(m_directCmdListAlloc.GetAddressOf())));
+	GFX_THROW_INFO(
+		m_d3dDevice->CreateCommandAllocator(
+			D3D12_COMMAND_LIST_TYPE_DIRECT,
+			IID_PPV_ARGS(m_directCmdListAlloc.GetAddressOf())
+		)
+	);
 
-	GFX_THROW_INFO(m_d3dDevice->CreateCommandList(
-		0,
-		D3D12_COMMAND_LIST_TYPE_DIRECT,
-		m_directCmdListAlloc.Get(), // Associated command allocator
-		nullptr,                   // Initial PipelineStateObject
-		IID_PPV_ARGS(m_commandList.GetAddressOf())));
+	GFX_THROW_INFO(
+		m_d3dDevice->CreateCommandList(
+			0,
+			D3D12_COMMAND_LIST_TYPE_DIRECT,
+			m_directCmdListAlloc.Get(), // Associated command allocator
+			nullptr,                   // Initial PipelineStateObject
+			IID_PPV_ARGS(m_commandList.GetAddressOf())
+		)
+	);
 
 	// Start off in a closed state.  This is because the first time we refer 
 	// to the command list we will Reset it, and it needs to be closed before
@@ -135,17 +146,24 @@ void DeviceResources::CreateRtvAndDsvDescriptorHeaps()
 	rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
 	rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 	rtvHeapDesc.NodeMask = 0;
-	GFX_THROW_INFO(m_d3dDevice->CreateDescriptorHeap(
-		&rtvHeapDesc, IID_PPV_ARGS(m_rtvHeap.GetAddressOf())));
-
+	GFX_THROW_INFO(
+		m_d3dDevice->CreateDescriptorHeap(
+			&rtvHeapDesc, 
+			IID_PPV_ARGS(m_rtvHeap.GetAddressOf())
+		)
+	);
 
 	D3D12_DESCRIPTOR_HEAP_DESC dsvHeapDesc;
 	dsvHeapDesc.NumDescriptors = 1;
 	dsvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
 	dsvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
 	dsvHeapDesc.NodeMask = 0;
-	GFX_THROW_INFO(m_d3dDevice->CreateDescriptorHeap(
-		&dsvHeapDesc, IID_PPV_ARGS(m_dsvHeap.GetAddressOf())));
+	GFX_THROW_INFO(
+		m_d3dDevice->CreateDescriptorHeap(
+			&dsvHeapDesc, 
+			IID_PPV_ARGS(m_dsvHeap.GetAddressOf())
+		)
+	);
 }
 void DeviceResources::CreateSwapChain()
 {
@@ -175,10 +193,13 @@ void DeviceResources::CreateSwapChain()
 
 		// Note: Swap chain uses queue to perform flush.
 		ComPtr<IDXGISwapChain> swapChain = nullptr;
-		GFX_THROW_INFO(m_dxgiFactory->CreateSwapChain(
-			m_commandQueue.Get(),
-			&sd,
-			swapChain.ReleaseAndGetAddressOf()));
+		GFX_THROW_INFO(
+			m_dxgiFactory->CreateSwapChain(
+				m_commandQueue.Get(),
+				&sd,
+				swapChain.ReleaseAndGetAddressOf()
+			)
+		);
 
 		// Get interface for IDXGISwapChain1
 		swapChain.As(&m_swapChain);
@@ -191,7 +212,6 @@ void DeviceResources::CreateSwapChain()
 		sd.Width = m_width; // Match the size of the window.
 		sd.Height = m_height;
 		sd.Format = m_backBufferFormat; // This is the most common swap chain format.
-		//sd.Stereo = m_stereoEnabled;
 		sd.SampleDesc.Count = m_4xMsaaState ? 4 : 1;
 		sd.SampleDesc.Quality = m_4xMsaaState ? (m_4xMsaaQuality - 1) : 0;
 		sd.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
@@ -206,7 +226,8 @@ void DeviceResources::CreateSwapChain()
 				m_commandQueue.Get(),
 				&sd,
 				nullptr,
-				m_swapChain.ReleaseAndGetAddressOf())
+				m_swapChain.ReleaseAndGetAddressOf()
+			)
 		);
 	}
 }
@@ -273,12 +294,14 @@ void DeviceResources::OnResize(int height, int width)
 	m_depthStencilBuffer.Reset();
 
 	// Resize the swap chain.
-	GFX_THROW_INFO(m_swapChain->ResizeBuffers(
-		SwapChainBufferCount,
-		m_width, 
-		m_height,
-		m_backBufferFormat,
-		DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH)
+	GFX_THROW_INFO(
+		m_swapChain->ResizeBuffers(
+			SwapChainBufferCount,
+			m_width, 
+			m_height,
+			m_backBufferFormat,
+			DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH
+		)
 	);
 
 	m_currBackBuffer = 0;
@@ -290,7 +313,6 @@ void DeviceResources::OnResize(int height, int width)
 		m_d3dDevice->CreateRenderTargetView(m_swapChainBuffer[i].Get(), nullptr, rtvHeapHandle);
 		rtvHeapHandle.Offset(1, m_rtvDescriptorSize);
 	}
-
 
 	// Create the depth/stencil buffer and view.
 	D3D12_RESOURCE_DESC depthStencilDesc;
@@ -319,13 +341,16 @@ void DeviceResources::OnResize(int height, int width)
 	optClear.DepthStencil.Stencil = 0;
 
 	auto _p = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
-	GFX_THROW_INFO(m_d3dDevice->CreateCommittedResource(
-		&_p,
-		D3D12_HEAP_FLAG_NONE,
-		&depthStencilDesc,
-		D3D12_RESOURCE_STATE_COMMON,
-		&optClear,
-		IID_PPV_ARGS(m_depthStencilBuffer.GetAddressOf())));
+	GFX_THROW_INFO(
+		m_d3dDevice->CreateCommittedResource(
+			&_p,
+			D3D12_HEAP_FLAG_NONE,
+			&depthStencilDesc,
+			D3D12_RESOURCE_STATE_COMMON,
+			&optClear,
+			IID_PPV_ARGS(m_depthStencilBuffer.GetAddressOf())
+		)
+	);
 
 	// Create descriptor to mip level 0 of entire resource using the format of the resource.
 	D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc;
@@ -338,8 +363,11 @@ void DeviceResources::OnResize(int height, int width)
 	m_d3dDevice->CreateDepthStencilView(m_depthStencilBuffer.Get(), &dsvDesc, DepthStencilView());
 
 	// Transition the resource from its initial state to be used as a depth buffer.
-	auto _b = CD3DX12_RESOURCE_BARRIER::Transition(m_depthStencilBuffer.Get(),
-		D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_DEPTH_WRITE);
+	auto _b = CD3DX12_RESOURCE_BARRIER::Transition(
+		m_depthStencilBuffer.Get(),
+		D3D12_RESOURCE_STATE_COMMON, 
+		D3D12_RESOURCE_STATE_DEPTH_WRITE
+	);
 	m_commandList->ResourceBarrier(1, &_b);
 
 	// Execute the resize commands.
@@ -433,12 +461,4 @@ void DeviceResources::Present()
 	// so we do not have to wait per frame.
 	FlushCommandQueue();
 }
-
-
-
-
-// =======================================================================================================================
-
-
-
 }

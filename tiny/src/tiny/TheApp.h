@@ -3,9 +3,13 @@
 #include "tiny/Core.h"
 #include "tiny/Log.h"
 #include "tiny/DeviceResources.h"
+#include "tiny/rendering/BlendState.h"
+#include "tiny/rendering/DepthStencilState.h"
+#include "tiny/rendering/InputLayout.h"
 #include "tiny/rendering/Shader.h"
 #include "tiny/rendering/UploadBuffer.h"
 #include "tiny/rendering/MeshGeometry.h"
+#include "tiny/rendering/RasterizerState.h"
 
 
 namespace tiny
@@ -54,9 +58,13 @@ namespace tiny
 		std::unique_ptr<Shader> m_vertexShader = nullptr;
 		std::unique_ptr<Shader> m_pixelShader = nullptr;
 
-		std::vector<D3D12_INPUT_ELEMENT_DESC> m_inputLayout;
+		std::unique_ptr<InputLayout> m_inputLayout = nullptr;
 
 		Microsoft::WRL::ComPtr<ID3D12PipelineState> m_pso = nullptr;
+
+		std::unique_ptr<RasterizerState> m_rasterizerState = nullptr;
+		std::unique_ptr<BlendState> m_blendState = nullptr;
+		std::unique_ptr<DepthStencilState> m_depthStencilState = nullptr;
 
 		DirectX::XMFLOAT4X4 m_world = tiny::MathHelper::Identity4x4();
 		DirectX::XMFLOAT4X4 m_view = tiny::MathHelper::Identity4x4();

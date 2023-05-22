@@ -1,11 +1,9 @@
 #pragma once
 #include "tiny-pch.h"
 #include "tiny/Core.h"
+#include "tiny/Log.h"
 #include "tiny/utils/DxgiInfoManager.h"
 #include "exception/DeviceResourcesException.h"
-//#include "tiny/rendering/MeshGeometry.h"
-//#include "tiny/rendering/UploadBuffer.h"
-//#include "tiny/rendering/Shader.h"
 
 namespace tiny
 {

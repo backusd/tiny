@@ -24,7 +24,7 @@ public:
 	}
 	Shader(const Shader&) noexcept = delete;
 	Shader& operator=(const Shader&) noexcept = delete;
-	virtual ~Shader() noexcept {}
+	~Shader() noexcept {}
 
 	ND inline void* GetBufferPointer() const noexcept { return m_blob->GetBufferPointer(); }
 	ND inline SIZE_T GetBufferSize() const noexcept { return m_blob->GetBufferSize(); }

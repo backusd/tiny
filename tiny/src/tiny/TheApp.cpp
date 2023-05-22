@@ -89,8 +89,11 @@ namespace tiny
 		commandList->RSSetScissorRects(1, &m_scissorRect);
 
 		// Indicate a state transition on the resource usage.
-		auto _b = CD3DX12_RESOURCE_BARRIER::Transition(m_deviceResources->CurrentBackBuffer(),
-			D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+		auto _b = CD3DX12_RESOURCE_BARRIER::Transition(
+			m_deviceResources->CurrentBackBuffer(),
+			D3D12_RESOURCE_STATE_PRESENT, 
+			D3D12_RESOURCE_STATE_RENDER_TARGET
+		);
 		commandList->ResourceBarrier(1, &_b);
 
 		// Clear the back buffer and depth buffer.
@@ -121,8 +124,11 @@ namespace tiny
 			1, 0, 0, 0);
 
 		// Indicate a state transition on the resource usage.
-		auto _b2 = CD3DX12_RESOURCE_BARRIER::Transition(m_deviceResources->CurrentBackBuffer(),
-			D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+		auto _b2 = CD3DX12_RESOURCE_BARRIER::Transition(
+			m_deviceResources->CurrentBackBuffer(),
+			D3D12_RESOURCE_STATE_RENDER_TARGET, 
+			D3D12_RESOURCE_STATE_PRESENT
+		);
 		commandList->ResourceBarrier(1, &_b2);
 
 		// Done recording commands.
@@ -191,16 +197,18 @@ namespace tiny
 
 		if (errorBlob != nullptr)
 		{
-			LOG_ERROR("D3DCompileFromFile() failed with message: {}", (char*)errorBlob->GetBufferPointer());
+			LOG_ERROR("D3D12SerializeRootSignature() failed with message: {}", (char*)errorBlob->GetBufferPointer());
 		}
 		if (FAILED(hr))
 			throw tiny::DeviceResourcesException(__LINE__, __FILE__, hr);
 
-		GFX_THROW_INFO(m_deviceResources->GetDevice()->CreateRootSignature(
-			0,
-			serializedRootSig->GetBufferPointer(),
-			serializedRootSig->GetBufferSize(),
-			IID_PPV_ARGS(&m_rootSignature))
+		GFX_THROW_INFO(
+			m_deviceResources->GetDevice()->CreateRootSignature(
+				0,
+				serializedRootSig->GetBufferPointer(),
+				serializedRootSig->GetBufferSize(),
+				IID_PPV_ARGS(&m_rootSignature)
+			)
 		);
 	}
 	void TheApp::BuildShadersAndInputLayout()
@@ -208,11 +216,12 @@ namespace tiny
 		m_vertexShader = std::make_unique<Shader>(m_deviceResources, "color_vs.cso");
 		m_pixelShader = std::make_unique<Shader>(m_deviceResources, "color_ps.cso");
 
-		m_inputLayout =
-		{
-			{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-			{ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
-		};
+		m_inputLayout = std::make_unique<InputLayout>(
+			std::vector<D3D12_INPUT_ELEMENT_DESC>{
+				{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+				{ "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }
+			}
+		);
 	}
 	void TheApp::BuildBoxGeometry()
 	{
@@ -287,15 +296,19 @@ namespace tiny
 	}
 	void TheApp::BuildPSO()
 	{
+		m_rasterizerState = std::make_unique<RasterizerState>();
+		m_blendState = std::make_unique<BlendState>();
+		m_depthStencilState = std::make_unique<DepthStencilState>();
+
 		D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc;
 		ZeroMemory(&psoDesc, sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC));
-		psoDesc.InputLayout = { m_inputLayout.data(), (UINT)m_inputLayout.size() };
+		psoDesc.InputLayout = m_inputLayout->GetInputLayoutDesc();
 		psoDesc.pRootSignature = m_rootSignature.Get();
 		psoDesc.VS = m_vertexShader->GetShaderByteCode();
 		psoDesc.PS = m_pixelShader->GetShaderByteCode();
-		psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
-		psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
-		psoDesc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
+		psoDesc.RasterizerState = m_rasterizerState->GetRasterizerDesc();
+		psoDesc.BlendState = m_blendState->GetBlendDesc();
+		psoDesc.DepthStencilState = m_depthStencilState->GetDepthStencilDesc();
 		psoDesc.SampleMask = UINT_MAX;
 		psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 		psoDesc.NumRenderTargets = 1;
