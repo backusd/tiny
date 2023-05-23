@@ -13,6 +13,7 @@
 #include <type_traits>
 #include <unordered_map>
 #include <cstdint>
+#include <ppl.h>
 
 #include <dxgidebug.h> // For DxgiInfoManager
 #include <wrl.h>

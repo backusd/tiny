@@ -111,6 +111,7 @@
     <ClInclude Include="src\tiny.h" />
     <ClInclude Include="src\tiny\Core.h" />
     <ClInclude Include="src\tiny\Log.h" />
+    <ClInclude Include="src\tiny\other\Waves.h" />
     <ClInclude Include="src\tiny\rendering\BlendState.h" />
     <ClInclude Include="src\tiny\rendering\DepthStencilState.h" />
     <ClInclude Include="src\tiny\rendering\FrameResource.h" />
@@ -134,6 +135,7 @@
     <ClCompile Include="src\tiny-pch.cpp" />
     <ClCompile Include="src\tiny\DeviceResources.cpp" />
     <ClCompile Include="src\tiny\Log.cpp" />
+    <ClCompile Include="src\tiny\other\Waves.cpp" />
     <ClCompile Include="src\tiny\rendering\FrameResource.cpp" />
     <ClCompile Include="src\tiny\rendering\GeometryGenerator.cpp" />
     <ClCompile Include="src\tiny\TheApp.cpp" />

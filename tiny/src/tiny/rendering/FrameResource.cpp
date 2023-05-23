@@ -4,7 +4,7 @@
 
 namespace tiny
 {
-FrameResource::FrameResource(ID3D12Device* device, UINT passCount, UINT objectCount)
+FrameResource::FrameResource(ID3D12Device* device, UINT passCount, UINT objectCount, UINT waveVertCount)
 {
     GFX_THROW_INFO(
         device->CreateCommandAllocator(
@@ -15,6 +15,8 @@ FrameResource::FrameResource(ID3D12Device* device, UINT passCount, UINT objectCo
 
     PassCB = std::make_unique<UploadBuffer<PassConstants>>(device, passCount, true);
     ObjectCB = std::make_unique<UploadBuffer<ObjectConstants>>(device, objectCount, true);
+
+    WavesVB = std::make_unique<UploadBuffer<Vertex>>(device, waveVertCount, false);
 }
 
 }
