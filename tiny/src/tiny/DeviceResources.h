@@ -41,6 +41,13 @@ public:
 	ND inline int GetHeight() const noexcept { return m_height; }
 	ND inline int GetWidth() const noexcept { return m_width; }
 
+	ND inline ID3D12Fence* GetFence() const noexcept { return m_fence.Get(); }
+	ND inline UINT64 GetCurrentFenceValue() const noexcept { return m_currentFence; }
+
+	ND inline UINT GetRTVDescriptorSize() const noexcept { return m_rtvDescriptorSize; }
+	ND inline UINT GetDSVDescriptorSize() const noexcept { return m_dsvDescriptorSize; }
+	ND inline UINT GetCBVSRVUAVDescriptorSize() const noexcept { return m_cbvSrvUavDescriptorSize; }
+
 	// Setters
 	void Set4xMsaaState(bool value);
 

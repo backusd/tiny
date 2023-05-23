@@ -58,7 +58,7 @@ bool Sandbox::DoFrame() noexcept
 
 void Sandbox::Update(const tiny::Timer& timer) 
 {
-    m_app->Update();
+    m_app->Update(timer);
 }
 void Sandbox::Render() 
 {

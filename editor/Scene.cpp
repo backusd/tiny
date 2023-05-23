@@ -62,7 +62,7 @@ void Scene::StartRenderLoop()
                 timer.Tick();
 
                 // Update =========================================================================
-                m_app->Update();
+                m_app->Update(timer);
                 
 
                 // Render =========================================================================
@@ -70,7 +70,7 @@ void Scene::StartRenderLoop()
                 m_app->Render();
 
                 // Present ========================================================================
-                m_deviceResources->Present();
+                m_app->Present();
 
                 if (!m_haveFocus)
                 {

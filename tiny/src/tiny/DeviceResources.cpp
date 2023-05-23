@@ -359,7 +359,6 @@ void DeviceResources::OnResize(int height, int width)
 	dsvDesc.Format = m_depthStencilFormat;
 	dsvDesc.Texture2D.MipSlice = 0;
 
-	//auto _v = DepthStencilView();
 	m_d3dDevice->CreateDepthStencilView(m_depthStencilBuffer.Get(), &dsvDesc, DepthStencilView());
 
 	// Transition the resource from its initial state to be used as a depth buffer.
@@ -459,6 +458,9 @@ void DeviceResources::Present()
 	// Wait until frame commands are complete.  This waiting is inefficient and is
 	// done for simplicity.  Later we will show how to organize our rendering code
 	// so we do not have to wait per frame.
-	FlushCommandQueue();
+	//FlushCommandQueue();
+
+
+	++m_currentFence;
 }
 }
