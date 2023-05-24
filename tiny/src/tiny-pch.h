@@ -24,6 +24,8 @@
 #include <DirectXPackedVector.h>
 #include <DirectXColors.h>
 #include <DirectXCollision.h>
+
+#include "tiny/utils/Constants.h"
 #include "tiny/utils/d3dx12.h"
 #include "tiny/utils/DDSTextureLoader.h"
 #include "tiny/utils/MathHelper.h"

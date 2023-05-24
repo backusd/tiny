@@ -30,5 +30,55 @@
   <ItemGroup>
     <FxCompile Include="src\shaders\color_vs.hlsl" />
     <FxCompile Include="src\shaders\color_ps.hlsl" />
+    <FxCompile Include="src\shaders\LightingVS.hlsl" />
+    <FxCompile Include="src\shaders\LightingPS.hlsl" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="src\shaders\Lighting.hlsli" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="src\textures\bricks.dds" />
+    <Image Include="src\textures\bricks_nmap.dds" />
+    <Image Include="src\textures\bricks2.dds" />
+    <Image Include="src\textures\bricks2_nmap.dds" />
+    <Image Include="src\textures\bricks3.dds" />
+    <Image Include="src\textures\checkboard.dds" />
+    <Image Include="src\textures\default_nmap.dds" />
+    <Image Include="src\textures\desertcube1024.dds" />
+    <Image Include="src\textures\grass.dds" />
+    <Image Include="src\textures\grasscube1024.dds" />
+    <Image Include="src\textures\head_diff.dds" />
+    <Image Include="src\textures\head_norm.dds" />
+    <Image Include="src\textures\ice.dds" />
+    <Image Include="src\textures\jacket_diff.dds" />
+    <Image Include="src\textures\jacket_norm.dds" />
+    <Image Include="src\textures\pants_diff.dds" />
+    <Image Include="src\textures\pants_norm.dds" />
+    <Image Include="src\textures\snowcube1024.dds" />
+    <Image Include="src\textures\stone.dds" />
+    <Image Include="src\textures\sunsetcube1024.dds" />
+    <Image Include="src\textures\tile.dds" />
+    <Image Include="src\textures\tile_nmap.dds" />
+    <Image Include="src\textures\tree0.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="src\textures\tree01S.dds" />
+    <Image Include="src\textures\tree1.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="src\textures\tree02S.dds" />
+    <Image Include="src\textures\tree2.bmp">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="src\textures\tree35S.dds" />
+    <Image Include="src\textures\treearray.dds" />
+    <Image Include="src\textures\treeArray2.dds" />
+    <Image Include="src\textures\upBody_diff.dds" />
+    <Image Include="src\textures\upbody_norm.dds" />
+    <Image Include="src\textures\water1.dds" />
+    <Image Include="src\textures\white1x1.dds" />
+    <Image Include="src\textures\WireFence.dds" />
+    <Image Include="src\textures\WoodCrate01.dds" />
+    <Image Include="src\textures\WoodCrate02.dds" />
   </ItemGroup>
 </Project>

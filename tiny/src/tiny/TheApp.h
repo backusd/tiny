@@ -15,6 +15,9 @@
 #include "tiny/rendering/FrameResource.h"
 #include "tiny/rendering/RenderItem.h"
 #include "tiny/rendering/GeometryGenerator.h"
+#include "tiny/rendering/Texture.h"
+#include "tiny/rendering/Light.h"
+#include "tiny/rendering/Material.h"
 
 #include "tiny/other/Waves.h"
 
@@ -42,22 +45,28 @@ public:
 private:
 	std::shared_ptr<DeviceResources> m_deviceResources;
 
+	void LoadTextures();
 	void BuildRootSignature();
-	//void BuildDescriptorHeaps();
+	void BuildDescriptorHeaps();
 	//void BuildConstantBufferViews();
 	void BuildShadersAndInputLayout();
-	//void BuildShapeGeometry();
 	void BuildLandGeometry();
-	void BuildWavesGeometryBuffers();
+	void BuildWavesGeometry();
+	void BuildBoxGeometry();
 	void BuildPSOs();
 	void BuildFrameResources();
+	void BuildMaterials();
 	void BuildRenderItems();
 	void DrawRenderItems(ID3D12GraphicsCommandList* commandList, const std::vector<RenderItem*>& ritems);
 
 	void UpdateCamera(const Timer& timer);
 	void UpdateObjectCBs(const Timer& timer);
+	void UpdateMaterialCBs(const Timer& timer);
 	void UpdateMainPassCB(const Timer& timer);
 	void UpdateWaves(const Timer& timer);
+	void AnimateMaterials(const Timer& timer);
+
+	std::array<const CD3DX12_STATIC_SAMPLER_DESC, 6> GetStaticSamplers();
 
 	float GetHillsHeight(float x, float z) const;
 	DirectX::XMFLOAT3 GetHillsNormal(float x, float z) const;
@@ -69,10 +78,11 @@ private:
 
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_rootSignature = nullptr;
 
-	//Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_cbvHeap = nullptr;
-	//Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_srvDescriptorHeap = nullptr;
+	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_srvDescriptorHeap = nullptr;
 
 	std::unordered_map<std::string, std::unique_ptr<MeshGeometry>> m_geometries;
+	std::unordered_map<std::string, std::unique_ptr<Material>> m_materials;
+	std::unordered_map<std::string, std::unique_ptr<Texture>> m_textures;
 	std::unordered_map<std::string, Microsoft::WRL::ComPtr<ID3D12PipelineState>> m_psos;
 	std::unordered_map<std::string, std::unique_ptr<Shader>> m_shaders;
 
@@ -83,7 +93,6 @@ private:
 	RenderItem* m_wavesRitem = nullptr;
 
 	// Render items divided by PSO.
-	//std::vector<RenderItem*> m_opaqueRitems;
 	std::vector<RenderItem*> m_renderItemLayer[(int)RenderLayer::Count];
 	std::unique_ptr<Waves> m_waves;
 
@@ -102,13 +111,9 @@ private:
 	DirectX::XMFLOAT4X4 m_view = tiny::MathHelper::Identity4x4();
 	DirectX::XMFLOAT4X4 m_proj = tiny::MathHelper::Identity4x4();
 
-
 	float m_theta = 1.5f * DirectX::XM_PI;
 	float m_phi = DirectX::XM_PIDIV4;
 	float m_radius = 55.0f;
-
-	float m_sunTheta = 1.25f * DirectX::XM_PI;
-	float m_sunPhi = DirectX::XM_PIDIV4;
 
 	D3D12_VIEWPORT m_viewport;
 	D3D12_RECT m_scissorRect;

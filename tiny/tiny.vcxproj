@@ -117,12 +117,16 @@
     <ClInclude Include="src\tiny\rendering\FrameResource.h" />
     <ClInclude Include="src\tiny\rendering\GeometryGenerator.h" />
     <ClInclude Include="src\tiny\rendering\InputLayout.h" />
+    <ClInclude Include="src\tiny\rendering\Light.h" />
+    <ClInclude Include="src\tiny\rendering\Material.h" />
     <ClInclude Include="src\tiny\rendering\MeshGeometry.h" />
     <ClInclude Include="src\tiny\rendering\RasterizerState.h" />
     <ClInclude Include="src\tiny\rendering\RenderItem.h" />
     <ClInclude Include="src\tiny\rendering\Shader.h" />
+    <ClInclude Include="src\tiny\rendering\Texture.h" />
     <ClInclude Include="src\tiny\rendering\UploadBuffer.h" />
     <ClInclude Include="src\tiny\TheApp.h" />
+    <ClInclude Include="src\tiny\utils\Constants.h" />
     <ClInclude Include="src\tiny\utils\d3dx12.h" />
     <ClInclude Include="src\tiny\utils\DDSTextureLoader.h" />
     <ClInclude Include="src\tiny\utils\DxgiInfoManager.h" />
