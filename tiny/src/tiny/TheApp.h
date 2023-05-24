@@ -26,6 +26,8 @@ namespace tiny
 enum class RenderLayer : int
 {
 	Opaque = 0,
+	Transparent,
+	AlphaTested,
 	Count
 };
 
@@ -48,7 +50,6 @@ private:
 	void LoadTextures();
 	void BuildRootSignature();
 	void BuildDescriptorHeaps();
-	//void BuildConstantBufferViews();
 	void BuildShadersAndInputLayout();
 	void BuildLandGeometry();
 	void BuildWavesGeometry();
@@ -104,8 +105,6 @@ private:
 	PassConstants m_mainPassCB;
 
 	UINT m_passCbvOffset = 0;
-
-	bool m_isWireframe = false;
 
 	DirectX::XMFLOAT3 m_eyePos = { 0.0f, 0.0f, 0.0f };
 	DirectX::XMFLOAT4X4 m_view = tiny::MathHelper::Identity4x4();

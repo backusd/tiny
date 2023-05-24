@@ -181,6 +181,11 @@ namespace tiny
 		m_mainPassCB.DeltaTime = timer.DeltaTime();
 
 		m_mainPassCB.AmbientLight = { 0.25f, 0.25f, 0.35f, 1.0f };
+
+		m_mainPassCB.FogColor = { 0.7f, 0.7f, 0.7f, 1.0f };
+		m_mainPassCB.gFogStart = 5.0f;
+		m_mainPassCB.gFogRange = 150.0f;
+
 		m_mainPassCB.Lights[0].Direction = { 0.57735f, -0.57735f, 0.57735f };
 		m_mainPassCB.Lights[0].Strength = { 0.9f, 0.9f, 0.9f };
 		m_mainPassCB.Lights[1].Direction = { -0.57735f, -0.57735f, 0.57735f };
@@ -266,14 +271,7 @@ namespace tiny
 
 		// A command list can be reset after it has been added to the command queue via ExecuteCommandList.
 		// Reusing the command list reuses memory.
-		if (m_isWireframe)
-		{
-			GFX_THROW_INFO(commandList->Reset(commandAllocator.Get(), m_psos["opaque_wireframe"].Get()));
-		}
-		else
-		{
-			GFX_THROW_INFO(commandList->Reset(commandAllocator.Get(), m_psos["opaque"].Get()));
-		}
+		GFX_THROW_INFO(commandList->Reset(commandAllocator.Get(), m_psos["opaque"].Get()));
 
 		commandList->RSSetViewports(1, &m_viewport);
 		commandList->RSSetScissorRects(1, &m_scissorRect);
@@ -287,7 +285,7 @@ namespace tiny
 		commandList->ResourceBarrier(1, &_b);
 
 		// Clear the back buffer and depth buffer.
-		commandList->ClearRenderTargetView(m_deviceResources->CurrentBackBufferView(), DirectX::Colors::LightSteelBlue, 0, nullptr);
+		commandList->ClearRenderTargetView(m_deviceResources->CurrentBackBufferView(), (float*)&m_mainPassCB.FogColor, 0, nullptr);
 		commandList->ClearDepthStencilView(m_deviceResources->DepthStencilView(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 
 		// Specify the buffers we are going to render to.
@@ -304,12 +302,15 @@ namespace tiny
 		auto passCB = m_currFrameResource->PassCB->Resource();
 		commandList->SetGraphicsRootConstantBufferView(2, passCB->GetGPUVirtualAddress());
 
-		//int passCbvIndex = m_passCbvOffset + m_currFrameResourceIndex;
-		//auto passCbvHandle = CD3DX12_GPU_DESCRIPTOR_HANDLE(m_cbvHeap->GetGPUDescriptorHandleForHeapStart());
-		//passCbvHandle.Offset(passCbvIndex, m_deviceResources->GetCBVSRVUAVDescriptorSize());
-		//commandList->SetGraphicsRootDescriptorTable(1, passCbvHandle);
 
 		DrawRenderItems(commandList, m_renderItemLayer[(int)RenderLayer::Opaque]);
+
+		commandList->SetPipelineState(m_psos["alphaTested"].Get());
+		DrawRenderItems(commandList, m_renderItemLayer[(int)RenderLayer::AlphaTested]);
+
+		commandList->SetPipelineState(m_psos["transparent"].Get());
+		DrawRenderItems(commandList, m_renderItemLayer[(int)RenderLayer::Transparent]);
+
 
 		// Indicate a state transition on the resource usage.
 		auto _b2 = CD3DX12_RESOURCE_BARRIER::Transition(
@@ -400,7 +401,7 @@ namespace tiny
 
 		auto fenceTex = std::make_unique<Texture>();
 		fenceTex->Name = "fenceTex";
-		fenceTex->Filename = L"src/textures/WoodCrate01.dds";
+		fenceTex->Filename = L"src/textures/WireFence.dds";
 		GFX_THROW_INFO(
 			DirectX::CreateDDSTextureFromFile12(
 				m_deviceResources->GetDevice(),
@@ -461,7 +462,8 @@ namespace tiny
 	void TheApp::BuildShadersAndInputLayout()
 	{
 		m_shaders["standardVS"] = std::make_unique<Shader>(m_deviceResources, "LightingVS.cso");
-		m_shaders["opaquePS"] = std::make_unique<Shader>(m_deviceResources, "LightingPS.cso");
+		m_shaders["opaquePS"] = std::make_unique<Shader>(m_deviceResources, "LightingFogPS.cso");
+		m_shaders["alphaTestedPS"] = std::make_unique<Shader>(m_deviceResources, "LightingFogAlphaTestPS.cso");
 
 		m_inputLayout = std::make_unique<InputLayout>(
 			std::vector<D3D12_INPUT_ELEMENT_DESC>{
@@ -699,12 +701,49 @@ namespace tiny
 		);
 
 		//
-		// PSO for opaque wireframe objects.
+		// PSO for transparent objects
 		//
-		D3D12_GRAPHICS_PIPELINE_STATE_DESC opaqueWireframePsoDesc = opaquePsoDesc;
-		opaqueWireframePsoDesc.RasterizerState.FillMode = D3D12_FILL_MODE_WIREFRAME;
+		D3D12_GRAPHICS_PIPELINE_STATE_DESC transparentPsoDesc = opaquePsoDesc;
+
+		//D3D12_RENDER_TARGET_BLEND_DESC transparencyBlendDesc;
+		//transparencyBlendDesc.BlendEnable = true;
+		//transparencyBlendDesc.LogicOpEnable = false;
+		//transparencyBlendDesc.SrcBlend = D3D12_BLEND_SRC_ALPHA;
+		//transparencyBlendDesc.DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
+		//transparencyBlendDesc.BlendOp = D3D12_BLEND_OP_ADD;
+		//transparencyBlendDesc.SrcBlendAlpha = D3D12_BLEND_ONE;
+		//transparencyBlendDesc.DestBlendAlpha = D3D12_BLEND_ZERO;
+		//transparencyBlendDesc.BlendOpAlpha = D3D12_BLEND_OP_ADD;
+		//transparencyBlendDesc.LogicOp = D3D12_LOGIC_OP_NOOP;
+		//transparencyBlendDesc.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+		//
+		//transparentPsoDesc.BlendState.RenderTarget[0] = transparencyBlendDesc;
+
+		std::unique_ptr<BlendState> transparentBlendState = std::make_unique<BlendState>();
+		transparentBlendState->SetRenderTargetBlendEnabled(true);
+		transparentBlendState->SetRenderTargetLogicOpEnabled(false);
+		transparentBlendState->SetRenderTargetSrcBlend(D3D12_BLEND_SRC_ALPHA);
+		transparentBlendState->SetRenderTargetDestBlend(D3D12_BLEND_INV_SRC_ALPHA);
+		transparentBlendState->SetRenderTargetBlendOp(D3D12_BLEND_OP_ADD);
+		transparentBlendState->SetRenderTargetSrcBlendAlpha(D3D12_BLEND_ONE);
+		transparentBlendState->SetRenderTargetDestBlendAlpha(D3D12_BLEND_ZERO);
+		transparentBlendState->SetRenderTargetBlendOpAlpha(D3D12_BLEND_OP_ADD);
+		transparentBlendState->SetRenderTargetLogicOp(D3D12_LOGIC_OP_NOOP);
+		transparentBlendState->SetRenderTargetWriteMask(D3D12_COLOR_WRITE_ENABLE_ALL);
+
+		transparentPsoDesc.BlendState = transparentBlendState->GetBlendDesc();
 		GFX_THROW_INFO(
-			m_deviceResources->GetDevice()->CreateGraphicsPipelineState(&opaqueWireframePsoDesc, IID_PPV_ARGS(&m_psos["opaque_wireframe"]))
+			m_deviceResources->GetDevice()->CreateGraphicsPipelineState(&transparentPsoDesc, IID_PPV_ARGS(&m_psos["transparent"]))
+		);
+		
+		// 
+		// PSO for alpha tested objects
+		//
+		D3D12_GRAPHICS_PIPELINE_STATE_DESC alphaTestedPsoDesc = opaquePsoDesc;
+		alphaTestedPsoDesc.PS = m_shaders["alphaTestedPS"]->GetShaderByteCode();
+		alphaTestedPsoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
+		GFX_THROW_INFO(
+			m_deviceResources->GetDevice()->CreateGraphicsPipelineState(&alphaTestedPsoDesc, IID_PPV_ARGS(&m_psos["alphaTested"]))
 		);
 	}
 	void TheApp::BuildFrameResources()
@@ -758,7 +797,7 @@ namespace tiny
 	{
 		auto wavesRitem = std::make_unique<RenderItem>();
 		wavesRitem->World = MathHelper::Identity4x4();
-		XMStoreFloat4x4(&wavesRitem->TexTransform, DirectX::XMMatrixScaling(5.0f, 5.0f, 1.0f));
+		DirectX::XMStoreFloat4x4(&wavesRitem->TexTransform, DirectX::XMMatrixScaling(5.0f, 5.0f, 1.0f));
 		wavesRitem->ObjCBIndex = 0;
 		wavesRitem->Mat = m_materials["water"].get();
 		wavesRitem->Geo = m_geometries["waterGeo"].get();
@@ -769,11 +808,11 @@ namespace tiny
 
 		m_wavesRitem = wavesRitem.get();
 
-		m_renderItemLayer[(int)RenderLayer::Opaque].push_back(wavesRitem.get());
+		m_renderItemLayer[(int)RenderLayer::Transparent].push_back(wavesRitem.get());
 
 		auto gridRitem = std::make_unique<RenderItem>();
 		gridRitem->World = MathHelper::Identity4x4();
-		XMStoreFloat4x4(&gridRitem->TexTransform, DirectX::XMMatrixScaling(5.0f, 5.0f, 1.0f));
+		DirectX::XMStoreFloat4x4(&gridRitem->TexTransform, DirectX::XMMatrixScaling(5.0f, 5.0f, 1.0f));
 		gridRitem->ObjCBIndex = 1;
 		gridRitem->Mat = m_materials["grass"].get();
 		gridRitem->Geo = m_geometries["landGeo"].get();
@@ -785,7 +824,7 @@ namespace tiny
 		m_renderItemLayer[(int)RenderLayer::Opaque].push_back(gridRitem.get());
 
 		auto boxRitem = std::make_unique<RenderItem>();
-		XMStoreFloat4x4(&boxRitem->World, DirectX::XMMatrixTranslation(3.0f, 2.0f, -9.0f));
+		DirectX::XMStoreFloat4x4(&boxRitem->World, DirectX::XMMatrixTranslation(3.0f, 2.0f, -9.0f));
 		boxRitem->ObjCBIndex = 2;
 		boxRitem->Mat = m_materials["wirefence"].get();
 		boxRitem->Geo = m_geometries["boxGeo"].get();
@@ -794,7 +833,7 @@ namespace tiny
 		boxRitem->StartIndexLocation = boxRitem->Geo->DrawArgs["box"].StartIndexLocation;
 		boxRitem->BaseVertexLocation = boxRitem->Geo->DrawArgs["box"].BaseVertexLocation;
 
-		m_renderItemLayer[(int)RenderLayer::Opaque].push_back(boxRitem.get());
+		m_renderItemLayer[(int)RenderLayer::AlphaTested].push_back(boxRitem.get());
 
 		m_allRitems.push_back(std::move(wavesRitem));
 		m_allRitems.push_back(std::move(gridRitem));

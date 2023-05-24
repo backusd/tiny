@@ -32,6 +32,8 @@
     <FxCompile Include="src\shaders\color_ps.hlsl" />
     <FxCompile Include="src\shaders\LightingVS.hlsl" />
     <FxCompile Include="src\shaders\LightingPS.hlsl" />
+    <FxCompile Include="src\shaders\LightingFogPS.hlsl" />
+    <FxCompile Include="src\shaders\LightingFogAlphaTestPS.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <None Include="src\shaders\Lighting.hlsli" />

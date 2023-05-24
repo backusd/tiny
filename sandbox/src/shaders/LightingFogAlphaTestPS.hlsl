@@ -16,12 +16,12 @@
 
 Texture2D gDiffuseMap : register(t0);
 
-SamplerState gsamPointWrap          : register(s0);
-SamplerState gsamPointClamp         : register(s1);
-SamplerState gsamLinearWrap         : register(s2);
-SamplerState gsamLinearClamp        : register(s3);
-SamplerState gsamAnisotropicWrap    : register(s4);
-SamplerState gsamAnisotropicClamp   : register(s5);
+SamplerState gsamPointWrap : register(s0);
+SamplerState gsamPointClamp : register(s1);
+SamplerState gsamLinearWrap : register(s2);
+SamplerState gsamLinearClamp : register(s3);
+SamplerState gsamAnisotropicWrap : register(s4);
+SamplerState gsamAnisotropicClamp : register(s5);
 
 // Constant data that varies per frame.
 
@@ -71,13 +71,6 @@ cbuffer cbMaterial : register(b2)
     float gRoughness;
     float4x4 gMatTransform;
 };
- 
-struct VertexIn
-{
-    float3 PosL : POSITION;
-    float3 NormalL : NORMAL;
-    float2 TexC : TEXCOORD;
-};
 
 struct VertexOut
 {
@@ -87,25 +80,43 @@ struct VertexOut
     float2 TexC : TEXCOORD;
 };
 
-VertexOut main(VertexIn vin)
+float4 main(VertexOut pin) : SV_Target
 {
-    VertexOut vout = (VertexOut) 0.0f;
+    float4 diffuseAlbedo = gDiffuseMap.Sample(gsamAnisotropicWrap, pin.TexC) * gDiffuseAlbedo;
 	
-    // Transform to world space.
-    float4 posW = mul(float4(vin.PosL, 1.0f), gWorld);
-    vout.PosW = posW.xyz;
+// ALPHA_TEST SPECIFIC CODE
+	// Discard pixel if texture alpha < 0.1.  We do this test as soon 
+	// as possible in the shader so that we can potentially exit the
+	// shader early, thereby skipping the rest of the shader code.
+	clip(diffuseAlbedo.a - 0.1f);
+// END
+    
+    // Interpolating normal can unnormalize it, so renormalize it.
+    pin.NormalW = normalize(pin.NormalW);
 
-    // Assumes nonuniform scaling; otherwise, need to use inverse-transpose of world matrix.
-    vout.NormalW = mul(vin.NormalL, (float3x3) gWorld);
+    // Vector from point being lit to eye. 
+    float3 toEyeW = gEyePosW - pin.PosW;
+    float distToEye = length(toEyeW);
+    toEyeW /= distToEye; // normalize
 
-    // Transform to homogeneous clip space.
-    vout.PosH = mul(posW, gViewProj);
-	
-	// Output vertex attributes for interpolation across triangle.
-    float4 texC = mul(float4(vin.TexC, 0.0f, 1.0f), gTexTransform);
-    vout.TexC = mul(texC, gMatTransform).xy;
-	
-    return vout;
+    // Light terms.
+    float4 ambient = gAmbientLight * diffuseAlbedo;
+
+    const float shininess = 1.0f - gRoughness;
+    Material mat = { diffuseAlbedo, gFresnelR0, shininess };
+    float3 shadowFactor = 1.0f;
+    float4 directLight = ComputeLighting(gLights, mat, pin.PosW,
+        pin.NormalW, toEyeW, shadowFactor);
+
+    float4 litColor = ambient + directLight;
+
+// FOG SPECIFIC CODE
+    float fogAmount = saturate((distToEye - gFogStart) / gFogRange);
+    litColor = lerp(litColor, gFogColor, fogAmount);
+// END
+
+    // Common convention to take alpha from diffuse albedo.
+    litColor.a = diffuseAlbedo.a;
+
+    return litColor;
 }
-
-
