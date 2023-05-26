@@ -506,14 +506,14 @@ namespace tiny
 		srvDesc.Texture2D.MostDetailedMip = 0;
 		srvDesc.Texture2D.MipLevels = -1;
 		//m_deviceResources->GetDevice()->CreateShaderResourceView(grassTex.Get(), &srvDesc, hDescriptor);
-		m_srvDescriptors.PushBackShaderResourceView(grassTex.Get(), &srvDesc);
+		m_srvDescriptors.EmplaceBackShaderResourceView(grassTex.Get(), &srvDesc);
 
 		// next descriptor
 		//hDescriptor.Offset(1, m_deviceResources->GetCBVSRVUAVDescriptorSize());
 
 		srvDesc.Format = waterTex->GetDesc().Format;
 		//m_deviceResources->GetDevice()->CreateShaderResourceView(waterTex.Get(), &srvDesc, hDescriptor);
-		m_srvDescriptors.PushBackShaderResourceView(waterTex.Get(), &srvDesc);
+		m_srvDescriptors.EmplaceBackShaderResourceView(waterTex.Get(), &srvDesc);
 
 
 		// next descriptor
@@ -521,7 +521,7 @@ namespace tiny
 
 		srvDesc.Format = fenceTex->GetDesc().Format;
 		//m_deviceResources->GetDevice()->CreateShaderResourceView(fenceTex.Get(), &srvDesc, hDescriptor);
-		m_srvDescriptors.PushBackShaderResourceView(fenceTex.Get(), &srvDesc);
+		m_srvDescriptors.EmplaceBackShaderResourceView(fenceTex.Get(), &srvDesc);
 
 	}
 	void TheApp::BuildLandGeometry()

@@ -20,7 +20,7 @@ public:
     ND D3D12_GPU_DESCRIPTOR_HANDLE GetGPUHandleAt(UINT index) const;
     ND inline ID3D12DescriptorHeap* GetRawHeapPointer() const noexcept { return m_descriptorHeapShaderVisible.Get(); }
 
-    unsigned int PushBackShaderResourceView(ID3D12Resource* pResource, const D3D12_SHADER_RESOURCE_VIEW_DESC* desc);
+    unsigned int EmplaceBackShaderResourceView(ID3D12Resource* pResource, const D3D12_SHADER_RESOURCE_VIEW_DESC* desc);
 
 
 
@@ -43,54 +43,3 @@ private:
     D3D12_DESCRIPTOR_HEAP_TYPE m_type;
 };
 }
-
-
-
-/*
-Example wrapper from: https://learn.microsoft.com/en-us/windows/win32/direct3d12/creating-descriptor-heaps
-
-class CDescriptorHeapWrapper
-{
-public:
-    CDescriptorHeapWrapper() { memset(this, 0, sizeof(*this)); }
-
-    HRESULT Create(
-        ID3D12Device* pDevice,
-        D3D12_DESCRIPTOR_HEAP_TYPE Type,
-        UINT NumDescriptors,
-        bool bShaderVisible = false)
-    {
-        D3D12_DESCRIPTOR_HEAP_DESC Desc;
-        Desc.Type = Type;
-        Desc.NumDescriptors = NumDescriptors;
-        Desc.Flags = (bShaderVisible ? D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE : D3D12_DESCRIPTOR_HEAP_FLAG_NONE);
-
-        HRESULT hr = pDevice->CreateDescriptorHeap(&Desc,
-                               __uuidof(ID3D12DescriptorHeap),
-                               (void**)&pDH);
-        if (FAILED(hr)) return hr;
-
-        hCPUHeapStart = pDH->GetCPUDescriptorHandleForHeapStart();
-        hGPUHeapStart = pDH->GetGPUDescriptorHandleForHeapStart();
-
-        HandleIncrementSize = pDevice->GetDescriptorHandleIncrementSize(Desc.Type);
-        return hr;
-    }
-    operator ID3D12DescriptorHeap*() { return pDH; }
-
-    D3D12_CPU_DESCRIPTOR_HANDLE hCPU(UINT index)
-    {
-        return hCPUHeapStart.MakeOffsetted(index,HandleIncrementSize);
-    }
-    D3D12_GPU_DESCRIPTOR_HANDLE hGPU(UINT index)
-    {
-        assert(Desc.Flags&D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE);
-        return hGPUHeapStart.MakeOffsetted(index,HandleIncrementSize);
-    }
-    D3D12_DESCRIPTOR_HEAP_DESC Desc;
-    CComPtr<ID3D12DescriptorHeap> pDH;
-    D3D12_CPU_DESCRIPTOR_HANDLE hCPUHeapStart;
-    D3D12_GPU_DESCRIPTOR_HANDLE hGPUHeapStart;
-    UINT HandleIncrementSize;
-};
-*/
