@@ -18,6 +18,7 @@
 #include "tiny/rendering/Texture.h"
 #include "tiny/rendering/Light.h"
 #include "tiny/rendering/Material.h"
+#include "tiny/rendering/DescriptorVector.h"
 
 #include "tiny/other/Waves.h"
 
@@ -79,7 +80,8 @@ private:
 
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_rootSignature = nullptr;
 
-	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_srvDescriptorHeap = nullptr;
+	DescriptorVector m_srvDescriptors;
+	//Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_srvDescriptorHeap = nullptr;
 
 	std::unordered_map<std::string, std::unique_ptr<MeshGeometry>> m_geometries;
 	std::unordered_map<std::string, std::unique_ptr<Material>> m_materials;

@@ -6,7 +6,8 @@
 namespace tiny
 {
 	TheApp::TheApp(std::shared_ptr<DeviceResources> deviceResources) :
-		m_deviceResources(deviceResources)
+		m_deviceResources(deviceResources),
+		m_srvDescriptors(deviceResources, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)
 	{
 		DirectX::XMMATRIX P = DirectX::XMMatrixPerspectiveFovLH(0.25f * DirectX::XM_PI, m_deviceResources->AspectRatio(), 1.0f, 1000.0f);
 		DirectX::XMStoreFloat4x4(&m_proj, P);
@@ -293,7 +294,9 @@ namespace tiny
 		auto depthStencilView = m_deviceResources->DepthStencilView();
 		commandList->OMSetRenderTargets(1, &currentBackBufferView, true, &depthStencilView);
 
-		ID3D12DescriptorHeap* descriptorHeaps[] = { m_srvDescriptorHeap.Get() };
+		
+		//ID3D12DescriptorHeap* descriptorHeaps[] = { m_srvDescriptorHeap.Get() };
+		ID3D12DescriptorHeap* descriptorHeaps[] = { m_srvDescriptors.GetRawHeapPointer() };
 		commandList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
 
 		commandList->SetGraphicsRootSignature(m_rootSignature.Get());
@@ -346,8 +349,10 @@ namespace tiny
 			commandList->IASetIndexBuffer(&ibv);
 			commandList->IASetPrimitiveTopology(ri->PrimitiveType);
 
-			CD3DX12_GPU_DESCRIPTOR_HANDLE tex(m_srvDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
-			tex.Offset(ri->Mat->DiffuseSrvHeapIndex, m_deviceResources->GetCBVSRVUAVDescriptorSize());
+			//CD3DX12_GPU_DESCRIPTOR_HANDLE tex(m_srvDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
+			//tex.Offset(ri->Mat->DiffuseSrvHeapIndex, m_deviceResources->GetCBVSRVUAVDescriptorSize());
+
+			D3D12_GPU_DESCRIPTOR_HANDLE tex = m_srvDescriptors.GetGPUHandleAt(ri->Mat->DiffuseSrvHeapIndex);
 
 			D3D12_GPU_VIRTUAL_ADDRESS objCBAddress = objectCB->GetGPUVirtualAddress() + ri->ObjCBIndex * objCBByteSize; 
 			D3D12_GPU_VIRTUAL_ADDRESS matCBAddress = matCB->GetGPUVirtualAddress() + ri->Mat->MatCBIndex * matCBByteSize; 
@@ -478,16 +483,17 @@ namespace tiny
 		//
 		// Create the SRV heap.
 		//
-		D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
-		srvHeapDesc.NumDescriptors = 3;
-		srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-		srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-		GFX_THROW_INFO(m_deviceResources->GetDevice()->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&m_srvDescriptorHeap)));
+		// D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
+		// srvHeapDesc.NumDescriptors = 3;
+		// srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+		// srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+		// GFX_THROW_INFO(m_deviceResources->GetDevice()->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&m_srvDescriptorHeap)));
+
 
 		//
 		// Fill out the heap with actual descriptors.
 		//
-		CD3DX12_CPU_DESCRIPTOR_HANDLE hDescriptor(m_srvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
+		//CD3DX12_CPU_DESCRIPTOR_HANDLE hDescriptor(m_srvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
 
 		auto grassTex = m_textures["grassTex"]->Resource;
 		auto waterTex = m_textures["waterTex"]->Resource;
@@ -499,19 +505,24 @@ namespace tiny
 		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
 		srvDesc.Texture2D.MostDetailedMip = 0;
 		srvDesc.Texture2D.MipLevels = -1;
-		m_deviceResources->GetDevice()->CreateShaderResourceView(grassTex.Get(), &srvDesc, hDescriptor);
+		//m_deviceResources->GetDevice()->CreateShaderResourceView(grassTex.Get(), &srvDesc, hDescriptor);
+		m_srvDescriptors.PushBackShaderResourceView(grassTex.Get(), &srvDesc);
 
 		// next descriptor
-		hDescriptor.Offset(1, m_deviceResources->GetCBVSRVUAVDescriptorSize());
+		//hDescriptor.Offset(1, m_deviceResources->GetCBVSRVUAVDescriptorSize());
 
 		srvDesc.Format = waterTex->GetDesc().Format;
-		m_deviceResources->GetDevice()->CreateShaderResourceView(waterTex.Get(), &srvDesc, hDescriptor);
+		//m_deviceResources->GetDevice()->CreateShaderResourceView(waterTex.Get(), &srvDesc, hDescriptor);
+		m_srvDescriptors.PushBackShaderResourceView(waterTex.Get(), &srvDesc);
+
 
 		// next descriptor
-		hDescriptor.Offset(1, m_deviceResources->GetCBVSRVUAVDescriptorSize());
+		//hDescriptor.Offset(1, m_deviceResources->GetCBVSRVUAVDescriptorSize());
 
 		srvDesc.Format = fenceTex->GetDesc().Format;
-		m_deviceResources->GetDevice()->CreateShaderResourceView(fenceTex.Get(), &srvDesc, hDescriptor);
+		//m_deviceResources->GetDevice()->CreateShaderResourceView(fenceTex.Get(), &srvDesc, hDescriptor);
+		m_srvDescriptors.PushBackShaderResourceView(fenceTex.Get(), &srvDesc);
+
 	}
 	void TheApp::BuildLandGeometry()
 	{

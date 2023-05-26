@@ -105,6 +105,9 @@
     <ClInclude Include="src\tiny\utils\Constants.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\tiny\rendering\DescriptorVector.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\tiny-pch.cpp">
@@ -144,6 +147,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\tiny\other\Waves.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\tiny\rendering\DescriptorVector.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
