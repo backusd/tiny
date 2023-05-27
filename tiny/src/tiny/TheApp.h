@@ -80,14 +80,18 @@ private:
 
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_rootSignature = nullptr;
 
-	DescriptorVector m_srvDescriptors;
+	//DescriptorVector m_srvDescriptors;
 	//Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_srvDescriptorHeap = nullptr;
 
 	std::unordered_map<std::string, std::unique_ptr<MeshGeometry>> m_geometries;
 	std::unordered_map<std::string, std::unique_ptr<Material>> m_materials;
-	std::unordered_map<std::string, std::unique_ptr<Texture>> m_textures;
+	//std::unordered_map<std::string, std::unique_ptr<Texture>> m_textures;
 	std::unordered_map<std::string, Microsoft::WRL::ComPtr<ID3D12PipelineState>> m_psos;
 	std::unordered_map<std::string, std::unique_ptr<Shader>> m_shaders;
+
+	// grass, water, fence
+	std::array<std::unique_ptr<Texture>, 3> m_textures;
+
 
 	std::unique_ptr<InputLayout> m_inputLayout = nullptr;
 

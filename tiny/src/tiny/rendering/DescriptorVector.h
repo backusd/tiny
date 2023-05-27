@@ -25,6 +25,9 @@ public:
 
 
 private:
+    DescriptorVector(const DescriptorVector& rhs) = delete;
+    DescriptorVector& operator=(const DescriptorVector& rhs) = delete;
+
     D3D12_CPU_DESCRIPTOR_HANDLE GetCPUCopyableHandleAt(UINT index) const;
     D3D12_GPU_DESCRIPTOR_HANDLE GetGPUCopyableHandleAt(UINT index) const;
     void DoubleTheCapacity();

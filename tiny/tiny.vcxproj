@@ -144,6 +144,7 @@
     <ClCompile Include="src\tiny\rendering\DescriptorVector.cpp" />
     <ClCompile Include="src\tiny\rendering\FrameResource.cpp" />
     <ClCompile Include="src\tiny\rendering\GeometryGenerator.cpp" />
+    <ClCompile Include="src\tiny\rendering\Texture.cpp" />
     <ClCompile Include="src\tiny\TheApp.cpp" />
     <ClCompile Include="src\tiny\utils\DDSTextureLoader.cpp" />
     <ClCompile Include="src\tiny\utils\DxgiInfoManager.cpp" />

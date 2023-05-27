@@ -152,5 +152,8 @@
     <ClCompile Include="src\tiny\rendering\DescriptorVector.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\tiny\rendering\Texture.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>
