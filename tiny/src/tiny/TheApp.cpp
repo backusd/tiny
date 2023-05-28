@@ -797,8 +797,8 @@ namespace tiny
 		water->Name = "water";
 		water->MatCBIndex = 1;
 		water->DiffuseSrvHeapIndex = 1;
-		water->DiffuseAlbedo = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-		water->FresnelR0 = DirectX::XMFLOAT3(0.2f, 0.2f, 0.2f);
+		water->DiffuseAlbedo = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 0.5f);
+		water->FresnelR0 = DirectX::XMFLOAT3(0.1f, 0.1f, 0.1f);
 		water->Roughness = 0.0f;
 
 		auto wirefence = std::make_unique<Material>();
