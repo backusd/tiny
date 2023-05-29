@@ -4,29 +4,12 @@
 #include "tiny/DeviceResources.h"
 #include "tiny/rendering/DescriptorVector.h"
 
+// External methods so that the client can define which textures are included in the app
+extern std::wstring GetTextureFilename(unsigned int index);
+extern std::size_t GetTotalTextureCount();
+
 namespace tiny
 {
-// struct _Texture
-// {
-// 	// Unique material name for lookup.
-// 	std::string Name;
-// 
-// 	std::wstring Filename;
-// 
-// 	Microsoft::WRL::ComPtr<ID3D12Resource> Resource = nullptr;
-// 	Microsoft::WRL::ComPtr<ID3D12Resource> UploadHeap = nullptr;
-// };
-
-//const std::vector<std::string> g_textureFiles;
-
-enum class TEXTURE : int
-{
-	GRASS = 0,
-	WATER1,
-	WIRE_FENCE,
-	Count
-};
-
 struct TextureResources
 {
 	Microsoft::WRL::ComPtr<ID3D12Resource> Resource = nullptr;
@@ -38,17 +21,17 @@ class Texture
 {
 public:	
 	~Texture();
-	ND inline D3D12_GPU_DESCRIPTOR_HANDLE GetGPUHandle() const noexcept { return m_descriptorVector->GetGPUHandleAt(m_index); }
+	ND inline D3D12_GPU_DESCRIPTOR_HANDLE GetGPUHandle() const noexcept { return m_descriptorVector->GetGPUHandleAt(m_indexIntoDescriptorVector); }
 
 private:
-	Texture(DescriptorVector* descriptorVector, unsigned int index, TEXTURE texture);
+	Texture(DescriptorVector* descriptorVector, unsigned int indexIntoDescriptorVector, unsigned int indexIntoAllTextures);
 	Texture(const Texture& rhs) = delete;
 	Texture& operator=(const Texture& rhs) = delete;
 
 
 	DescriptorVector* m_descriptorVector;
-	unsigned int m_index;
-	TEXTURE m_texture;
+	unsigned int m_indexIntoDescriptorVector;
+	unsigned int m_indexIntoAllTextures;
 
 	// Declare TextureManager a friend so it can construct a Texture
 	friend TextureManager;
@@ -59,7 +42,7 @@ class TextureManager
 {
 public:
 	static void Init(std::shared_ptr<DeviceResources> deviceResources) noexcept { Get().InitImpl(deviceResources); }
-	ND static std::unique_ptr<Texture> GetTexture(TEXTURE texture) { return std::move(Get().GetTextureImpl(texture)); }
+	ND static std::unique_ptr<Texture> GetTexture(unsigned int indexIntoAllTextures) { return std::move(Get().GetTextureImpl(indexIntoAllTextures)); }
 	ND static ID3D12DescriptorHeap* GetHeapPointer() noexcept { return Get().GetHeapPointerImpl(); }
 
 private:
@@ -74,19 +57,19 @@ private:
 	}
 
 	void InitImpl(std::shared_ptr<DeviceResources> deviceResources) noexcept;
-	ND std::unique_ptr<Texture> GetTextureImpl(TEXTURE texture);
+	ND std::unique_ptr<Texture> GetTextureImpl(unsigned int indexIntoAllTextures);
 	ND ID3D12DescriptorHeap* GetHeapPointerImpl() noexcept { return m_descriptorVector->GetRawHeapPointer(); }
 
 
 
 
 private:
-	static void ReleaseTexture(TEXTURE texture) noexcept { Get().ReleaseTextureImpl(texture); }
-	void ReleaseTextureImpl(TEXTURE texture) noexcept;
+	static void ReleaseTexture(unsigned int indexIntoAllTextures) noexcept { Get().ReleaseTextureImpl(indexIntoAllTextures); }
+	void ReleaseTextureImpl(unsigned int indexIntoAllTextures) noexcept;
 
 	std::shared_ptr<DeviceResources> m_deviceResources = nullptr;
 
-	// all textures, their refernce count, and their index into the DescriptorVector
+	// all textures, their reference count, and their index into the DescriptorVector
 	std::vector<std::tuple<TextureResources, unsigned int, unsigned int>> m_allTextures;
 
 	// Descriptor Vector to hold all the shader resource views for the Textures

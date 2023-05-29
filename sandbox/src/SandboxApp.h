@@ -3,6 +3,19 @@
 #include <tiny.h>
 
 
+// These methods are required because they are listed as "extern" in tiny Texture.h
+std::wstring GetTextureFilename(unsigned int index);
+std::size_t GetTotalTextureCount();
+
+// This enum class is not required, but serves as a good helper so that we can easily reference textures by int
+enum class TEXTURE : int
+{
+	GRASS		= 0,
+	WATER1		= 1,
+	WIRE_FENCE	= 2,
+	Count		= 3
+};
+
 
 namespace sandbox
 {

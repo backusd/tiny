@@ -2,6 +2,22 @@
 #include "tiny/exception/TinyException.h"
 #include "tiny/utils/Utility.h"
 
+
+static constexpr std::array g_textureFiles{
+    L"src/textures/grass.dds",		// 0
+    L"src/textures/water1.dds",		// 1
+    L"src/textures/WireFence.dds"	// 2
+};
+
+std::wstring GetTextureFilename(unsigned int index)
+{
+    return g_textureFiles[index];
+}
+std::size_t GetTotalTextureCount()
+{
+    return static_cast<std::size_t>(TEXTURE::Count);
+}
+
 namespace sandbox
 {
 Sandbox::Sandbox() :

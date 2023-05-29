@@ -7,7 +7,6 @@ namespace tiny
 {
 	TheApp::TheApp(std::shared_ptr<DeviceResources> deviceResources) :
 		m_deviceResources(deviceResources)
-		//m_srvDescriptors(deviceResources, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)
 	{
 		TextureManager::Init(m_deviceResources);
 
@@ -22,7 +21,6 @@ namespace tiny
 
 		LoadTextures();
 		BuildRootSignature();
-		BuildDescriptorHeaps();
 		BuildShadersAndInputLayout();
 		BuildLandGeometry();
 		BuildWavesGeometry();
@@ -296,9 +294,6 @@ namespace tiny
 		auto depthStencilView = m_deviceResources->DepthStencilView();
 		commandList->OMSetRenderTargets(1, &currentBackBufferView, true, &depthStencilView);
 
-		
-		//ID3D12DescriptorHeap* descriptorHeaps[] = { m_srvDescriptorHeap.Get() };
-		//ID3D12DescriptorHeap* descriptorHeaps[] = { m_srvDescriptors.GetRawHeapPointer() };
 		ID3D12DescriptorHeap* descriptorHeaps[] = { TextureManager::GetHeapPointer() };
 		commandList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
 
@@ -352,11 +347,6 @@ namespace tiny
 			commandList->IASetIndexBuffer(&ibv);
 			commandList->IASetPrimitiveTopology(ri->PrimitiveType);
 
-			//CD3DX12_GPU_DESCRIPTOR_HANDLE tex(m_srvDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
-			//tex.Offset(ri->Mat->DiffuseSrvHeapIndex, m_deviceResources->GetCBVSRVUAVDescriptorSize());
-
-			//D3D12_GPU_DESCRIPTOR_HANDLE tex = m_srvDescriptors.GetGPUHandleAt(ri->Mat->DiffuseSrvHeapIndex);
-
 			D3D12_GPU_DESCRIPTOR_HANDLE tex = m_textures[ri->Mat->DiffuseSrvHeapIndex]->GetGPUHandle();
 
 			D3D12_GPU_VIRTUAL_ADDRESS objCBAddress = objectCB->GetGPUVirtualAddress() + ri->ObjCBIndex * objCBByteSize; 
@@ -383,52 +373,9 @@ namespace tiny
 
 	void TheApp::LoadTextures()
 	{
-		m_textures[0] = std::move(TextureManager::GetTexture(TEXTURE::GRASS));
-		m_textures[1] = std::move(TextureManager::GetTexture(TEXTURE::WATER1));
-		m_textures[2] = std::move(TextureManager::GetTexture(TEXTURE::WIRE_FENCE));
-
-		//auto grassTex = std::make_unique<Texture>();
-		//grassTex->Name = "grassTex";
-		//grassTex->Filename = L"src/textures/grass.dds";
-		//GFX_THROW_INFO(
-		//	DirectX::CreateDDSTextureFromFile12(
-		//		m_deviceResources->GetDevice(),
-		//		m_deviceResources->GetCommandList(), 
-		//		grassTex->Filename.c_str(),
-		//		grassTex->Resource, 
-		//		grassTex->UploadHeap
-		//	)
-		//);
-		//
-		//auto waterTex = std::make_unique<Texture>();
-		//waterTex->Name = "waterTex";
-		//waterTex->Filename = L"src/textures/water1.dds";
-		//GFX_THROW_INFO(
-		//	DirectX::CreateDDSTextureFromFile12(
-		//		m_deviceResources->GetDevice(),
-		//		m_deviceResources->GetCommandList(),
-		//		waterTex->Filename.c_str(),
-		//		waterTex->Resource, 
-		//		waterTex->UploadHeap
-		//	)
-		//);
-		//
-		//auto fenceTex = std::make_unique<Texture>();
-		//fenceTex->Name = "fenceTex";
-		//fenceTex->Filename = L"src/textures/WireFence.dds";
-		//GFX_THROW_INFO(
-		//	DirectX::CreateDDSTextureFromFile12(
-		//		m_deviceResources->GetDevice(),
-		//		m_deviceResources->GetCommandList(),
-		//		fenceTex->Filename.c_str(),
-		//		fenceTex->Resource, 
-		//		fenceTex->UploadHeap
-		//	)
-		//);
-		//
-		//m_textures[grassTex->Name] = std::move(grassTex);
-		//m_textures[waterTex->Name] = std::move(waterTex);
-		//m_textures[fenceTex->Name] = std::move(fenceTex);
+		m_textures[0] = TextureManager::GetTexture(0);
+		m_textures[1] = TextureManager::GetTexture(1);
+		m_textures[2] = TextureManager::GetTexture(2);
 	}
 	void TheApp::BuildRootSignature()
 	{
@@ -486,52 +433,6 @@ namespace tiny
 				{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
 			}
 		);
-	}
-	void TheApp::BuildDescriptorHeaps()
-	{
-		//
-		// Create the SRV heap.
-		//
-		// D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
-		// srvHeapDesc.NumDescriptors = 3;
-		// srvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-		// srvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-		// GFX_THROW_INFO(m_deviceResources->GetDevice()->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&m_srvDescriptorHeap)));
-
-
-		//
-		// Fill out the heap with actual descriptors.
-		//
-		//CD3DX12_CPU_DESCRIPTOR_HANDLE hDescriptor(m_srvDescriptorHeap->GetCPUDescriptorHandleForHeapStart());
-
-//		auto grassTex = m_textures["grassTex"]->Resource;
-//		auto waterTex = m_textures["waterTex"]->Resource;
-//		auto fenceTex = m_textures["fenceTex"]->Resource;
-//
-//		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-//		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-//		srvDesc.Format = grassTex->GetDesc().Format;
-//		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-//		srvDesc.Texture2D.MostDetailedMip = 0;
-//		srvDesc.Texture2D.MipLevels = -1;
-//		//m_deviceResources->GetDevice()->CreateShaderResourceView(grassTex.Get(), &srvDesc, hDescriptor);
-//		m_srvDescriptors.EmplaceBackShaderResourceView(grassTex.Get(), &srvDesc);
-//
-//		// next descriptor
-//		//hDescriptor.Offset(1, m_deviceResources->GetCBVSRVUAVDescriptorSize());
-//
-//		srvDesc.Format = waterTex->GetDesc().Format;
-//		//m_deviceResources->GetDevice()->CreateShaderResourceView(waterTex.Get(), &srvDesc, hDescriptor);
-//		m_srvDescriptors.EmplaceBackShaderResourceView(waterTex.Get(), &srvDesc);
-//
-//
-//		// next descriptor
-//		//hDescriptor.Offset(1, m_deviceResources->GetCBVSRVUAVDescriptorSize());
-//
-//		srvDesc.Format = fenceTex->GetDesc().Format;
-//		//m_deviceResources->GetDevice()->CreateShaderResourceView(fenceTex.Get(), &srvDesc, hDescriptor);
-//		m_srvDescriptors.EmplaceBackShaderResourceView(fenceTex.Get(), &srvDesc);
-
 	}
 	void TheApp::BuildLandGeometry()
 	{

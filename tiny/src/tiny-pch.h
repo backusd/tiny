@@ -14,6 +14,10 @@
 #include <unordered_map>
 #include <cstdint>
 #include <ppl.h>
+#include <utility>
+#include <stdexcept>
+#include <map>
+#include <string_view>
 
 #include <dxgidebug.h> // For DxgiInfoManager
 #include <wrl.h>
