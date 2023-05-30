@@ -80,14 +80,14 @@ void DescriptorVector::DoubleTheCapacity()
     m_capacity *= 2;
 }
 
-D3D12_CPU_DESCRIPTOR_HANDLE DescriptorVector::GetCPUHandleAt(UINT index) const
+D3D12_CPU_DESCRIPTOR_HANDLE DescriptorVector::GetCPUHandleAt(UINT index) const noexcept
 {
     TINY_CORE_ASSERT(index < m_capacity, "Index is too large");
     CD3DX12_CPU_DESCRIPTOR_HANDLE handle(m_cpuHeapStart);
     handle.Offset(index, m_handleIncrementSize);
     return handle;
 }
-D3D12_GPU_DESCRIPTOR_HANDLE DescriptorVector::GetGPUHandleAt(UINT index) const
+D3D12_GPU_DESCRIPTOR_HANDLE DescriptorVector::GetGPUHandleAt(UINT index) const noexcept
 {
     TINY_CORE_ASSERT(index < m_capacity, "Index is too large");
     CD3DX12_GPU_DESCRIPTOR_HANDLE handle(m_gpuHeapStart);
@@ -95,14 +95,14 @@ D3D12_GPU_DESCRIPTOR_HANDLE DescriptorVector::GetGPUHandleAt(UINT index) const
     return handle;
 }
 
-D3D12_CPU_DESCRIPTOR_HANDLE DescriptorVector::GetCPUCopyableHandleAt(UINT index) const
+D3D12_CPU_DESCRIPTOR_HANDLE DescriptorVector::GetCPUCopyableHandleAt(UINT index) const noexcept
 {
     TINY_CORE_ASSERT(index < m_capacity, "Index is too large");
     CD3DX12_CPU_DESCRIPTOR_HANDLE handle(m_descriptorHeapCopyable->GetCPUDescriptorHandleForHeapStart());
     handle.Offset(index, m_handleIncrementSize);
     return handle;
 }
-D3D12_GPU_DESCRIPTOR_HANDLE DescriptorVector::GetGPUCopyableHandleAt(UINT index) const
+D3D12_GPU_DESCRIPTOR_HANDLE DescriptorVector::GetGPUCopyableHandleAt(UINT index) const noexcept
 {
     TINY_CORE_ASSERT(index < m_capacity, "Index is too large");
     CD3DX12_GPU_DESCRIPTOR_HANDLE handle(m_descriptorHeapCopyable->GetGPUDescriptorHandleForHeapStart());

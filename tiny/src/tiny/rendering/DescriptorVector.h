@@ -16,8 +16,8 @@ public:
     ND inline unsigned int Capacity() const noexcept { return m_capacity; }
     ND inline D3D12_DESCRIPTOR_HEAP_TYPE Type() const noexcept { return m_type; }
 
-    ND D3D12_CPU_DESCRIPTOR_HANDLE GetCPUHandleAt(UINT index) const;
-    ND D3D12_GPU_DESCRIPTOR_HANDLE GetGPUHandleAt(UINT index) const;
+    ND D3D12_CPU_DESCRIPTOR_HANDLE GetCPUHandleAt(UINT index) const noexcept;
+    ND D3D12_GPU_DESCRIPTOR_HANDLE GetGPUHandleAt(UINT index) const noexcept;
     ND inline ID3D12DescriptorHeap* GetRawHeapPointer() const noexcept { return m_descriptorHeapShaderVisible.Get(); }
 
     unsigned int EmplaceBackShaderResourceView(ID3D12Resource* pResource, const D3D12_SHADER_RESOURCE_VIEW_DESC* desc);
@@ -28,8 +28,8 @@ private:
     DescriptorVector(const DescriptorVector& rhs) = delete;
     DescriptorVector& operator=(const DescriptorVector& rhs) = delete;
 
-    D3D12_CPU_DESCRIPTOR_HANDLE GetCPUCopyableHandleAt(UINT index) const;
-    D3D12_GPU_DESCRIPTOR_HANDLE GetGPUCopyableHandleAt(UINT index) const;
+    D3D12_CPU_DESCRIPTOR_HANDLE GetCPUCopyableHandleAt(UINT index) const noexcept;
+    D3D12_GPU_DESCRIPTOR_HANDLE GetGPUCopyableHandleAt(UINT index) const noexcept;
     void DoubleTheCapacity();
 
     std::shared_ptr<DeviceResources> m_deviceResources;
