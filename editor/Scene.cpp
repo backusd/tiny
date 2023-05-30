@@ -6,6 +6,21 @@ using namespace winrt::Windows::Foundation;
 using namespace winrt::Windows::System::Threading;
 using namespace winrt::Windows::UI::Core;
 
+static constexpr std::array g_textureFiles{
+    L"src/textures/grass.dds",		// 0
+    L"src/textures/water1.dds",		// 1
+    L"src/textures/WireFence.dds"	// 2
+};
+
+std::wstring GetTextureFilename(unsigned int index)
+{
+    return g_textureFiles[index];
+}
+std::size_t GetTotalTextureCount()
+{
+    return static_cast<std::size_t>(TEXTURE::Count);
+}
+
 
 Scene::Scene(std::shared_ptr<tiny::DeviceResources> deviceResources, ISceneUIControl* uiControl) :
     m_deviceResources(deviceResources),
