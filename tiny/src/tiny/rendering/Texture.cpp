@@ -92,8 +92,8 @@ void TextureManager::ReleaseTextureImpl(unsigned int indexIntoAllTextures) noexc
 		m_allTextures[indexIntoAllTextures].textureResources.Resource = nullptr;
 		m_allTextures[indexIntoAllTextures].textureResources.UploadHeap = nullptr;
 
-		// Good practice to just reset the index as well, although this is not necessary
-		m_allTextures[indexIntoAllTextures].descriptorVectorIndex = 0;
+		// Inform the descriptor vector that the view for this texture can be removed
+		m_descriptorVector->ReleaseAt(m_allTextures[indexIntoAllTextures].descriptorVectorIndex);
 	}
 }
 

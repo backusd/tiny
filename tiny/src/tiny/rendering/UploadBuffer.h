@@ -38,7 +38,7 @@ public:
                 nullptr,
                 IID_PPV_ARGS(&m_uploadBuffer)
             )
-        );
+        );        
 
         GFX_THROW_INFO(
             m_uploadBuffer->Map(0, nullptr, reinterpret_cast<void**>(&m_mappedData))

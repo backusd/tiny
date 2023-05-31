@@ -1,6 +1,7 @@
 #pragma once
 #include "tiny-pch.h"
 #include "tiny/Core.h"
+#include "Texture.h"
 
 
 namespace tiny
@@ -26,7 +27,7 @@ struct Material
 	int MatCBIndex = -1;
 
 	// Index into SRV heap for diffuse texture.
-	int DiffuseSrvHeapIndex = -1;
+	unsigned int DiffuseTextureIndex = 0;
 
 	// Index into SRV heap for normal texture.
 	int NormalSrvHeapIndex = -1;

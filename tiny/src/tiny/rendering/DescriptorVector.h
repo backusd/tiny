@@ -22,7 +22,7 @@ public:
 
     unsigned int EmplaceBackShaderResourceView(ID3D12Resource* pResource, const D3D12_SHADER_RESOURCE_VIEW_DESC* desc);
 
-
+    void ReleaseAt(unsigned int index) noexcept;
 
 private:
     DescriptorVector(const DescriptorVector& rhs) = delete;
@@ -44,5 +44,7 @@ private:
     D3D12_GPU_DESCRIPTOR_HANDLE m_gpuHeapStart;
 
     D3D12_DESCRIPTOR_HEAP_TYPE m_type;
+
+    std::vector<unsigned int> m_releasedIndices;
 };
 }

@@ -13,7 +13,8 @@ enum class TEXTURE : int
 	GRASS		= 0,
 	WATER1		= 1,
 	WIRE_FENCE	= 2,
-	Count		= 3
+	BRICKS		= 3,
+	Count		= 4
 };
 
 

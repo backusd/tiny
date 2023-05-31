@@ -18,6 +18,7 @@
 #include <stdexcept>
 #include <map>
 #include <string_view>
+#include <set>
 
 #include <dxgidebug.h> // For DxgiInfoManager
 #include <wrl.h>

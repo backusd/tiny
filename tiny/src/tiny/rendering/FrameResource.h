@@ -67,7 +67,7 @@ public:
     Microsoft::WRL::ComPtr<ID3D12CommandAllocator> CmdListAlloc;
 
     // We cannot update a cbuffer until the GPU is done processing the commands
-    // that reference it.  So each frame needs their own cbuffers.
+    // that reference it. So each frame needs their own cbuffers.
     std::unique_ptr<UploadBuffer<PassConstants>> PassCB = nullptr;
     std::unique_ptr<UploadBuffer<ObjectConstants>> ObjectCB = nullptr;
     std::unique_ptr<UploadBuffer<MaterialConstants>> MaterialCB = nullptr;

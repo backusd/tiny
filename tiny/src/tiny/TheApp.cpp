@@ -347,7 +347,7 @@ namespace tiny
 			commandList->IASetIndexBuffer(&ibv);
 			commandList->IASetPrimitiveTopology(ri->PrimitiveType);
 
-			D3D12_GPU_DESCRIPTOR_HANDLE tex = m_textures[ri->Mat->DiffuseSrvHeapIndex]->GetGPUHandle();
+			D3D12_GPU_DESCRIPTOR_HANDLE tex = m_textures[ri->Mat->DiffuseTextureIndex]->GetGPUHandle();
 
 			D3D12_GPU_VIRTUAL_ADDRESS objCBAddress = objectCB->GetGPUVirtualAddress() + ri->ObjCBIndex * objCBByteSize; 
 			D3D12_GPU_VIRTUAL_ADDRESS matCBAddress = matCB->GetGPUVirtualAddress() + ri->Mat->MatCBIndex * matCBByteSize; 
@@ -687,7 +687,7 @@ namespace tiny
 		auto grass = std::make_unique<Material>();
 		grass->Name = "grass";
 		grass->MatCBIndex = 0;
-		grass->DiffuseSrvHeapIndex = 0;
+		grass->DiffuseTextureIndex = 0;
 		grass->DiffuseAlbedo = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
 		grass->FresnelR0 = DirectX::XMFLOAT3(0.01f, 0.01f, 0.01f);
 		grass->Roughness = 0.125f;
@@ -697,7 +697,7 @@ namespace tiny
 		auto water = std::make_unique<Material>();
 		water->Name = "water";
 		water->MatCBIndex = 1;
-		water->DiffuseSrvHeapIndex = 1;
+		water->DiffuseTextureIndex = 1;
 		water->DiffuseAlbedo = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 0.5f);
 		water->FresnelR0 = DirectX::XMFLOAT3(0.1f, 0.1f, 0.1f);
 		water->Roughness = 0.0f;
@@ -705,7 +705,7 @@ namespace tiny
 		auto wirefence = std::make_unique<Material>();
 		wirefence->Name = "wirefence";
 		wirefence->MatCBIndex = 2;
-		wirefence->DiffuseSrvHeapIndex = 2;
+		wirefence->DiffuseTextureIndex = 2;
 		wirefence->DiffuseAlbedo = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
 		wirefence->FresnelR0 = DirectX::XMFLOAT3(0.1f, 0.1f, 0.1f);
 		wirefence->Roughness = 0.25f;

@@ -114,6 +114,32 @@ unsigned int DescriptorVector::EmplaceBackShaderResourceView(ID3D12Resource* pRe
 {
     TINY_CORE_ASSERT(m_type == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, "Invalid to create a Shader Resource View if the type is not D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV");
 
+    // If there have been any released descriptors, we can just re-use that memory first
+    if (m_releasedIndices.size() > 0)
+    {
+        // Get the most recently removed index
+        unsigned int index = m_releasedIndices.back();
+
+        // Get the handles to the two descriptor heaps
+        D3D12_CPU_DESCRIPTOR_HANDLE handleToCopyable = GetCPUCopyableHandleAt(index);
+        D3D12_CPU_DESCRIPTOR_HANDLE handleToShaderVisible = GetCPUHandleAt(index);
+
+        // Create the Shader Resource Views in both heaps
+        m_deviceResources->GetDevice()->CreateShaderResourceView(pResource, desc, handleToCopyable);
+        m_deviceResources->GetDevice()->CreateShaderResourceView(pResource, desc, handleToShaderVisible);
+
+        // Remove the index from the list of released indices
+        m_releasedIndices.pop_back();
+
+        // Increment the count
+        ++m_count;
+
+        // return the index 
+        return index;
+    }
+
+    // No released descriptors to re-use, so we append to the end
+    //
     // Increment the count
     ++m_count;
 
@@ -133,6 +159,12 @@ unsigned int DescriptorVector::EmplaceBackShaderResourceView(ID3D12Resource* pRe
     return m_count - 1;
 }
 
-
+void DescriptorVector::ReleaseAt(unsigned int index) noexcept
+{
+    TINY_CORE_ASSERT(index < m_capacity, "Index is too large");
+    TINY_CORE_ASSERT(std::find(m_releasedIndices.begin(), m_releasedIndices.end(), index) == m_releasedIndices.end(), "Index has already been released");
+    m_releasedIndices.push_back(index);
+    --m_count;
+}
 
 }
