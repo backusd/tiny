@@ -8,12 +8,6 @@
 
 namespace tiny
 {
-struct ObjectConstants
-{
-    DirectX::XMFLOAT4X4 World = MathHelper::Identity4x4();
-    DirectX::XMFLOAT4X4 TexTransform = MathHelper::Identity4x4();
-};
-
 struct PassConstants
 {
     DirectX::XMFLOAT4X4 View = MathHelper::Identity4x4();
@@ -69,7 +63,6 @@ public:
     // We cannot update a cbuffer until the GPU is done processing the commands
     // that reference it. So each frame needs their own cbuffers.
     std::unique_ptr<UploadBuffer<PassConstants>> PassCB = nullptr;
-    std::unique_ptr<UploadBuffer<ObjectConstants>> ObjectCB = nullptr;
     std::unique_ptr<UploadBuffer<MaterialConstants>> MaterialCB = nullptr;
 
     // We cannot update a dynamic vertex buffer until the GPU is done processing

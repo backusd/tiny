@@ -9,7 +9,7 @@
 
 namespace tiny
 {
-struct _ObjectConstants
+struct ObjectConstants
 {
 	DirectX::XMFLOAT4X4 World = MathHelper::Identity4x4();
 	DirectX::XMFLOAT4X4 TexTransform = MathHelper::Identity4x4();
@@ -34,9 +34,8 @@ struct RenderItem
 	// NumFramesDirty = gNumFrameResources so that each frame resource gets the update.
 	int NumFramesDirty = gNumFrameResources;
 
-	// Index into GPU constant buffer corresponding to the ObjectCB for this render item.
-	//UINT ObjCBIndex = -1;
-	std::unique_ptr<ConstantBuffer<_ObjectConstants>> m_objectConstantBuffer = nullptr;
+	// Constant Buffer to hold World Matrix and Tex transform
+	std::unique_ptr<ConstantBuffer<ObjectConstants>> ObjectConstantBuffer = nullptr;
 
 	MeshGeometry* Geo = nullptr;
 	Material* Mat = nullptr;
