@@ -2,6 +2,8 @@
 #include "TheApp.h"
 
 
+#include "rendering/ConstantBuffer.h"
+
 
 namespace tiny
 {
@@ -99,26 +101,46 @@ namespace tiny
 	}
 	void TheApp::UpdateObjectCBs(const Timer& timer)
 	{
-		auto currObjectCB = m_currFrameResource->ObjectCB.get();
-		for (auto& e : m_allRitems)
+		for (auto& renderItem : m_allRitems)
 		{
 			// Only update the cbuffer data if the constants have changed.  
 			// This needs to be tracked per frame resource.
-			if (e->NumFramesDirty > 0)
+			if (renderItem->NumFramesDirty > 0)
 			{
-				DirectX::XMMATRIX world = DirectX::XMLoadFloat4x4(&e->World);
-				DirectX::XMMATRIX texTransform = DirectX::XMLoadFloat4x4(&e->TexTransform);
+				DirectX::XMMATRIX world = DirectX::XMLoadFloat4x4(&renderItem->World);
+				DirectX::XMMATRIX texTransform = DirectX::XMLoadFloat4x4(&renderItem->TexTransform);
 
-				ObjectConstants objConstants; 
-				DirectX::XMStoreFloat4x4(&objConstants.World, DirectX::XMMatrixTranspose(world));
-				DirectX::XMStoreFloat4x4(&objConstants.TexTransform, DirectX::XMMatrixTranspose(texTransform));
+				_ObjectConstants objConstants; 
+				DirectX::XMStoreFloat4x4(&objConstants.World, DirectX::XMMatrixTranspose(world)); 
+				DirectX::XMStoreFloat4x4(&objConstants.TexTransform, DirectX::XMMatrixTranspose(texTransform)); 
 
-				currObjectCB->CopyData(e->ObjCBIndex, objConstants);
+				renderItem->m_objectConstantBuffer->CopyData(m_currFrameResourceIndex, objConstants);
 
 				// Next FrameResource need to be updated too.
-				e->NumFramesDirty--;
+				renderItem->NumFramesDirty--;
 			}
 		}
+
+//		auto currObjectCB = m_currFrameResource->ObjectCB.get();
+//		for (auto& e : m_allRitems)
+//		{
+//			// Only update the cbuffer data if the constants have changed.  
+//			// This needs to be tracked per frame resource.
+//			if (e->NumFramesDirty > 0)
+//			{
+//				DirectX::XMMATRIX world = DirectX::XMLoadFloat4x4(&e->World);
+//				DirectX::XMMATRIX texTransform = DirectX::XMLoadFloat4x4(&e->TexTransform);
+//
+//				ObjectConstants objConstants; 
+//				DirectX::XMStoreFloat4x4(&objConstants.World, DirectX::XMMatrixTranspose(world));
+//				DirectX::XMStoreFloat4x4(&objConstants.TexTransform, DirectX::XMMatrixTranspose(texTransform));
+//
+//				currObjectCB->CopyData(e->ObjCBIndex, objConstants);
+//
+//				// Next FrameResource need to be updated too.
+//				e->NumFramesDirty--;
+//			}
+//		}
 	}
 	void TheApp::UpdateMaterialCBs(const Timer& timer)
 	{
@@ -349,7 +371,9 @@ namespace tiny
 
 			D3D12_GPU_DESCRIPTOR_HANDLE tex = m_textures[ri->Mat->DiffuseTextureIndex]->GetGPUHandle();
 
-			D3D12_GPU_VIRTUAL_ADDRESS objCBAddress = objectCB->GetGPUVirtualAddress() + ri->ObjCBIndex * objCBByteSize; 
+			D3D12_GPU_VIRTUAL_ADDRESS objCBAddress = ri->m_objectConstantBuffer->GetGPUVirtualAddress(m_currFrameResourceIndex);
+
+			//D3D12_GPU_VIRTUAL_ADDRESS objCBAddress = objectCB->GetGPUVirtualAddress() + ri->ObjCBIndex * objCBByteSize; 
 			D3D12_GPU_VIRTUAL_ADDRESS matCBAddress = matCB->GetGPUVirtualAddress() + ri->Mat->MatCBIndex * matCBByteSize; 
 
 			commandList->SetGraphicsRootDescriptorTable(0, tex);
@@ -719,7 +743,10 @@ namespace tiny
 		auto wavesRitem = std::make_unique<RenderItem>();
 		wavesRitem->World = MathHelper::Identity4x4();
 		DirectX::XMStoreFloat4x4(&wavesRitem->TexTransform, DirectX::XMMatrixScaling(5.0f, 5.0f, 1.0f));
-		wavesRitem->ObjCBIndex = 0;
+
+		wavesRitem->m_objectConstantBuffer = std::make_unique<ConstantBuffer<_ObjectConstants>>(m_deviceResources);
+		//wavesRitem->ObjCBIndex = 0;
+		
 		wavesRitem->Mat = m_materials["water"].get();
 		wavesRitem->Geo = m_geometries["waterGeo"].get();
 		wavesRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
@@ -734,7 +761,10 @@ namespace tiny
 		auto gridRitem = std::make_unique<RenderItem>();
 		gridRitem->World = MathHelper::Identity4x4();
 		DirectX::XMStoreFloat4x4(&gridRitem->TexTransform, DirectX::XMMatrixScaling(5.0f, 5.0f, 1.0f));
-		gridRitem->ObjCBIndex = 1;
+
+		gridRitem->m_objectConstantBuffer = std::make_unique<ConstantBuffer<_ObjectConstants>>(m_deviceResources);
+		//gridRitem->ObjCBIndex = 1;
+		
 		gridRitem->Mat = m_materials["grass"].get();
 		gridRitem->Geo = m_geometries["landGeo"].get();
 		gridRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
@@ -746,7 +776,10 @@ namespace tiny
 
 		auto boxRitem = std::make_unique<RenderItem>();
 		DirectX::XMStoreFloat4x4(&boxRitem->World, DirectX::XMMatrixTranslation(3.0f, 2.0f, -9.0f));
-		boxRitem->ObjCBIndex = 2;
+
+		boxRitem->m_objectConstantBuffer = std::make_unique<ConstantBuffer<_ObjectConstants>>(m_deviceResources);
+		//boxRitem->ObjCBIndex = 2;
+		
 		boxRitem->Mat = m_materials["wirefence"].get();
 		boxRitem->Geo = m_geometries["boxGeo"].get();
 		boxRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;

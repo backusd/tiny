@@ -5,8 +5,16 @@
 #include "MeshGeometry.h"
 #include "Material.h"
 
+#include "ConstantBuffer.h"
+
 namespace tiny
 {
+struct _ObjectConstants
+{
+	DirectX::XMFLOAT4X4 World = MathHelper::Identity4x4();
+	DirectX::XMFLOAT4X4 TexTransform = MathHelper::Identity4x4();
+};
+
 // Lightweight structure stores parameters to draw a shape.  This will
 // vary from app-to-app.
 struct RenderItem
@@ -27,7 +35,8 @@ struct RenderItem
 	int NumFramesDirty = gNumFrameResources;
 
 	// Index into GPU constant buffer corresponding to the ObjectCB for this render item.
-	UINT ObjCBIndex = -1;
+	//UINT ObjCBIndex = -1;
+	std::unique_ptr<ConstantBuffer<_ObjectConstants>> m_objectConstantBuffer = nullptr;
 
 	MeshGeometry* Geo = nullptr;
 	Material* Mat = nullptr;
