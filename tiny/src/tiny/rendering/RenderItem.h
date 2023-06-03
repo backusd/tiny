@@ -37,8 +37,16 @@ struct RenderItem
 	// Constant Buffer to hold World Matrix and Tex transform
 	std::unique_ptr<ConstantBuffer<ObjectConstants>> ObjectConstantBuffer = nullptr;
 
+	// Hold a unique_ptr to the material for this render item. In theory, multiple render items
+	// could definitely share materials. However, adding the ability to share significantly increases
+	// code complexity and maintenance. And in reality, the majority of objects will be unique and not
+	// share materials.
+	std::unique_ptr<Material> material = nullptr;
+	std::unique_ptr<ConstantBuffer<MaterialConstants>> materialConstantBuffer = nullptr;
+	int materialNumFramesDirty = gNumFrameResources; // <-- Set this as dirty so the constant buffer gets updated immediately
+
 	MeshGeometry* Geo = nullptr;
-	Material* Mat = nullptr;
+	//Material* Mat = nullptr;
 
 	// Primitive topology.
 	D3D12_PRIMITIVE_TOPOLOGY PrimitiveType = D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST;

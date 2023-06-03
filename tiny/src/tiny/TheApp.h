@@ -19,6 +19,7 @@
 #include "tiny/rendering/Light.h"
 #include "tiny/rendering/Material.h"
 #include "tiny/rendering/DescriptorVector.h"
+#include "tiny/rendering/ConstantBuffer.h"
 
 #include "tiny/other/Waves.h"
 
@@ -80,7 +81,7 @@ private:
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_rootSignature = nullptr;
 
 	std::unordered_map<std::string, std::unique_ptr<MeshGeometry>> m_geometries;
-	std::unordered_map<std::string, std::unique_ptr<Material>> m_materials;
+	//std::unordered_map<std::string, std::unique_ptr<Material>> m_materials;
 	std::unordered_map<std::string, Microsoft::WRL::ComPtr<ID3D12PipelineState>> m_psos;
 	std::unordered_map<std::string, std::unique_ptr<Shader>> m_shaders;
 
@@ -103,7 +104,9 @@ private:
 	std::unique_ptr<BlendState> m_blendState = nullptr;
 	std::unique_ptr<DepthStencilState> m_depthStencilState = nullptr;
 
+	// Pass constants and the constant buffer the data is uploaded to
 	PassConstants m_mainPassCB;
+	std::unique_ptr<ConstantBuffer<PassConstants>> m_passConstantsConstantBuffer = nullptr;
 
 	UINT m_passCbvOffset = 0;
 

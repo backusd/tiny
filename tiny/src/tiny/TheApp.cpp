@@ -32,6 +32,8 @@ namespace tiny
 		BuildFrameResources();
 		BuildPSOs();
 
+		m_passConstantsConstantBuffer = std::make_unique<ConstantBuffer<PassConstants>>(m_deviceResources);
+
 		// Execute the initialization commands.
 		GFX_THROW_INFO(m_deviceResources->GetCommandList()->Close());
 		ID3D12CommandList* cmdsLists[] = { m_deviceResources->GetCommandList() };
@@ -123,28 +125,48 @@ namespace tiny
 	}
 	void TheApp::UpdateMaterialCBs(const Timer& timer)
 	{
-		auto currMaterialCB = m_currFrameResource->MaterialCB.get();
-		for (auto& e : m_materials)
+		for (auto& ri : m_allRitems)
 		{
-			// Only update the cbuffer data if the constants have changed.  If the cbuffer
-			// data changes, it needs to be updated for each FrameResource.
-			Material* mat = e.second.get();
-			if (mat->NumFramesDirty > 0)
+			if (ri->materialNumFramesDirty > 0)
 			{
-				DirectX::XMMATRIX matTransform = DirectX::XMLoadFloat4x4(&mat->MatTransform);
+				Material* mat = ri->material.get();
+				DirectX::XMMATRIX matTransform = DirectX::XMLoadFloat4x4(&mat->MatTransform); 
+				 
+				MaterialConstants matConstants; 
+				matConstants.DiffuseAlbedo = mat->DiffuseAlbedo;  
+				matConstants.FresnelR0 = mat->FresnelR0; 
+				matConstants.Roughness = mat->Roughness; 
+				DirectX::XMStoreFloat4x4(&matConstants.MatTransform, DirectX::XMMatrixTranspose(matTransform)); 
 
-				MaterialConstants matConstants;
-				matConstants.DiffuseAlbedo = mat->DiffuseAlbedo;
-				matConstants.FresnelR0 = mat->FresnelR0;
-				matConstants.Roughness = mat->Roughness;
-				DirectX::XMStoreFloat4x4(&matConstants.MatTransform, DirectX::XMMatrixTranspose(matTransform));
-
-				currMaterialCB->CopyData(mat->MatCBIndex, matConstants);
+				ri->materialConstantBuffer->CopyData(m_currFrameResourceIndex, matConstants);
 
 				// Next FrameResource need to be updated too.
-				mat->NumFramesDirty--;
+				ri->materialNumFramesDirty--;
 			}
 		}
+
+//		auto currMaterialCB = m_currFrameResource->MaterialCB.get();
+//		for (auto& e : m_materials)
+//		{
+//			// Only update the cbuffer data if the constants have changed.  If the cbuffer
+//			// data changes, it needs to be updated for each FrameResource.
+//			Material* mat = e.second.get();
+//			if (mat->NumFramesDirty > 0)
+//			{
+//				DirectX::XMMATRIX matTransform = DirectX::XMLoadFloat4x4(&mat->MatTransform);
+//
+//				MaterialConstants matConstants;
+//				matConstants.DiffuseAlbedo = mat->DiffuseAlbedo;
+//				matConstants.FresnelR0 = mat->FresnelR0;
+//				matConstants.Roughness = mat->Roughness;
+//				DirectX::XMStoreFloat4x4(&matConstants.MatTransform, DirectX::XMMatrixTranspose(matTransform));
+//
+//				currMaterialCB->CopyData(mat->MatCBIndex, matConstants);
+//
+//				// Next FrameResource need to be updated too.
+//				mat->NumFramesDirty--;
+//			}
+//		}
 	}
 	void TheApp::UpdateMainPassCB(const Timer& timer)
 	{
@@ -195,8 +217,7 @@ namespace tiny
 		m_mainPassCB.Lights[2].Direction = { 0.0f, -0.707f, -0.707f };
 		m_mainPassCB.Lights[2].Strength = { 0.2f, 0.2f, 0.2f };
 
-		auto currPassCB = m_currFrameResource->PassCB.get();
-		currPassCB->CopyData(0, m_mainPassCB);
+		m_passConstantsConstantBuffer->CopyData(m_currFrameResourceIndex, m_mainPassCB);
 	}
 	void TheApp::UpdateWaves(const Timer& timer)
 	{
@@ -239,8 +260,12 @@ namespace tiny
 	}
 	void TheApp::AnimateMaterials(const Timer& timer)
 	{
+		// TODO: This animation requires us knowing that water is the first render item
+		//		 This should be replaced with a lambda or something belonging to the render item
+		auto waterMat = m_allRitems[0]->material.get();
+
 		// Scroll the water material texture coordinates.
-		auto waterMat = m_materials["water"].get();
+		//auto waterMat = m_materials["water"].get();
 
 		float& tu = waterMat->MatTransform(3, 0);
 		float& tv = waterMat->MatTransform(3, 1);
@@ -258,7 +283,9 @@ namespace tiny
 		waterMat->MatTransform(3, 1) = tv;
 
 		// Material has changed, so need to update cbuffer.
-		waterMat->NumFramesDirty = gNumFrameResources;
+		//waterMat->NumFramesDirty = gNumFrameResources;
+
+		m_allRitems[0]->materialNumFramesDirty = gNumFrameResources;
 	}
 
 	void TheApp::Render()
@@ -300,9 +327,8 @@ namespace tiny
 
 		commandList->SetGraphicsRootSignature(m_rootSignature.Get());
 
-		// Bind per-pass constant buffer.  We only need to do this once per-pass.
-		auto passCB = m_currFrameResource->PassCB->Resource();
-		commandList->SetGraphicsRootConstantBufferView(2, passCB->GetGPUVirtualAddress());
+		// Bind per-pass constant buffer. We only need to do this once per-pass.
+		commandList->SetGraphicsRootConstantBufferView(2, m_passConstantsConstantBuffer->GetGPUVirtualAddress(m_currFrameResourceIndex));
 
 
 		DrawRenderItems(commandList, m_renderItemLayer[(int)RenderLayer::Opaque]);
@@ -331,10 +357,10 @@ namespace tiny
 	}
 	void TheApp::DrawRenderItems(ID3D12GraphicsCommandList* commandList, const std::vector<RenderItem*>& ritems)
 	{
-		UINT objCBByteSize = utility::CalcConstantBufferByteSize(sizeof(ObjectConstants));
-		UINT matCBByteSize = utility::CalcConstantBufferByteSize(sizeof(MaterialConstants));
-
-		auto matCB = m_currFrameResource->MaterialCB->Resource();
+//		UINT objCBByteSize = utility::CalcConstantBufferByteSize(sizeof(ObjectConstants));
+//		UINT matCBByteSize = utility::CalcConstantBufferByteSize(sizeof(MaterialConstants));
+//
+//		auto matCB = m_currFrameResource->MaterialCB->Resource();
 
 		// For each render item...
 		for (size_t i = 0; i < ritems.size(); ++i)
@@ -347,11 +373,11 @@ namespace tiny
 			commandList->IASetIndexBuffer(&ibv);
 			commandList->IASetPrimitiveTopology(ri->PrimitiveType);
 
-			D3D12_GPU_DESCRIPTOR_HANDLE tex = m_textures[ri->Mat->DiffuseTextureIndex]->GetGPUHandle();
+			D3D12_GPU_DESCRIPTOR_HANDLE tex = m_textures[ri->material->DiffuseTextureIndex]->GetGPUHandle();
 
 			D3D12_GPU_VIRTUAL_ADDRESS objCBAddress = ri->ObjectConstantBuffer->GetGPUVirtualAddress(m_currFrameResourceIndex);
-
-			D3D12_GPU_VIRTUAL_ADDRESS matCBAddress = matCB->GetGPUVirtualAddress() + ri->Mat->MatCBIndex * matCBByteSize; 
+			D3D12_GPU_VIRTUAL_ADDRESS matCBAddress = ri->materialConstantBuffer->GetGPUVirtualAddress(m_currFrameResourceIndex);
+			//D3D12_GPU_VIRTUAL_ADDRESS matCBAddress = matCB->GetGPUVirtualAddress() + ri->material->MatCBIndex * matCBByteSize; 
 
 			commandList->SetGraphicsRootDescriptorTable(0, tex);
 			commandList->SetGraphicsRootConstantBufferView(1, objCBAddress); 
@@ -675,9 +701,6 @@ namespace tiny
 			m_frameResources.push_back(
 				std::make_unique<FrameResource>(
 					m_deviceResources->GetDevice(),
-					1, 
-					(UINT)m_allRitems.size(),
-					(UINT)m_materials.size(),
 					m_waves->VertexCount()
 				)
 			);
@@ -685,81 +708,108 @@ namespace tiny
 	}
 	void TheApp::BuildMaterials()
 	{
-		auto grass = std::make_unique<Material>();
-		grass->Name = "grass";
-		grass->MatCBIndex = 0;
-		grass->DiffuseTextureIndex = 0;
-		grass->DiffuseAlbedo = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-		grass->FresnelR0 = DirectX::XMFLOAT3(0.01f, 0.01f, 0.01f);
-		grass->Roughness = 0.125f;
-
-		// This is not a good water material definition, but we do not have all the rendering
-		// tools we need (transparency, environment reflection), so we fake it for now.
-		auto water = std::make_unique<Material>();
-		water->Name = "water";
-		water->MatCBIndex = 1;
-		water->DiffuseTextureIndex = 1;
-		water->DiffuseAlbedo = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 0.5f);
-		water->FresnelR0 = DirectX::XMFLOAT3(0.1f, 0.1f, 0.1f);
-		water->Roughness = 0.0f;
-
-		auto wirefence = std::make_unique<Material>();
-		wirefence->Name = "wirefence";
-		wirefence->MatCBIndex = 2;
-		wirefence->DiffuseTextureIndex = 2;
-		wirefence->DiffuseAlbedo = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-		wirefence->FresnelR0 = DirectX::XMFLOAT3(0.1f, 0.1f, 0.1f);
-		wirefence->Roughness = 0.25f;
-
-		m_materials["grass"] = std::move(grass);
-		m_materials["water"] = std::move(water);
-		m_materials["wirefence"] = std::move(wirefence);
+//		auto grass = std::make_unique<Material>();
+//		grass->Name = "grass";
+//		grass->MatCBIndex = 0;
+//		grass->DiffuseTextureIndex = 0;
+//		grass->DiffuseAlbedo = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+//		grass->FresnelR0 = DirectX::XMFLOAT3(0.01f, 0.01f, 0.01f);
+//		grass->Roughness = 0.125f;
+//
+//		// This is not a good water material definition, but we do not have all the rendering
+//		// tools we need (transparency, environment reflection), so we fake it for now.
+//		auto water = std::make_unique<Material>();
+//		water->Name = "water";
+//		water->MatCBIndex = 1;
+//		water->DiffuseTextureIndex = 1;
+//		water->DiffuseAlbedo = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 0.5f);
+//		water->FresnelR0 = DirectX::XMFLOAT3(0.1f, 0.1f, 0.1f);
+//		water->Roughness = 0.0f;
+//
+//		auto wirefence = std::make_unique<Material>();
+//		wirefence->Name = "wirefence";
+//		wirefence->MatCBIndex = 2;
+//		wirefence->DiffuseTextureIndex = 2;
+//		wirefence->DiffuseAlbedo = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+//		wirefence->FresnelR0 = DirectX::XMFLOAT3(0.1f, 0.1f, 0.1f);
+//		wirefence->Roughness = 0.25f;
+//
+//		m_materials["grass"] = std::move(grass);
+//		m_materials["water"] = std::move(water);
+//`		m_materials["wirefence"] = std::move(wirefence);
 	}
 	void TheApp::BuildRenderItems()
 	{
 		auto wavesRitem = std::make_unique<RenderItem>();
 		wavesRitem->World = MathHelper::Identity4x4();
 		DirectX::XMStoreFloat4x4(&wavesRitem->TexTransform, DirectX::XMMatrixScaling(5.0f, 5.0f, 1.0f));
-
 		wavesRitem->ObjectConstantBuffer = std::make_unique<ConstantBuffer<ObjectConstants>>(m_deviceResources);
-		
-		wavesRitem->Mat = m_materials["water"].get();
+		wavesRitem->material = std::make_unique<Material>();
+		// This is not a good water material definition, but we do not have all the rendering
+		// tools we need (transparency, environment reflection), so we fake it for now.
+		wavesRitem->material->Name = "water";
+		wavesRitem->material->MatCBIndex = 1;
+		wavesRitem->material->DiffuseTextureIndex = 1;
+		wavesRitem->material->DiffuseAlbedo = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 0.5f);
+		wavesRitem->material->FresnelR0 = DirectX::XMFLOAT3(0.1f, 0.1f, 0.1f);
+		wavesRitem->material->Roughness = 0.0f;
 		wavesRitem->Geo = m_geometries["waterGeo"].get();
 		wavesRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 		wavesRitem->IndexCount = wavesRitem->Geo->DrawArgs["grid"].IndexCount;
 		wavesRitem->StartIndexLocation = wavesRitem->Geo->DrawArgs["grid"].StartIndexLocation;
 		wavesRitem->BaseVertexLocation = wavesRitem->Geo->DrawArgs["grid"].BaseVertexLocation;
+		wavesRitem->materialConstantBuffer = std::make_unique<ConstantBuffer<MaterialConstants>>(m_deviceResources);
 
 		m_wavesRitem = wavesRitem.get();
 
 		m_renderItemLayer[(int)RenderLayer::Transparent].push_back(wavesRitem.get());
+
+
+
+
 
 		auto gridRitem = std::make_unique<RenderItem>();
 		gridRitem->World = MathHelper::Identity4x4();
 		DirectX::XMStoreFloat4x4(&gridRitem->TexTransform, DirectX::XMMatrixScaling(5.0f, 5.0f, 1.0f));
 
 		gridRitem->ObjectConstantBuffer = std::make_unique<ConstantBuffer<ObjectConstants>>(m_deviceResources);
-		
-		gridRitem->Mat = m_materials["grass"].get();
+		gridRitem->material = std::make_unique<Material>();
+		gridRitem->material->Name = "grass";
+		gridRitem->material->MatCBIndex = 0;
+		gridRitem->material->DiffuseTextureIndex = 0;
+		gridRitem->material->DiffuseAlbedo = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+		gridRitem->material->FresnelR0 = DirectX::XMFLOAT3(0.01f, 0.01f, 0.01f);
+		gridRitem->material->Roughness = 0.125f;
 		gridRitem->Geo = m_geometries["landGeo"].get();
 		gridRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 		gridRitem->IndexCount = gridRitem->Geo->DrawArgs["grid"].IndexCount;
 		gridRitem->StartIndexLocation = gridRitem->Geo->DrawArgs["grid"].StartIndexLocation;
 		gridRitem->BaseVertexLocation = gridRitem->Geo->DrawArgs["grid"].BaseVertexLocation;
+		gridRitem->materialConstantBuffer = std::make_unique<ConstantBuffer<MaterialConstants>>(m_deviceResources);
 
 		m_renderItemLayer[(int)RenderLayer::Opaque].push_back(gridRitem.get());
+
+
+
+
 
 		auto boxRitem = std::make_unique<RenderItem>();
 		DirectX::XMStoreFloat4x4(&boxRitem->World, DirectX::XMMatrixTranslation(3.0f, 2.0f, -9.0f));
 
 		boxRitem->ObjectConstantBuffer = std::make_unique<ConstantBuffer<ObjectConstants>>(m_deviceResources);
-		
-		boxRitem->Mat = m_materials["wirefence"].get();
+		boxRitem->material = std::make_unique<Material>();
+		boxRitem->material->Name = "wirefence";
+		boxRitem->material->MatCBIndex = 2;
+		boxRitem->material->DiffuseTextureIndex = 2;
+		boxRitem->material->DiffuseAlbedo = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+		boxRitem->material->FresnelR0 = DirectX::XMFLOAT3(0.1f, 0.1f, 0.1f);
+		boxRitem->material->Roughness = 0.25f;
 		boxRitem->Geo = m_geometries["boxGeo"].get();
 		boxRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 		boxRitem->IndexCount = boxRitem->Geo->DrawArgs["box"].IndexCount;
 		boxRitem->StartIndexLocation = boxRitem->Geo->DrawArgs["box"].StartIndexLocation;
 		boxRitem->BaseVertexLocation = boxRitem->Geo->DrawArgs["box"].BaseVertexLocation;
+		boxRitem->materialConstantBuffer = std::make_unique<ConstantBuffer<MaterialConstants>>(m_deviceResources);
 
 		m_renderItemLayer[(int)RenderLayer::AlphaTested].push_back(boxRitem.get());
 
