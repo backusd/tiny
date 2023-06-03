@@ -57,7 +57,6 @@ private:
 	void BuildBoxGeometry();
 	void BuildPSOs();
 	void BuildFrameResources();
-	void BuildMaterials();
 	void BuildRenderItems();
 	void DrawRenderItems(ID3D12GraphicsCommandList* commandList, const std::vector<RenderItem*>& ritems);
 
@@ -81,7 +80,6 @@ private:
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_rootSignature = nullptr;
 
 	std::unordered_map<std::string, std::unique_ptr<MeshGeometry>> m_geometries;
-	//std::unordered_map<std::string, std::unique_ptr<Material>> m_materials;
 	std::unordered_map<std::string, Microsoft::WRL::ComPtr<ID3D12PipelineState>> m_psos;
 	std::unordered_map<std::string, std::unique_ptr<Shader>> m_shaders;
 
