@@ -122,6 +122,7 @@
     <ClInclude Include="src\tiny\rendering\Light.h" />
     <ClInclude Include="src\tiny\rendering\Material.h" />
     <ClInclude Include="src\tiny\rendering\MeshGeometry.h" />
+    <ClInclude Include="src\tiny\rendering\MeshGroup.h" />
     <ClInclude Include="src\tiny\rendering\RasterizerState.h" />
     <ClInclude Include="src\tiny\rendering\RenderItem.h" />
     <ClInclude Include="src\tiny\rendering\Shader.h" />

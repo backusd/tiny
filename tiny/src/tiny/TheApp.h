@@ -20,6 +20,7 @@
 #include "tiny/rendering/Material.h"
 #include "tiny/rendering/DescriptorVector.h"
 #include "tiny/rendering/ConstantBuffer.h"
+#include "tiny/rendering/MeshGroup.h"
 
 #include "tiny/other/Waves.h"
 
@@ -58,7 +59,7 @@ private:
 	void BuildPSOs();
 	void BuildFrameResources();
 	void BuildRenderItems();
-	void DrawRenderItems(ID3D12GraphicsCommandList* commandList, const std::vector<RenderItem*>& ritems);
+	void DrawRenderItems(ID3D12GraphicsCommandList* commandList, const std::vector<RenderItem*>& ritems, MeshGroup* meshGroup);
 
 	void UpdateCamera(const Timer& timer);
 	void UpdateObjectCBs(const Timer& timer);
@@ -79,7 +80,12 @@ private:
 
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_rootSignature = nullptr;
 
-	std::unordered_map<std::string, std::unique_ptr<MeshGeometry>> m_geometries;
+	// Geometry
+	std::unique_ptr<MeshGroupT<Vertex>> m_landMesh = nullptr;
+	std::unique_ptr<MeshGroupT<Vertex>> m_waterMesh = nullptr;
+	std::unique_ptr<MeshGroupT<Vertex>> m_boxMesh = nullptr;
+
+	//std::unordered_map<std::string, std::unique_ptr<MeshGeometry>> m_geometries;
 	std::unordered_map<std::string, Microsoft::WRL::ComPtr<ID3D12PipelineState>> m_psos;
 	std::unordered_map<std::string, std::unique_ptr<Shader>> m_shaders;
 
@@ -93,8 +99,9 @@ private:
 	std::vector<std::unique_ptr<RenderItem>> m_allRitems;
 	RenderItem* m_wavesRitem = nullptr;
 
-	// Render items divided by PSO.
+	// Render items and mesh groups divided by PSO.
 	std::vector<RenderItem*> m_renderItemLayer[(int)RenderLayer::Count];
+	std::array<MeshGroup*, (int)RenderLayer::Count> m_meshGroups;
 	std::unique_ptr<Waves> m_waves;
 
 	// States

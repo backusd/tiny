@@ -66,8 +66,8 @@ namespace utility
         subResourceData.RowPitch = byteSize;
         subResourceData.SlicePitch = subResourceData.RowPitch;
 
-        // Schedule to copy the data to the default buffer resource.  At a high level, the helper function UpdateSubresources
-        // will copy the CPU memory into the intermediate upload heap.  Then, using ID3D12CommandList::CopySubresourceRegion,
+        // Schedule to copy the data to the default buffer resource. At a high level, the helper function UpdateSubresources
+        // will copy the CPU memory into the intermediate upload heap. Then, using ID3D12CommandList::CopySubresourceRegion,
         // the intermediate upload heap data will be copied to mBuffer.
         auto _b = CD3DX12_RESOURCE_BARRIER::Transition(defaultBuffer.Get(),
             D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST);

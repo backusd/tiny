@@ -114,6 +114,9 @@
     <ClInclude Include="src\tiny\rendering\ConstantBuffer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\tiny\rendering\MeshGroup.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\tiny-pch.cpp">

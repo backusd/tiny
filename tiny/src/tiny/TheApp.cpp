@@ -229,7 +229,7 @@ namespace tiny
 		}
 
 		// Set the dynamic VB of the wave renderitem to the current frame VB.
-		m_wavesRitem->Geo->VertexBufferGPU = currWavesVB->Resource();
+		//m_wavesRitem->Geo->VertexBufferGPU = currWavesVB->Resource();
 	}
 	void TheApp::AnimateMaterials(const Timer& timer)
 	{
@@ -301,13 +301,13 @@ namespace tiny
 		commandList->SetGraphicsRootConstantBufferView(2, m_passConstantsConstantBuffer->GetGPUVirtualAddress(m_currFrameResourceIndex));
 
 
-		DrawRenderItems(commandList, m_renderItemLayer[(int)RenderLayer::Opaque]);
+		DrawRenderItems(commandList, m_renderItemLayer[(int)RenderLayer::Opaque], m_meshGroups[(int)RenderLayer::Opaque]);
 
 		commandList->SetPipelineState(m_psos["alphaTested"].Get());
-		DrawRenderItems(commandList, m_renderItemLayer[(int)RenderLayer::AlphaTested]);
+		DrawRenderItems(commandList, m_renderItemLayer[(int)RenderLayer::AlphaTested], m_meshGroups[(int)RenderLayer::AlphaTested]);
 
 		commandList->SetPipelineState(m_psos["transparent"].Get());
-		DrawRenderItems(commandList, m_renderItemLayer[(int)RenderLayer::Transparent]);
+		DrawRenderItems(commandList, m_renderItemLayer[(int)RenderLayer::Transparent], m_meshGroups[(int)RenderLayer::Transparent]);
 
 
 		// Indicate a state transition on the resource usage.
@@ -325,17 +325,20 @@ namespace tiny
 		ID3D12CommandList* cmdsLists[] = { commandList };
 		m_deviceResources->GetCommandQueue()->ExecuteCommandLists(_countof(cmdsLists), cmdsLists);
 	}
-	void TheApp::DrawRenderItems(ID3D12GraphicsCommandList* commandList, const std::vector<RenderItem*>& ritems)
+	void TheApp::DrawRenderItems(ID3D12GraphicsCommandList* commandList, const std::vector<RenderItem*>& ritems, MeshGroup* meshGroup)
 	{
+		// Bind the mesh group
+		meshGroup->Bind(commandList);
+
 		// For each render item...
 		for (size_t i = 0; i < ritems.size(); ++i)
 		{
 			auto ri = ritems[i];
 
-			D3D12_VERTEX_BUFFER_VIEW vbv = ri->Geo->VertexBufferView();
-			commandList->IASetVertexBuffers(0, 1, &vbv);
-			D3D12_INDEX_BUFFER_VIEW ibv = ri->Geo->IndexBufferView();
-			commandList->IASetIndexBuffer(&ibv);
+			//D3D12_VERTEX_BUFFER_VIEW vbv = ri->Geo->VertexBufferView();
+			//commandList->IASetVertexBuffers(0, 1, &vbv);
+			//D3D12_INDEX_BUFFER_VIEW ibv = ri->Geo->IndexBufferView();
+			//commandList->IASetIndexBuffer(&ibv);
 			commandList->IASetPrimitiveTopology(ri->PrimitiveType);
 
 			D3D12_GPU_DESCRIPTOR_HANDLE tex = m_textures[ri->texture]->GetGPUHandle();
@@ -347,7 +350,8 @@ namespace tiny
 			commandList->SetGraphicsRootConstantBufferView(1, objCBAddress); 
 			commandList->SetGraphicsRootConstantBufferView(3, matCBAddress); 
 
-			commandList->DrawIndexedInstanced(ri->IndexCount, 1, ri->StartIndexLocation, ri->BaseVertexLocation, 0);
+			SubmeshGeometry mesh = meshGroup->GetSubmesh(ri->submeshIndex);
+			commandList->DrawIndexedInstanced(mesh.IndexCount, 1, mesh.StartIndexLocation, mesh.BaseVertexLocation, 0);
 		}
 	}
 	void TheApp::Present() 
@@ -446,39 +450,46 @@ namespace tiny
 			vertices[i].TexC = grid.Vertices[i].TexC; 
 		}
 
-		const UINT vbByteSize = (UINT)vertices.size() * sizeof(Vertex);
-
 		std::vector<std::uint16_t> indices = grid.GetIndices16();
-		const UINT ibByteSize = (UINT)indices.size() * sizeof(std::uint16_t);
 
-		auto geo = std::make_unique<MeshGeometry>();
-		geo->Name = "landGeo";
 
-		GFX_THROW_INFO(D3DCreateBlob(vbByteSize, &geo->VertexBufferCPU));
-		CopyMemory(geo->VertexBufferCPU->GetBufferPointer(), vertices.data(), vbByteSize);
+		m_landMesh = std::make_unique<MeshGroupT<Vertex>>(m_deviceResources);
+		m_landMesh->AddMesh(vertices, indices);
 
-		GFX_THROW_INFO(D3DCreateBlob(ibByteSize, &geo->IndexBufferCPU));
-		CopyMemory(geo->IndexBufferCPU->GetBufferPointer(), indices.data(), ibByteSize);
+		// The land will be rendered in the "opaque" layer
+		m_meshGroups[(int)RenderLayer::Opaque] = m_landMesh.get();
 
-		geo->VertexBufferGPU = utility::CreateDefaultBuffer(m_deviceResources->GetDevice(),
-			m_deviceResources->GetCommandList(), vertices.data(), vbByteSize, geo->VertexBufferUploader);
-
-		geo->IndexBufferGPU = utility::CreateDefaultBuffer(m_deviceResources->GetDevice(),
-			m_deviceResources->GetCommandList(), indices.data(), ibByteSize, geo->IndexBufferUploader);
-
-		geo->VertexByteStride = sizeof(Vertex);
-		geo->VertexBufferByteSize = vbByteSize;
-		geo->IndexFormat = DXGI_FORMAT_R16_UINT;
-		geo->IndexBufferByteSize = ibByteSize;
-
-		SubmeshGeometry submesh;
-		submesh.IndexCount = (UINT)indices.size();
-		submesh.StartIndexLocation = 0;
-		submesh.BaseVertexLocation = 0;
-
-		geo->DrawArgs["grid"] = submesh;
-
-		m_geometries["landGeo"] = std::move(geo);
+//		const UINT vbByteSize = (UINT)vertices.size() * sizeof(Vertex);
+//		const UINT ibByteSize = (UINT)indices.size() * sizeof(std::uint16_t);
+//
+//		auto geo = std::make_unique<MeshGeometry>();
+//		geo->Name = "landGeo";
+//
+//		GFX_THROW_INFO(D3DCreateBlob(vbByteSize, &geo->VertexBufferCPU));
+//		CopyMemory(geo->VertexBufferCPU->GetBufferPointer(), vertices.data(), vbByteSize);
+//
+//		GFX_THROW_INFO(D3DCreateBlob(ibByteSize, &geo->IndexBufferCPU));
+//		CopyMemory(geo->IndexBufferCPU->GetBufferPointer(), indices.data(), ibByteSize);
+//
+//		geo->VertexBufferGPU = utility::CreateDefaultBuffer(m_deviceResources->GetDevice(),
+//			m_deviceResources->GetCommandList(), vertices.data(), vbByteSize, geo->VertexBufferUploader);
+//
+//		geo->IndexBufferGPU = utility::CreateDefaultBuffer(m_deviceResources->GetDevice(),
+//			m_deviceResources->GetCommandList(), indices.data(), ibByteSize, geo->IndexBufferUploader);
+//
+//		geo->VertexByteStride = sizeof(Vertex);
+//		geo->VertexBufferByteSize = vbByteSize;
+//		geo->IndexFormat = DXGI_FORMAT_R16_UINT;
+//		geo->IndexBufferByteSize = ibByteSize;
+//
+//		SubmeshGeometry submesh;
+//		submesh.IndexCount = (UINT)indices.size();
+//		submesh.StartIndexLocation = 0;
+//		submesh.BaseVertexLocation = 0;
+//
+//		geo->DrawArgs["grid"] = submesh;
+//
+//		m_geometries["landGeo"] = std::move(geo);
 	}
 	void TheApp::BuildWavesGeometry()
 	{
@@ -505,35 +516,57 @@ namespace tiny
 			}
 		}
 
-		UINT vbByteSize = m_waves->VertexCount() * sizeof(Vertex);
-		UINT ibByteSize = (UINT)indices.size() * sizeof(std::uint16_t);
+		std::vector<Vertex> vertices(m_waves->VertexCount());
+		for (int i = 0; i < m_waves->VertexCount(); ++i)
+		{
+			Vertex v;
 
-		auto geo = std::make_unique<MeshGeometry>();
-		geo->Name = "waterGeo";
+			v.Pos = m_waves->Position(i);
+			v.Normal = m_waves->Normal(i);
 
-		// Set dynamically.
-		geo->VertexBufferCPU = nullptr;
-		geo->VertexBufferGPU = nullptr;
+			// Derive tex-coords from position by 
+			// mapping [-w/2,w/2] --> [0,1]
+			v.TexC.x = 0.5f + v.Pos.x / m_waves->Width();
+			v.TexC.y = 0.5f - v.Pos.z / m_waves->Depth();
 
-		GFX_THROW_INFO(D3DCreateBlob(ibByteSize, &geo->IndexBufferCPU));
-		CopyMemory(geo->IndexBufferCPU->GetBufferPointer(), indices.data(), ibByteSize);
+			vertices.push_back(v);
+		}
 
-		geo->IndexBufferGPU = utility::CreateDefaultBuffer(m_deviceResources->GetDevice(),
-			m_deviceResources->GetCommandList(), indices.data(), ibByteSize, geo->IndexBufferUploader);
+		m_waterMesh = std::make_unique<MeshGroupT<Vertex>>(m_deviceResources);
+		m_waterMesh->AddMesh(vertices, indices);
 
-		geo->VertexByteStride = sizeof(Vertex);
-		geo->VertexBufferByteSize = vbByteSize;
-		geo->IndexFormat = DXGI_FORMAT_R16_UINT;
-		geo->IndexBufferByteSize = ibByteSize;
+		// Waves will be rendered in the "transparent" layer
+		m_meshGroups[(int)RenderLayer::Transparent] = m_waterMesh.get();
 
-		SubmeshGeometry submesh;
-		submesh.IndexCount = (UINT)indices.size();
-		submesh.StartIndexLocation = 0;
-		submesh.BaseVertexLocation = 0;
-
-		geo->DrawArgs["grid"] = submesh;
-
-		m_geometries["waterGeo"] = std::move(geo);
+//		UINT vbByteSize = m_waves->VertexCount() * sizeof(Vertex);
+//		UINT ibByteSize = (UINT)indices.size() * sizeof(std::uint16_t);
+//
+//		auto geo = std::make_unique<MeshGeometry>();
+//		geo->Name = "waterGeo";
+//
+//		// Set dynamically.
+//		geo->VertexBufferCPU = nullptr;
+//		geo->VertexBufferGPU = nullptr;
+//
+//		GFX_THROW_INFO(D3DCreateBlob(ibByteSize, &geo->IndexBufferCPU));
+//		CopyMemory(geo->IndexBufferCPU->GetBufferPointer(), indices.data(), ibByteSize);
+//
+//		geo->IndexBufferGPU = utility::CreateDefaultBuffer(m_deviceResources->GetDevice(),
+//			m_deviceResources->GetCommandList(), indices.data(), ibByteSize, geo->IndexBufferUploader);
+//
+//		geo->VertexByteStride = sizeof(Vertex);
+//		geo->VertexBufferByteSize = vbByteSize;
+//		geo->IndexFormat = DXGI_FORMAT_R16_UINT;
+//		geo->IndexBufferByteSize = ibByteSize;
+//
+//		SubmeshGeometry submesh;
+//		submesh.IndexCount = (UINT)indices.size();
+//		submesh.StartIndexLocation = 0;
+//		submesh.BaseVertexLocation = 0;
+//
+//		geo->DrawArgs["grid"] = submesh;
+//
+//		m_geometries["waterGeo"] = std::move(geo);
 	}
 	void TheApp::BuildBoxGeometry()
 	{
@@ -549,39 +582,47 @@ namespace tiny
 			vertices[i].TexC = box.Vertices[i].TexC;
 		}
 
-		const UINT vbByteSize = (UINT)vertices.size() * sizeof(Vertex);
-
 		std::vector<std::uint16_t> indices = box.GetIndices16();
-		const UINT ibByteSize = (UINT)indices.size() * sizeof(std::uint16_t);
 
-		auto geo = std::make_unique<MeshGeometry>();
-		geo->Name = "boxGeo";
 
-		GFX_THROW_INFO(D3DCreateBlob(vbByteSize, &geo->VertexBufferCPU));
-		CopyMemory(geo->VertexBufferCPU->GetBufferPointer(), vertices.data(), vbByteSize);
+		m_boxMesh = std::make_unique<MeshGroupT<Vertex>>(m_deviceResources);
+		m_boxMesh->AddMesh(vertices, indices);
 
-		GFX_THROW_INFO(D3DCreateBlob(ibByteSize, &geo->IndexBufferCPU));
-		CopyMemory(geo->IndexBufferCPU->GetBufferPointer(), indices.data(), ibByteSize);
+		// The box will be rendered in the "alpha tested" layer
+		m_meshGroups[(int)RenderLayer::AlphaTested] = m_boxMesh.get();
 
-		geo->VertexBufferGPU = utility::CreateDefaultBuffer(m_deviceResources->GetDevice(),
-			m_deviceResources->GetCommandList(), vertices.data(), vbByteSize, geo->VertexBufferUploader);
 
-		geo->IndexBufferGPU = utility::CreateDefaultBuffer(m_deviceResources->GetDevice(),
-			m_deviceResources->GetCommandList(), indices.data(), ibByteSize, geo->IndexBufferUploader);
-
-		geo->VertexByteStride = sizeof(Vertex);
-		geo->VertexBufferByteSize = vbByteSize;
-		geo->IndexFormat = DXGI_FORMAT_R16_UINT;
-		geo->IndexBufferByteSize = ibByteSize;
-
-		SubmeshGeometry submesh;
-		submesh.IndexCount = (UINT)indices.size();
-		submesh.StartIndexLocation = 0;
-		submesh.BaseVertexLocation = 0;
-
-		geo->DrawArgs["box"] = submesh;
-
-		m_geometries["boxGeo"] = std::move(geo);
+//		const UINT vbByteSize = (UINT)vertices.size() * sizeof(Vertex);
+//		const UINT ibByteSize = (UINT)indices.size() * sizeof(std::uint16_t);
+//
+//		auto geo = std::make_unique<MeshGeometry>();
+//		geo->Name = "boxGeo";
+//
+//		GFX_THROW_INFO(D3DCreateBlob(vbByteSize, &geo->VertexBufferCPU));
+//		CopyMemory(geo->VertexBufferCPU->GetBufferPointer(), vertices.data(), vbByteSize);
+//
+//		GFX_THROW_INFO(D3DCreateBlob(ibByteSize, &geo->IndexBufferCPU));
+//		CopyMemory(geo->IndexBufferCPU->GetBufferPointer(), indices.data(), ibByteSize);
+//
+//		geo->VertexBufferGPU = utility::CreateDefaultBuffer(m_deviceResources->GetDevice(),
+//			m_deviceResources->GetCommandList(), vertices.data(), vbByteSize, geo->VertexBufferUploader);
+//
+//		geo->IndexBufferGPU = utility::CreateDefaultBuffer(m_deviceResources->GetDevice(),
+//			m_deviceResources->GetCommandList(), indices.data(), ibByteSize, geo->IndexBufferUploader);
+//
+//		geo->VertexByteStride = sizeof(Vertex);
+//		geo->VertexBufferByteSize = vbByteSize;
+//		geo->IndexFormat = DXGI_FORMAT_R16_UINT;
+//		geo->IndexBufferByteSize = ibByteSize;
+//
+//		SubmeshGeometry submesh;
+//		submesh.IndexCount = (UINT)indices.size();
+//		submesh.StartIndexLocation = 0;
+//		submesh.BaseVertexLocation = 0;
+//
+//		geo->DrawArgs["box"] = submesh;
+//
+//		m_geometries["boxGeo"] = std::move(geo);
 	}
 	void TheApp::BuildPSOs()
 	{
@@ -683,11 +724,12 @@ namespace tiny
 		wavesRitem->material->FresnelR0 = DirectX::XMFLOAT3(0.1f, 0.1f, 0.1f);
 		wavesRitem->material->Roughness = 0.0f;
 		wavesRitem->texture = 1;
-		wavesRitem->Geo = m_geometries["waterGeo"].get();
+		wavesRitem->submeshIndex = 0;
+		//wavesRitem->Geo = m_geometries["waterGeo"].get();
 		wavesRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-		wavesRitem->IndexCount = wavesRitem->Geo->DrawArgs["grid"].IndexCount;
-		wavesRitem->StartIndexLocation = wavesRitem->Geo->DrawArgs["grid"].StartIndexLocation;
-		wavesRitem->BaseVertexLocation = wavesRitem->Geo->DrawArgs["grid"].BaseVertexLocation;
+		//wavesRitem->IndexCount = wavesRitem->Geo->DrawArgs["grid"].IndexCount;
+		//wavesRitem->StartIndexLocation = wavesRitem->Geo->DrawArgs["grid"].StartIndexLocation;
+		//wavesRitem->BaseVertexLocation = wavesRitem->Geo->DrawArgs["grid"].BaseVertexLocation;
 		wavesRitem->materialConstantBuffer = std::make_unique<ConstantBuffer<Material>>(m_deviceResources);
 
 		m_wavesRitem = wavesRitem.get();
@@ -708,11 +750,12 @@ namespace tiny
 		gridRitem->material->FresnelR0 = DirectX::XMFLOAT3(0.01f, 0.01f, 0.01f);
 		gridRitem->material->Roughness = 0.125f;
 		gridRitem->texture = 0;
-		gridRitem->Geo = m_geometries["landGeo"].get();
+		gridRitem->submeshIndex = 0;
+		//gridRitem->Geo = m_geometries["landGeo"].get();
 		gridRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-		gridRitem->IndexCount = gridRitem->Geo->DrawArgs["grid"].IndexCount;
-		gridRitem->StartIndexLocation = gridRitem->Geo->DrawArgs["grid"].StartIndexLocation;
-		gridRitem->BaseVertexLocation = gridRitem->Geo->DrawArgs["grid"].BaseVertexLocation;
+		//gridRitem->IndexCount = gridRitem->Geo->DrawArgs["grid"].IndexCount;
+		//gridRitem->StartIndexLocation = gridRitem->Geo->DrawArgs["grid"].StartIndexLocation;
+		//gridRitem->BaseVertexLocation = gridRitem->Geo->DrawArgs["grid"].BaseVertexLocation;
 		gridRitem->materialConstantBuffer = std::make_unique<ConstantBuffer<Material>>(m_deviceResources);
 
 		m_renderItemLayer[(int)RenderLayer::Opaque].push_back(gridRitem.get());
@@ -730,11 +773,12 @@ namespace tiny
 		boxRitem->material->FresnelR0 = DirectX::XMFLOAT3(0.1f, 0.1f, 0.1f);
 		boxRitem->material->Roughness = 0.25f;
 		boxRitem->texture = 2;
-		boxRitem->Geo = m_geometries["boxGeo"].get();
+		boxRitem->submeshIndex = 0;
+		//boxRitem->Geo = m_geometries["boxGeo"].get();
 		boxRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-		boxRitem->IndexCount = boxRitem->Geo->DrawArgs["box"].IndexCount;
-		boxRitem->StartIndexLocation = boxRitem->Geo->DrawArgs["box"].StartIndexLocation;
-		boxRitem->BaseVertexLocation = boxRitem->Geo->DrawArgs["box"].BaseVertexLocation;
+		//boxRitem->IndexCount = boxRitem->Geo->DrawArgs["box"].IndexCount;
+		//boxRitem->StartIndexLocation = boxRitem->Geo->DrawArgs["box"].StartIndexLocation;
+		//boxRitem->BaseVertexLocation = boxRitem->Geo->DrawArgs["box"].BaseVertexLocation;
 		boxRitem->materialConstantBuffer = std::make_unique<ConstantBuffer<Material>>(m_deviceResources);
 
 		m_renderItemLayer[(int)RenderLayer::AlphaTested].push_back(boxRitem.get());
