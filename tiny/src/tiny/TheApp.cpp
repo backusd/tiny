@@ -1,37 +1,40 @@
 #include "tiny-pch.h"
 #include "TheApp.h"
-
-
-#include "rendering/ConstantBuffer.h"
+#include "Engine.h"
 
 
 namespace tiny
 {
 	TheApp::TheApp(std::shared_ptr<DeviceResources> deviceResources) :
-		m_deviceResources(deviceResources)
+		m_deviceResources(deviceResources),
+		m_mainRenderPass()
 	{
 		TextureManager::Init(m_deviceResources);
-
-		DirectX::XMMATRIX P = DirectX::XMMatrixPerspectiveFovLH(0.25f * DirectX::XM_PI, m_deviceResources->AspectRatio(), 1.0f, 1000.0f);
-		DirectX::XMStoreFloat4x4(&m_proj, P);
+		Engine::Init(m_deviceResources);
 
 		GFX_THROW_INFO(
 			m_deviceResources->GetCommandList()->Reset(m_deviceResources->GetCommandAllocator(), nullptr)
 		);
 
-		m_waves = std::make_unique<Waves>(128, 128, 1.0f, 0.03f, 4.0f, 0.2f);
-
 		LoadTextures();
-		BuildRootSignature();
-		BuildShadersAndInputLayout();
-		BuildLandGeometry();
-		BuildWavesGeometry();
-		BuildBoxGeometry();
-		BuildRenderItems();
-		BuildFrameResources();
-		BuildPSOs();
+		BuildMainRenderPass();
 
-		m_passConstantsConstantBuffer = std::make_unique<ConstantBuffer<PassConstants>>(m_deviceResources);
+		DirectX::XMMATRIX P = DirectX::XMMatrixPerspectiveFovLH(0.25f * DirectX::XM_PI, m_deviceResources->AspectRatio(), 1.0f, 1000.0f);
+		DirectX::XMStoreFloat4x4(&m_proj, P);
+
+//		m_waves = std::make_unique<Waves>(128, 128, 1.0f, 0.03f, 4.0f, 0.2f);
+//
+//		LoadTextures();
+//		BuildRootSignature();
+//		BuildShadersAndInputLayout();
+//		BuildLandGeometry();
+//		BuildWavesGeometry();
+//		BuildBoxGeometry();
+//		BuildRenderItems();
+//		BuildFrameResources();
+//		BuildPSOs();
+//
+//		m_passConstantsConstantBuffer = std::make_unique<ConstantBuffer<PassConstants>>(m_deviceResources);
 
 		// Execute the initialization commands.
 		GFX_THROW_INFO(m_deviceResources->GetCommandList()->Close());
@@ -48,41 +51,271 @@ namespace tiny
 	}
 	void TheApp::SetViewport(float top, float left, float height, float width) noexcept
 	{
-		m_viewport.TopLeftX = left;
-		m_viewport.TopLeftY = top;
-		m_viewport.Height = height;
-		m_viewport.Width = width;
-		m_viewport.MinDepth = 0.0f;
-		m_viewport.MaxDepth = 1.0f;
+		D3D12_VIEWPORT vp;
+		vp.TopLeftX = left;
+		vp.TopLeftY = top;
+		vp.Height = height;
+		vp.Width = width;
+		vp.MinDepth = 0.0f;
+		vp.MaxDepth = 1.0f;
+		Engine::SetViewport(vp);
 
-		m_scissorRect = { 0, 0, static_cast<int>(width), static_cast<int>(height) };
+		D3D12_RECT scissorRect = { 0, 0, static_cast<int>(width), static_cast<int>(height) };
+		Engine::SetScissorRect(scissorRect);
 	}
+
+	void TheApp::LoadTextures()
+	{
+		m_textures[0] = TextureManager::GetTexture(0);
+		m_textures[1] = TextureManager::GetTexture(1);
+		m_textures[2] = TextureManager::GetTexture(2);
+	}
+	void TheApp::BuildMainRenderPass()
+	{
+		// Root Signature --------------------------------------------------------------------------------
+		CD3DX12_DESCRIPTOR_RANGE texTable; 
+		texTable.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0); 
+
+		// Root parameter can be a table, root descriptor or root constants.
+		CD3DX12_ROOT_PARAMETER slotRootParameter[4]; 
+
+		// Perfomance TIP: Order from most frequent to least frequent.
+		slotRootParameter[0].InitAsDescriptorTable(1, &texTable, D3D12_SHADER_VISIBILITY_PIXEL); 
+		slotRootParameter[1].InitAsConstantBufferView(0); // ObjectCB
+		slotRootParameter[2].InitAsConstantBufferView(1); // PassConstants
+		slotRootParameter[3].InitAsConstantBufferView(2); // MaterialCB
+
+		auto staticSamplers = GetStaticSamplers(); 
+
+		// A root signature is an array of root parameters.
+		CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(4, slotRootParameter, 
+			(UINT)staticSamplers.size(), staticSamplers.data(), 
+			D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT); 
+
+		m_mainRenderPass.RootSignature = std::make_shared<RootSignature>(m_deviceResources, rootSigDesc);
+
+		
+		// Per-pass constants -----------------------------------------------------------------------------
+		m_mainRenderPassConstantsCB = std::make_unique<ConstantBufferT<PassConstants>>(m_deviceResources);
+
+		// Currently using root parameter index #2 for the per-pass constants
+		auto& renderPassCBV = m_mainRenderPass.ConstantBufferViews.emplace_back(2, m_mainRenderPassConstantsCB.get());
+		renderPassCBV.Update = [this](const Timer& timer, RenderItem* ri, int frameIndex)
+		{
+			DirectX::XMMATRIX view = DirectX::XMLoadFloat4x4(&m_view); 
+			DirectX::XMMATRIX proj = DirectX::XMLoadFloat4x4(&m_proj); 
+
+			DirectX::XMMATRIX viewProj = DirectX::XMMatrixMultiply(view, proj); 
+
+			DirectX::XMVECTOR _det = DirectX::XMMatrixDeterminant(view); 
+			DirectX::XMMATRIX invView = DirectX::XMMatrixInverse(&_det, view); 
+
+			_det = DirectX::XMMatrixDeterminant(proj); 
+			DirectX::XMMATRIX invProj = DirectX::XMMatrixInverse(&_det, proj); 
+
+			_det = DirectX::XMMatrixDeterminant(viewProj); 
+			DirectX::XMMATRIX invViewProj = DirectX::XMMatrixInverse(&_det, viewProj); 
+
+			PassConstants passConstants;
+
+			DirectX::XMStoreFloat4x4(&passConstants.View, DirectX::XMMatrixTranspose(view));
+			DirectX::XMStoreFloat4x4(&passConstants.InvView, DirectX::XMMatrixTranspose(invView));
+			DirectX::XMStoreFloat4x4(&passConstants.Proj, DirectX::XMMatrixTranspose(proj));
+			DirectX::XMStoreFloat4x4(&passConstants.InvProj, DirectX::XMMatrixTranspose(invProj));
+			DirectX::XMStoreFloat4x4(&passConstants.ViewProj, DirectX::XMMatrixTranspose(viewProj));
+			DirectX::XMStoreFloat4x4(&passConstants.InvViewProj, DirectX::XMMatrixTranspose(invViewProj));
+			passConstants.EyePosW = m_eyePos;
+
+			float height = static_cast<float>(m_deviceResources->GetHeight());
+			float width = static_cast<float>(m_deviceResources->GetWidth());
+
+			passConstants.RenderTargetSize = DirectX::XMFLOAT2(width, height);
+			passConstants.InvRenderTargetSize = DirectX::XMFLOAT2(1.0f / width, 1.0f / height);
+			passConstants.NearZ = 1.0f;
+			passConstants.FarZ = 1000.0f;
+			passConstants.TotalTime = timer.TotalTime();
+			passConstants.DeltaTime = timer.DeltaTime();
+
+			passConstants.AmbientLight = { 0.25f, 0.25f, 0.35f, 1.0f };
+
+			passConstants.FogColor = { 0.7f, 0.7f, 0.7f, 1.0f };
+			passConstants.gFogStart = 5.0f;
+			passConstants.gFogRange = 150.0f;
+
+			passConstants.Lights[0].Direction = { 0.57735f, -0.57735f, 0.57735f };
+			passConstants.Lights[0].Strength = { 0.9f, 0.9f, 0.9f };
+			passConstants.Lights[1].Direction = { -0.57735f, -0.57735f, 0.57735f };
+			passConstants.Lights[1].Strength = { 0.5f, 0.5f, 0.5f };
+			passConstants.Lights[2].Direction = { 0.0f, -0.707f, -0.707f };
+			passConstants.Lights[2].Strength = { 0.2f, 0.2f, 0.2f };
+
+			m_mainRenderPassConstantsCB->CopyData(frameIndex, passConstants);
+		};
+
+
+
+		// Render Pass Layer: Opaque ----------------------------------------------------------------------
+		m_mainRenderPass.RenderPassLayers.emplace_back(m_deviceResources);
+		RenderPassLayer& opaqueLayer = m_mainRenderPass.RenderPassLayers.back();
+
+		// PSO
+		m_standardVS = std::make_unique<Shader>(m_deviceResources, "LightingVS.cso"); 
+		m_opaquePS = std::make_unique<Shader>(m_deviceResources, "LightingFogPS.cso"); 
+		m_alphaTestedPS = std::make_unique<Shader>(m_deviceResources, "LightingFogAlphaTestPS.cso"); 
+
+		m_inputLayout = std::make_unique<InputLayout>( 
+			std::vector<D3D12_INPUT_ELEMENT_DESC>{ 
+				{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }, 
+				{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }, 
+				{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }, 
+			}
+		);
+
+		m_rasterizerState = std::make_unique<RasterizerState>();
+		m_blendState = std::make_unique<BlendState>();
+		m_depthStencilState = std::make_unique<DepthStencilState>();
+
+		D3D12_GRAPHICS_PIPELINE_STATE_DESC opaqueDesc;
+		ZeroMemory(&opaqueDesc, sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC));
+		opaqueDesc.InputLayout = m_inputLayout->GetInputLayoutDesc(); 
+		opaqueDesc.pRootSignature = m_mainRenderPass.RootSignature->Get();
+		opaqueDesc.VS = m_standardVS->GetShaderByteCode(); 
+		opaqueDesc.PS = m_opaquePS->GetShaderByteCode(); 
+		opaqueDesc.RasterizerState = m_rasterizerState->GetRasterizerDesc();
+		opaqueDesc.BlendState = m_blendState->GetBlendDesc();
+		opaqueDesc.DepthStencilState = m_depthStencilState->GetDepthStencilDesc();
+		opaqueDesc.SampleMask = UINT_MAX;
+		opaqueDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+		opaqueDesc.NumRenderTargets = 1;
+		opaqueDesc.RTVFormats[0] = m_deviceResources->GetBackBufferFormat();
+		opaqueDesc.SampleDesc.Count = m_deviceResources->MsaaEnabled() ? 4 : 1;
+		opaqueDesc.SampleDesc.Quality = m_deviceResources->MsaaEnabled() ? (m_deviceResources->MsaaQuality() - 1) : 0;
+		opaqueDesc.DSVFormat = m_deviceResources->GetDepthStencilFormat();
+
+		opaqueLayer.SetPSO(opaqueDesc);
+
+		// Topology
+		opaqueLayer.Topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+
+		// MeshGroup
+		GeometryGenerator geoGen; 
+		GeometryGenerator::MeshData grid = geoGen.CreateGrid(160.0f, 160.0f, 50, 50);  
+
+		std::vector<std::uint16_t> indices = grid.GetIndices16(); 
+		std::vector<Vertex> vertices(grid.Vertices.size()); 
+		for (size_t i = 0; i < grid.Vertices.size(); ++i) 
+		{
+			auto& p = grid.Vertices[i].Position;			// Extract the vertex elements we are interested and apply the height function to
+			vertices[i].Pos = p;							// each vertex.  In addition, color the vertices based on their height so we have
+			vertices[i].Pos.y = GetHillsHeight(p.x, p.z);	// sandy looking beaches, grassy low hills, and snow mountain peaks.
+			vertices[i].Normal = GetHillsNormal(p.x, p.z);
+			vertices[i].TexC = grid.Vertices[i].TexC;
+		}
+
+		std::vector<std::vector<Vertex>> allVertices;
+		allVertices.push_back(std::move(vertices));
+		std::vector<std::vector<std::uint16_t>> allIndices;
+		allIndices.push_back(std::move(indices));
+
+		opaqueLayer.Meshes = std::make_unique<MeshGroupT<Vertex>>(m_deviceResources, allVertices, allIndices);
+
+		// Render Items
+		m_gridObjectConstantsCB = std::make_unique<ConstantBufferT<ObjectConstants>>(m_deviceResources);
+		m_gridMaterialCB = std::make_unique<ConstantBufferT<Material>>(m_deviceResources);
+
+		// NOTE: Must construct the RenderItem in-place because we have made it immovable
+		opaqueLayer.RenderItems.emplace_back();
+		RenderItem& gridRI = opaqueLayer.RenderItems.back();
+
+		gridRI.World = MathHelper::Identity4x4();
+		DirectX::XMStoreFloat4x4(&gridRI.TexTransform, DirectX::XMMatrixScaling(5.0f, 5.0f, 1.0f));
+
+		gridRI.material = std::make_unique<Material>();
+		gridRI.material->DiffuseAlbedo = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+		gridRI.material->FresnelR0 = DirectX::XMFLOAT3(0.01f, 0.01f, 0.01f);
+		gridRI.material->Roughness = 0.125f;
+
+		auto& gridConstantsCBV = gridRI.ConstantBufferViews.emplace_back(1, m_gridObjectConstantsCB.get());
+		gridConstantsCBV.Update = [this](const Timer& timer, RenderItem* ri, int frameIndex)
+		{
+			// Only update the cbuffer data if the constants have changed.  
+			if (ri->NumFramesDirty > 0)
+			{
+				DirectX::XMMATRIX world = DirectX::XMLoadFloat4x4(&ri->World);
+				DirectX::XMMATRIX texTransform = DirectX::XMLoadFloat4x4(&ri->TexTransform);
+
+				ObjectConstants objConstants;
+				DirectX::XMStoreFloat4x4(&objConstants.World, DirectX::XMMatrixTranspose(world));
+				DirectX::XMStoreFloat4x4(&objConstants.TexTransform, DirectX::XMMatrixTranspose(texTransform));
+
+				m_gridObjectConstantsCB->CopyData(frameIndex, objConstants);
+
+				--ri->NumFramesDirty;
+			}
+		};
+
+		auto& gridMaterialCBV = gridRI.ConstantBufferViews.emplace_back(3, m_gridMaterialCB.get());
+		gridMaterialCBV.Update = [this](const Timer& timer, RenderItem* ri, int frameIndex)
+		{
+			if (ri->materialNumFramesDirty > 0)
+			{
+				// Must transpose the transform before loading it into the constant buffer
+				DirectX::XMMATRIX transform = DirectX::XMLoadFloat4x4(&ri->material->MatTransform);
+
+				Material mat = *ri->material.get(); 
+				DirectX::XMStoreFloat4x4(&mat.MatTransform, DirectX::XMMatrixTranspose(transform)); 
+
+				m_gridMaterialCB->CopyData(frameIndex, mat);
+
+				// Next FrameResource need to be updated too.
+				--ri->materialNumFramesDirty;
+			}
+		};
+
+		gridRI.texture = 0; // grass is texture #0
+		gridRI.submeshIndex = 0; // Only using a single mesh, so automatically it is at index 0
+		
+		auto& dt = gridRI.DescriptorTables.emplace_back(0, m_textures[gridRI.texture]->GetGPUHandle());
+		dt.Update = [](const Timer& timer, int frameIndex)
+		{
+			// No update here because the texture is static
+		};
+	}
+
+
+
 
 	void TheApp::Update(const Timer& timer)
 	{
+		// IMPORTANT: Do all necessary updates/animation first, but then be sure to call Engine::Update()
+
 		UpdateCamera(timer);
 
 		// Cycle through the circular frame resource array.
-		m_currFrameResourceIndex = (m_currFrameResourceIndex + 1) % gNumFrameResources;
-		m_currFrameResource = m_frameResources[m_currFrameResourceIndex].get();
-
-		// Has the GPU finished processing the commands of the current frame resource?
-		// If not, wait until the GPU has completed commands up to this fence point.
-		if (m_currFrameResource->Fence != 0 && m_deviceResources->GetFence()->GetCompletedValue() < m_currFrameResource->Fence)
-		{
-			HANDLE eventHandle = CreateEventEx(nullptr, nullptr, false, EVENT_ALL_ACCESS);
-			GFX_THROW_INFO(
-				m_deviceResources->GetFence()->SetEventOnCompletion(m_currFrameResource->Fence, eventHandle)
-			);
-			WaitForSingleObject(eventHandle, INFINITE);
-			CloseHandle(eventHandle);
-		}
+//		m_currFrameResourceIndex = (m_currFrameResourceIndex + 1) % gNumFrameResources;
+//		m_currFrameResource = m_frameResources[m_currFrameResourceIndex].get();
+//
+//		// Has the GPU finished processing the commands of the current frame resource?
+//		// If not, wait until the GPU has completed commands up to this fence point.
+//		if (m_currFrameResource->Fence != 0 && m_deviceResources->GetFence()->GetCompletedValue() < m_currFrameResource->Fence)
+//		{
+//			HANDLE eventHandle = CreateEventEx(nullptr, nullptr, false, EVENT_ALL_ACCESS);
+//			GFX_THROW_INFO(
+//				m_deviceResources->GetFence()->SetEventOnCompletion(m_currFrameResource->Fence, eventHandle)
+//			);
+//			WaitForSingleObject(eventHandle, INFINITE);
+//			CloseHandle(eventHandle);
+//		}
 
 		AnimateMaterials(timer);
-		UpdateObjectCBs(timer);
-		UpdateMaterialCBs(timer);
-		UpdateMainPassCB(timer);
-		UpdateWaves(timer);
+//		UpdateObjectCBs(timer);
+//		UpdateMaterialCBs(timer);
+//		UpdateMainPassCB(timer);
+//		UpdateWaves(timer);
+
+
+		// IMPORTANT: Must call this last so that the updates made above will take effect for this frame
+		Engine::Update(timer);
 	}
 
 	void TheApp::UpdateCamera(const Timer& timer)
@@ -100,6 +333,7 @@ namespace tiny
 		DirectX::XMMATRIX view = DirectX::XMMatrixLookAtLH(pos, target, up);
 		DirectX::XMStoreFloat4x4(&m_view, view);
 	}
+/*
 	void TheApp::UpdateObjectCBs(const Timer& timer)
 	{
 		for (auto& renderItem : m_allRitems)
@@ -231,147 +465,143 @@ namespace tiny
 		// Set the dynamic VB of the wave renderitem to the current frame VB.
 		//m_wavesRitem->Geo->VertexBufferGPU = currWavesVB->Resource();
 	}
+*/
 	void TheApp::AnimateMaterials(const Timer& timer)
 	{
 		// TODO: This animation requires us knowing that water is the first render item
 		//		 This should be replaced with a lambda or something belonging to the render item
-		auto waterMat = m_allRitems[0]->material.get();
-
-		// Scroll the water material texture coordinates.
-
-		float& tu = waterMat->MatTransform(3, 0);
-		float& tv = waterMat->MatTransform(3, 1);
-
-		tu += 0.1f * timer.DeltaTime();
-		tv += 0.02f * timer.DeltaTime();
-
-		if (tu >= 1.0f)
-			tu -= 1.0f;
-
-		if (tv >= 1.0f)
-			tv -= 1.0f;
-
-		waterMat->MatTransform(3, 0) = tu;
-		waterMat->MatTransform(3, 1) = tv;
-
-		// Material has changed, so need to update cbuffer.
-		m_allRitems[0]->materialNumFramesDirty = gNumFrameResources;
+//		auto waterMat = m_allRitems[0]->material.get();
+//
+//		// Scroll the water material texture coordinates.
+//
+//		float& tu = waterMat->MatTransform(3, 0);
+//		float& tv = waterMat->MatTransform(3, 1);
+//
+//		tu += 0.1f * timer.DeltaTime();
+//		tv += 0.02f * timer.DeltaTime();
+//
+//		if (tu >= 1.0f)
+//			tu -= 1.0f;
+//
+//		if (tv >= 1.0f)
+//			tv -= 1.0f;
+//
+//		waterMat->MatTransform(3, 0) = tu;
+//		waterMat->MatTransform(3, 1) = tv;
+//
+//		// Material has changed, so need to update cbuffer.
+//		m_allRitems[0]->materialNumFramesDirty = gNumFrameResources;
 	}
 
 	void TheApp::Render()
 	{
-		auto commandAllocator = m_currFrameResource->CmdListAlloc;
+		Engine::Render();
 
-		// Reuse the memory associated with command recording.
-		// We can only reset when the associated command lists have finished execution on the GPU.
-		GFX_THROW_INFO(commandAllocator->Reset());
-
-		auto commandList = m_deviceResources->GetCommandList();
-
-		// A command list can be reset after it has been added to the command queue via ExecuteCommandList.
-		// Reusing the command list reuses memory.
-		GFX_THROW_INFO(commandList->Reset(commandAllocator.Get(), m_psos["opaque"].Get()));
-
-		commandList->RSSetViewports(1, &m_viewport);
-		commandList->RSSetScissorRects(1, &m_scissorRect);
-
-		// Indicate a state transition on the resource usage.
-		auto _b = CD3DX12_RESOURCE_BARRIER::Transition(
-			m_deviceResources->CurrentBackBuffer(),
-			D3D12_RESOURCE_STATE_PRESENT, 
-			D3D12_RESOURCE_STATE_RENDER_TARGET
-		);
-		commandList->ResourceBarrier(1, &_b);
-
-		// Clear the back buffer and depth buffer.
-		commandList->ClearRenderTargetView(m_deviceResources->CurrentBackBufferView(), (float*)&m_mainPassCB.FogColor, 0, nullptr);
-		commandList->ClearDepthStencilView(m_deviceResources->DepthStencilView(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
-
-		// Specify the buffers we are going to render to.
-		auto currentBackBufferView = m_deviceResources->CurrentBackBufferView();
-		auto depthStencilView = m_deviceResources->DepthStencilView();
-		commandList->OMSetRenderTargets(1, &currentBackBufferView, true, &depthStencilView);
-
-		ID3D12DescriptorHeap* descriptorHeaps[] = { TextureManager::GetHeapPointer() };
-		commandList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
-
-		commandList->SetGraphicsRootSignature(m_rootSignature.Get());
-
-		// Bind per-pass constant buffer. We only need to do this once per-pass.
-		commandList->SetGraphicsRootConstantBufferView(2, m_passConstantsConstantBuffer->GetGPUVirtualAddress(m_currFrameResourceIndex));
-
-
-		DrawRenderItems(commandList, m_renderItemLayer[(int)RenderLayer::Opaque], m_meshGroups[(int)RenderLayer::Opaque]);
-
-		commandList->SetPipelineState(m_psos["alphaTested"].Get());
-		DrawRenderItems(commandList, m_renderItemLayer[(int)RenderLayer::AlphaTested], m_meshGroups[(int)RenderLayer::AlphaTested]);
-
-		commandList->SetPipelineState(m_psos["transparent"].Get());
-		DrawRenderItems(commandList, m_renderItemLayer[(int)RenderLayer::Transparent], m_meshGroups[(int)RenderLayer::Transparent]);
-
-
-		// Indicate a state transition on the resource usage.
-		auto _b2 = CD3DX12_RESOURCE_BARRIER::Transition(
-			m_deviceResources->CurrentBackBuffer(),
-			D3D12_RESOURCE_STATE_RENDER_TARGET, 
-			D3D12_RESOURCE_STATE_PRESENT
-		);
-		commandList->ResourceBarrier(1, &_b2);
-
-		// Done recording commands.
-		GFX_THROW_INFO(commandList->Close());
-
-		// Add the command list to the queue for execution.
-		ID3D12CommandList* cmdsLists[] = { commandList };
-		m_deviceResources->GetCommandQueue()->ExecuteCommandLists(_countof(cmdsLists), cmdsLists);
+//		auto commandAllocator = m_currFrameResource->CmdListAlloc;
+//
+//		// Reuse the memory associated with command recording.
+//		// We can only reset when the associated command lists have finished execution on the GPU.
+//		GFX_THROW_INFO(commandAllocator->Reset());
+//
+//		auto commandList = m_deviceResources->GetCommandList();
+//
+//		// A command list can be reset after it has been added to the command queue via ExecuteCommandList.
+//		// Reusing the command list reuses memory.
+//		GFX_THROW_INFO(commandList->Reset(commandAllocator.Get(), m_psos["opaque"].Get()));
+//
+//		commandList->RSSetViewports(1, &m_viewport);
+//		commandList->RSSetScissorRects(1, &m_scissorRect);
+//
+//		// Indicate a state transition on the resource usage.
+//		auto _b = CD3DX12_RESOURCE_BARRIER::Transition(
+//			m_deviceResources->CurrentBackBuffer(),
+//			D3D12_RESOURCE_STATE_PRESENT, 
+//			D3D12_RESOURCE_STATE_RENDER_TARGET
+//		);
+//		commandList->ResourceBarrier(1, &_b);
+//
+//		// Clear the back buffer and depth buffer.
+//		commandList->ClearRenderTargetView(m_deviceResources->CurrentBackBufferView(), (float*)&m_mainPassCB.FogColor, 0, nullptr);
+//		commandList->ClearDepthStencilView(m_deviceResources->DepthStencilView(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
+//
+//		// Specify the buffers we are going to render to.
+//		auto currentBackBufferView = m_deviceResources->CurrentBackBufferView();
+//		auto depthStencilView = m_deviceResources->DepthStencilView();
+//		commandList->OMSetRenderTargets(1, &currentBackBufferView, true, &depthStencilView);
+//
+//		ID3D12DescriptorHeap* descriptorHeaps[] = { TextureManager::GetHeapPointer() };
+//		commandList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
+//
+//		commandList->SetGraphicsRootSignature(m_rootSignature.Get());
+//
+//		// Bind per-pass constant buffer. We only need to do this once per-pass.
+//		commandList->SetGraphicsRootConstantBufferView(2, m_passConstantsConstantBuffer->GetGPUVirtualAddress(m_currFrameResourceIndex));
+//
+//
+//		DrawRenderItems(commandList, m_renderItemLayer[(int)RenderLayer::Opaque], m_meshGroups[(int)RenderLayer::Opaque]);
+//
+//		commandList->SetPipelineState(m_psos["alphaTested"].Get());
+//		DrawRenderItems(commandList, m_renderItemLayer[(int)RenderLayer::AlphaTested], m_meshGroups[(int)RenderLayer::AlphaTested]);
+//
+//		commandList->SetPipelineState(m_psos["transparent"].Get());
+//		DrawRenderItems(commandList, m_renderItemLayer[(int)RenderLayer::Transparent], m_meshGroups[(int)RenderLayer::Transparent]);
+//
+//
+//		// Indicate a state transition on the resource usage.
+//		auto _b2 = CD3DX12_RESOURCE_BARRIER::Transition(
+//			m_deviceResources->CurrentBackBuffer(),
+//			D3D12_RESOURCE_STATE_RENDER_TARGET, 
+//			D3D12_RESOURCE_STATE_PRESENT
+//		);
+//		commandList->ResourceBarrier(1, &_b2);
+//
+//		// Done recording commands.
+//		GFX_THROW_INFO(commandList->Close());
+//
+//		// Add the command list to the queue for execution.
+//		ID3D12CommandList* cmdsLists[] = { commandList };
+//		m_deviceResources->GetCommandQueue()->ExecuteCommandLists(_countof(cmdsLists), cmdsLists);
 	}
-	void TheApp::DrawRenderItems(ID3D12GraphicsCommandList* commandList, const std::vector<RenderItem*>& ritems, MeshGroup* meshGroup)
-	{
-		// Bind the mesh group
-		meshGroup->Bind(commandList);
-
-		// For each render item...
-		for (size_t i = 0; i < ritems.size(); ++i)
-		{
-			auto ri = ritems[i];
-
-			//D3D12_VERTEX_BUFFER_VIEW vbv = ri->Geo->VertexBufferView();
-			//commandList->IASetVertexBuffers(0, 1, &vbv);
-			//D3D12_INDEX_BUFFER_VIEW ibv = ri->Geo->IndexBufferView();
-			//commandList->IASetIndexBuffer(&ibv);
-			commandList->IASetPrimitiveTopology(ri->PrimitiveType);
-
-			D3D12_GPU_DESCRIPTOR_HANDLE tex = m_textures[ri->texture]->GetGPUHandle();
-
-			D3D12_GPU_VIRTUAL_ADDRESS objCBAddress = ri->ObjectConstantBuffer->GetGPUVirtualAddress(m_currFrameResourceIndex);
-			D3D12_GPU_VIRTUAL_ADDRESS matCBAddress = ri->materialConstantBuffer->GetGPUVirtualAddress(m_currFrameResourceIndex);
-
-			commandList->SetGraphicsRootDescriptorTable(0, tex);
-			commandList->SetGraphicsRootConstantBufferView(1, objCBAddress); 
-			commandList->SetGraphicsRootConstantBufferView(3, matCBAddress); 
-
-			SubmeshGeometry mesh = meshGroup->GetSubmesh(ri->submeshIndex);
-			commandList->DrawIndexedInstanced(mesh.IndexCount, 1, mesh.StartIndexLocation, mesh.BaseVertexLocation, 0);
-		}
-	}
+//	void TheApp::DrawRenderItems(ID3D12GraphicsCommandList* commandList, const std::vector<RenderItem*>& ritems, MeshGroup* meshGroup)
+//	{
+//		// Bind the mesh group
+//		meshGroup->Bind(commandList);
+//
+//		// For each render item...
+//		for (size_t i = 0; i < ritems.size(); ++i)
+//		{
+//			auto ri = ritems[i];
+//
+//			commandList->IASetPrimitiveTopology(ri->PrimitiveType);
+//
+//			D3D12_GPU_DESCRIPTOR_HANDLE tex = m_textures[ri->texture]->GetGPUHandle();
+//
+//			D3D12_GPU_VIRTUAL_ADDRESS objCBAddress = ri->ObjectConstantBuffer->GetGPUVirtualAddress(m_currFrameResourceIndex);
+//			D3D12_GPU_VIRTUAL_ADDRESS matCBAddress = ri->materialConstantBuffer->GetGPUVirtualAddress(m_currFrameResourceIndex);
+//
+//			commandList->SetGraphicsRootDescriptorTable(0, tex);
+//			commandList->SetGraphicsRootConstantBufferView(1, objCBAddress); 
+//			commandList->SetGraphicsRootConstantBufferView(3, matCBAddress); 
+//
+//			SubmeshGeometry mesh = meshGroup->GetSubmesh(ri->submeshIndex);
+//			commandList->DrawIndexedInstanced(mesh.IndexCount, 1, mesh.StartIndexLocation, mesh.BaseVertexLocation, 0);
+//		}
+//	}
 	void TheApp::Present() 
 	{ 
-		m_deviceResources->Present();
-
-		m_currFrameResource->Fence = m_deviceResources->GetCurrentFenceValue();
-
-		// Add an instruction to the command queue to set a new fence point. 
-		// Because we are on the GPU timeline, the new fence point won't be 
-		// set until the GPU finishes processing all the commands prior to this Signal().
-		m_deviceResources->GetCommandQueue()->Signal(m_deviceResources->GetFence(), m_currFrameResource->Fence);
+		Engine::Present();
+//
+//		m_deviceResources->Present();
+//
+//		m_currFrameResource->Fence = m_deviceResources->GetCurrentFenceValue();
+//
+//		// Add an instruction to the command queue to set a new fence point. 
+//		// Because we are on the GPU timeline, the new fence point won't be 
+//		// set until the GPU finishes processing all the commands prior to this Signal().
+//		m_deviceResources->GetCommandQueue()->Signal(m_deviceResources->GetFence(), m_currFrameResource->Fence);
 	}
 
-	void TheApp::LoadTextures()
-	{
-		m_textures[0] = TextureManager::GetTexture(0);
-		m_textures[1] = TextureManager::GetTexture(1);
-		m_textures[2] = TextureManager::GetTexture(2);
-	}
+/*
 	void TheApp::BuildRootSignature()
 	{
 		CD3DX12_DESCRIPTOR_RANGE texTable;
@@ -459,37 +689,7 @@ namespace tiny
 		// The land will be rendered in the "opaque" layer
 		m_meshGroups[(int)RenderLayer::Opaque] = m_landMesh.get();
 
-//		const UINT vbByteSize = (UINT)vertices.size() * sizeof(Vertex);
-//		const UINT ibByteSize = (UINT)indices.size() * sizeof(std::uint16_t);
-//
-//		auto geo = std::make_unique<MeshGeometry>();
-//		geo->Name = "landGeo";
-//
-//		GFX_THROW_INFO(D3DCreateBlob(vbByteSize, &geo->VertexBufferCPU));
-//		CopyMemory(geo->VertexBufferCPU->GetBufferPointer(), vertices.data(), vbByteSize);
-//
-//		GFX_THROW_INFO(D3DCreateBlob(ibByteSize, &geo->IndexBufferCPU));
-//		CopyMemory(geo->IndexBufferCPU->GetBufferPointer(), indices.data(), ibByteSize);
-//
-//		geo->VertexBufferGPU = utility::CreateDefaultBuffer(m_deviceResources->GetDevice(),
-//			m_deviceResources->GetCommandList(), vertices.data(), vbByteSize, geo->VertexBufferUploader);
-//
-//		geo->IndexBufferGPU = utility::CreateDefaultBuffer(m_deviceResources->GetDevice(),
-//			m_deviceResources->GetCommandList(), indices.data(), ibByteSize, geo->IndexBufferUploader);
-//
-//		geo->VertexByteStride = sizeof(Vertex);
-//		geo->VertexBufferByteSize = vbByteSize;
-//		geo->IndexFormat = DXGI_FORMAT_R16_UINT;
-//		geo->IndexBufferByteSize = ibByteSize;
-//
-//		SubmeshGeometry submesh;
-//		submesh.IndexCount = (UINT)indices.size();
-//		submesh.StartIndexLocation = 0;
-//		submesh.BaseVertexLocation = 0;
-//
-//		geo->DrawArgs["grid"] = submesh;
-//
-//		m_geometries["landGeo"] = std::move(geo);
+
 	}
 	void TheApp::BuildWavesGeometry()
 	{
@@ -537,36 +737,6 @@ namespace tiny
 
 		// Waves will be rendered in the "transparent" layer
 		m_meshGroups[(int)RenderLayer::Transparent] = m_waterMesh.get();
-
-//		UINT vbByteSize = m_waves->VertexCount() * sizeof(Vertex);
-//		UINT ibByteSize = (UINT)indices.size() * sizeof(std::uint16_t);
-//
-//		auto geo = std::make_unique<MeshGeometry>();
-//		geo->Name = "waterGeo";
-//
-//		// Set dynamically.
-//		geo->VertexBufferCPU = nullptr;
-//		geo->VertexBufferGPU = nullptr;
-//
-//		GFX_THROW_INFO(D3DCreateBlob(ibByteSize, &geo->IndexBufferCPU));
-//		CopyMemory(geo->IndexBufferCPU->GetBufferPointer(), indices.data(), ibByteSize);
-//
-//		geo->IndexBufferGPU = utility::CreateDefaultBuffer(m_deviceResources->GetDevice(),
-//			m_deviceResources->GetCommandList(), indices.data(), ibByteSize, geo->IndexBufferUploader);
-//
-//		geo->VertexByteStride = sizeof(Vertex);
-//		geo->VertexBufferByteSize = vbByteSize;
-//		geo->IndexFormat = DXGI_FORMAT_R16_UINT;
-//		geo->IndexBufferByteSize = ibByteSize;
-//
-//		SubmeshGeometry submesh;
-//		submesh.IndexCount = (UINT)indices.size();
-//		submesh.StartIndexLocation = 0;
-//		submesh.BaseVertexLocation = 0;
-//
-//		geo->DrawArgs["grid"] = submesh;
-//
-//		m_geometries["waterGeo"] = std::move(geo);
 	}
 	void TheApp::BuildBoxGeometry()
 	{
@@ -590,39 +760,6 @@ namespace tiny
 
 		// The box will be rendered in the "alpha tested" layer
 		m_meshGroups[(int)RenderLayer::AlphaTested] = m_boxMesh.get();
-
-
-//		const UINT vbByteSize = (UINT)vertices.size() * sizeof(Vertex);
-//		const UINT ibByteSize = (UINT)indices.size() * sizeof(std::uint16_t);
-//
-//		auto geo = std::make_unique<MeshGeometry>();
-//		geo->Name = "boxGeo";
-//
-//		GFX_THROW_INFO(D3DCreateBlob(vbByteSize, &geo->VertexBufferCPU));
-//		CopyMemory(geo->VertexBufferCPU->GetBufferPointer(), vertices.data(), vbByteSize);
-//
-//		GFX_THROW_INFO(D3DCreateBlob(ibByteSize, &geo->IndexBufferCPU));
-//		CopyMemory(geo->IndexBufferCPU->GetBufferPointer(), indices.data(), ibByteSize);
-//
-//		geo->VertexBufferGPU = utility::CreateDefaultBuffer(m_deviceResources->GetDevice(),
-//			m_deviceResources->GetCommandList(), vertices.data(), vbByteSize, geo->VertexBufferUploader);
-//
-//		geo->IndexBufferGPU = utility::CreateDefaultBuffer(m_deviceResources->GetDevice(),
-//			m_deviceResources->GetCommandList(), indices.data(), ibByteSize, geo->IndexBufferUploader);
-//
-//		geo->VertexByteStride = sizeof(Vertex);
-//		geo->VertexBufferByteSize = vbByteSize;
-//		geo->IndexFormat = DXGI_FORMAT_R16_UINT;
-//		geo->IndexBufferByteSize = ibByteSize;
-//
-//		SubmeshGeometry submesh;
-//		submesh.IndexCount = (UINT)indices.size();
-//		submesh.StartIndexLocation = 0;
-//		submesh.BaseVertexLocation = 0;
-//
-//		geo->DrawArgs["box"] = submesh;
-//
-//		m_geometries["boxGeo"] = std::move(geo);
 	}
 	void TheApp::BuildPSOs()
 	{
@@ -725,11 +862,7 @@ namespace tiny
 		wavesRitem->material->Roughness = 0.0f;
 		wavesRitem->texture = 1;
 		wavesRitem->submeshIndex = 0;
-		//wavesRitem->Geo = m_geometries["waterGeo"].get();
 		wavesRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-		//wavesRitem->IndexCount = wavesRitem->Geo->DrawArgs["grid"].IndexCount;
-		//wavesRitem->StartIndexLocation = wavesRitem->Geo->DrawArgs["grid"].StartIndexLocation;
-		//wavesRitem->BaseVertexLocation = wavesRitem->Geo->DrawArgs["grid"].BaseVertexLocation;
 		wavesRitem->materialConstantBuffer = std::make_unique<ConstantBuffer<Material>>(m_deviceResources);
 
 		m_wavesRitem = wavesRitem.get();
@@ -751,11 +884,7 @@ namespace tiny
 		gridRitem->material->Roughness = 0.125f;
 		gridRitem->texture = 0;
 		gridRitem->submeshIndex = 0;
-		//gridRitem->Geo = m_geometries["landGeo"].get();
 		gridRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-		//gridRitem->IndexCount = gridRitem->Geo->DrawArgs["grid"].IndexCount;
-		//gridRitem->StartIndexLocation = gridRitem->Geo->DrawArgs["grid"].StartIndexLocation;
-		//gridRitem->BaseVertexLocation = gridRitem->Geo->DrawArgs["grid"].BaseVertexLocation;
 		gridRitem->materialConstantBuffer = std::make_unique<ConstantBuffer<Material>>(m_deviceResources);
 
 		m_renderItemLayer[(int)RenderLayer::Opaque].push_back(gridRitem.get());
@@ -774,11 +903,7 @@ namespace tiny
 		boxRitem->material->Roughness = 0.25f;
 		boxRitem->texture = 2;
 		boxRitem->submeshIndex = 0;
-		//boxRitem->Geo = m_geometries["boxGeo"].get();
 		boxRitem->PrimitiveType = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-		//boxRitem->IndexCount = boxRitem->Geo->DrawArgs["box"].IndexCount;
-		//boxRitem->StartIndexLocation = boxRitem->Geo->DrawArgs["box"].StartIndexLocation;
-		//boxRitem->BaseVertexLocation = boxRitem->Geo->DrawArgs["box"].BaseVertexLocation;
 		boxRitem->materialConstantBuffer = std::make_unique<ConstantBuffer<Material>>(m_deviceResources);
 
 		m_renderItemLayer[(int)RenderLayer::AlphaTested].push_back(boxRitem.get());
@@ -787,7 +912,7 @@ namespace tiny
 		m_allRitems.push_back(std::move(gridRitem));
 		m_allRitems.push_back(std::move(boxRitem));
 	}
-
+*/
 	std::array<const CD3DX12_STATIC_SAMPLER_DESC, 6> TheApp::GetStaticSamplers()
 	{
 		// Applications usually only need a handful of samplers.  So just define them all up front

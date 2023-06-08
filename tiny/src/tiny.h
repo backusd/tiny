@@ -3,6 +3,7 @@
 
 #include "tiny/Log.h"
 #include "tiny/DeviceResources.h"
+#include "tiny/Engine.h"
 
 #include "tiny/rendering/MeshGeometry.h"
 #include "tiny/rendering/UploadBuffer.h"
