@@ -62,13 +62,13 @@ protected:
 		);
 
 		// In order to copy CPU memory data into our default buffer, we need to create an intermediate upload heap. 
-		props = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD); 
-		desc = CD3DX12_RESOURCE_DESC::Buffer(byteSize);
+		auto props2 = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD); 
+		auto desc2 = CD3DX12_RESOURCE_DESC::Buffer(byteSize);
 		GFX_THROW_INFO(
 			m_deviceResources->GetDevice()->CreateCommittedResource(
-				&props,
+				&props2,
 				D3D12_HEAP_FLAG_NONE,
-				&desc,
+				&desc2,
 				D3D12_RESOURCE_STATE_GENERIC_READ,
 				nullptr,
 				IID_PPV_ARGS(uploadBuffer.GetAddressOf())
@@ -85,9 +85,12 @@ protected:
 		// will copy the CPU memory into the intermediate upload heap. Then, using ID3D12CommandList::CopySubresourceRegion,
 		// the intermediate upload heap data will be copied to mBuffer.
 		auto commandList = m_deviceResources->GetCommandList();
+		
 		auto _b = CD3DX12_RESOURCE_BARRIER::Transition(defaultBuffer.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST);
 		commandList->ResourceBarrier(1, &_b);
+		
 		UpdateSubresources<1>(commandList, defaultBuffer.Get(), uploadBuffer.Get(), 0, 0, 1, &subResourceData);
+		
 		auto _b2 = CD3DX12_RESOURCE_BARRIER::Transition(defaultBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ);
 		commandList->ResourceBarrier(1, &_b2);
 
@@ -171,8 +174,8 @@ MeshGroupT<T>::MeshGroupT(std::shared_ptr<DeviceResources> deviceResources,
 		m_submeshes.push_back(submesh);
 
 		// Add the vertices and indices
-		for (const T& v : vertices[iii]) 
-			m_vertices.push_back(v); 
+		for (const T& v : vertices[iii])
+			m_vertices.push_back(v);
 		for (const std::uint16_t& i : indices[iii])
 			m_indices.push_back(i);
 	}
@@ -184,8 +187,8 @@ MeshGroupT<T>::MeshGroupT(std::shared_ptr<DeviceResources> deviceResources,
 	m_indexBufferView.SizeInBytes = static_cast<UINT>(m_indices.size()) * sizeof(std::uint16_t);
 
 	// Create the vertex and index buffers with the initial data
-	m_vertexBufferGPU = CreateDefaultBuffer(vertices.data(), m_vertexBufferView.SizeInBytes);
-	m_indexBufferGPU = CreateDefaultBuffer(indices.data(), m_indexBufferView.SizeInBytes);
+	m_vertexBufferGPU = CreateDefaultBuffer(m_vertices.data(), m_vertexBufferView.SizeInBytes);
+	m_indexBufferGPU = CreateDefaultBuffer(m_indices.data(), m_indexBufferView.SizeInBytes);
 
 	// Get the buffer locations
 	m_vertexBufferView.BufferLocation = m_vertexBufferGPU->GetGPUVirtualAddress();

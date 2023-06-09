@@ -159,9 +159,9 @@ namespace tiny
 		RenderPassLayer& opaqueLayer = m_mainRenderPass.RenderPassLayers.back();
 
 		// PSO
-		m_standardVS = std::make_unique<Shader>(m_deviceResources, "LightingVS.cso"); 
-		m_opaquePS = std::make_unique<Shader>(m_deviceResources, "LightingFogPS.cso"); 
-		m_alphaTestedPS = std::make_unique<Shader>(m_deviceResources, "LightingFogAlphaTestPS.cso"); 
+		m_standardVS = std::make_unique<Shader>(m_deviceResources, "C:/dev/tiny/sandbox/LightingVS.cso"); 
+		m_opaquePS = std::make_unique<Shader>(m_deviceResources, "C:/dev/tiny/sandbox/LightingFogPS.cso"); 
+		m_alphaTestedPS = std::make_unique<Shader>(m_deviceResources, "C:/dev/tiny/sandbox/LightingFogAlphaTestPS.cso"); 
 
 		m_inputLayout = std::make_unique<InputLayout>( 
 			std::vector<D3D12_INPUT_ELEMENT_DESC>{ 
@@ -206,7 +206,7 @@ namespace tiny
 		for (size_t i = 0; i < grid.Vertices.size(); ++i) 
 		{
 			auto& p = grid.Vertices[i].Position;			// Extract the vertex elements we are interested and apply the height function to
-			vertices[i].Pos = p;							// each vertex.  In addition, color the vertices based on their height so we have
+			vertices[i].Pos = p;							// each vertex. In addition, color the vertices based on their height so we have
 			vertices[i].Pos.y = GetHillsHeight(p.x, p.z);	// sandy looking beaches, grassy low hills, and snow mountain peaks.
 			vertices[i].Normal = GetHillsNormal(p.x, p.z);
 			vertices[i].TexC = grid.Vertices[i].TexC;
@@ -223,9 +223,7 @@ namespace tiny
 		m_gridObjectConstantsCB = std::make_unique<ConstantBufferT<ObjectConstants>>(m_deviceResources);
 		m_gridMaterialCB = std::make_unique<ConstantBufferT<Material>>(m_deviceResources);
 
-		// NOTE: Must construct the RenderItem in-place because we have made it immovable
-		opaqueLayer.RenderItems.emplace_back();
-		RenderItem& gridRI = opaqueLayer.RenderItems.back();
+		RenderItem& gridRI = opaqueLayer.RenderItems.emplace_back();
 
 		gridRI.World = MathHelper::Identity4x4();
 		DirectX::XMStoreFloat4x4(&gridRI.TexTransform, DirectX::XMMatrixScaling(5.0f, 5.0f, 1.0f));

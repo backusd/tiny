@@ -14,6 +14,9 @@ void Engine::InitImpl(std::shared_ptr<DeviceResources> deviceResources)
 	TINY_CORE_ASSERT(deviceResources != nullptr, "No device resources");
 	m_deviceResources = deviceResources;
 
+	// Initialize all fence values to 0
+	std::fill(std::begin(m_fences), std::end(m_fences), 0);
+
 	// Initialize allocators
 	auto device = m_deviceResources->GetDevice();
 	for (unsigned int iii = 0; iii < gNumFrameResources; ++iii)
@@ -55,7 +58,6 @@ void Engine::UpdateImpl(const Timer& timer)
 	UpdateRenderItems(timer);
 	UpdateRenderPasses(timer);
 	UpdateDynamicMeshes(timer);
-
 }
 void Engine::RenderImpl()
 {

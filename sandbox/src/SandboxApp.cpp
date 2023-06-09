@@ -4,10 +4,10 @@
 
 
 static constexpr std::array g_textureFiles{
-    L"src/textures/grass.dds",		// 0
-    L"src/textures/water1.dds",		// 1
-    L"src/textures/WireFence.dds",	// 2
-    L"src/textures/bricks.dds"	    // 3
+    L"C:/dev/tiny/sandbox/src/textures/grass.dds",		// 0
+    L"C:/dev/tiny/sandbox/src/textures/water1.dds",		// 1
+    L"C:/dev/tiny/sandbox/src/textures/WireFence.dds",	// 2
+    L"C:/dev/tiny/sandbox/src/textures/bricks.dds"	    // 3
 };
 
 std::wstring GetTextureFilename(unsigned int index)
