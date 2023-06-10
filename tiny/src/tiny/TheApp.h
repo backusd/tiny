@@ -55,6 +55,9 @@ private:
 	float GetHillsHeight(float x, float z) const;
 	DirectX::XMFLOAT3 GetHillsNormal(float x, float z) const;
 
+	void UpdateWavesVertices(const Timer&);
+	void UpdateWavesMaterials(const Timer& timer);
+
 	std::shared_ptr<DeviceResources> m_deviceResources;
 
 	// Textures: grass, water, fence
@@ -68,8 +71,19 @@ private:
 	std::unique_ptr<Shader> m_alphaTestedPS = nullptr;
 	std::unique_ptr<InputLayout> m_inputLayout = nullptr;
 
+	// Grid
 	std::unique_ptr<ConstantBufferT<ObjectConstants>> m_gridObjectConstantsCB = nullptr;
 	std::unique_ptr<ConstantBufferT<Material>> m_gridMaterialCB = nullptr;
+	// Box
+	std::unique_ptr<ConstantBufferT<ObjectConstants>> m_boxObjectConstantsCB = nullptr;
+	std::unique_ptr<ConstantBufferT<Material>> m_boxMaterialCB = nullptr;
+	// Waves
+	std::unique_ptr<Waves> m_waves;
+	std::unique_ptr<ConstantBufferT<ObjectConstants>> m_wavesObjectConstantsCB = nullptr;
+	std::unique_ptr<ConstantBufferT<Material>> m_wavesMaterialCB = nullptr;
+	DynamicMeshGroupT<Vertex>* m_dynamicWaveMesh = nullptr;
+	RenderItem* m_wavesRI = nullptr;
+
 
 	DirectX::XMFLOAT3 m_eyePos = { 0.0f, 0.0f, 0.0f };
 	DirectX::XMFLOAT4X4 m_view = tiny::MathHelper::Identity4x4();
@@ -101,7 +115,7 @@ private:
 //	void UpdateMaterialCBs(const Timer& timer);
 //	void UpdateMainPassCB(const Timer& timer);
 //	void UpdateWaves(const Timer& timer);
-	void AnimateMaterials(const Timer& timer);
+
 
 	std::array<const CD3DX12_STATIC_SAMPLER_DESC, 6> GetStaticSamplers();
 

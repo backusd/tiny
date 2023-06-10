@@ -204,7 +204,7 @@ MeshGroupT<T>::MeshGroupT(std::shared_ptr<DeviceResources> deviceResources,
 class DynamicMeshGroup : public MeshGroup
 {
 public:
-	DynamicMeshGroup(std::shared_ptr<DeviceResources> deviceResources) noexcept : MeshGroup(deviceResources) {}
+	DynamicMeshGroup(std::shared_ptr<DeviceResources> deviceResources) : MeshGroup(deviceResources) {}
 	virtual ~DynamicMeshGroup() override {}
 	inline void Update(int frameIndex) noexcept
 	{
@@ -260,7 +260,7 @@ public:
 	// NOTE: For Dynamic meshes, we only allow there to be a single mesh - see Note above the DynamicMeshGroup class
 	DynamicMeshGroupT(std::shared_ptr<DeviceResources> deviceResources,
 					  std::vector<T>&& vertices,
-					  std::vector<std::uint16_t>&& indices) noexcept :
+					  std::vector<std::uint16_t>&& indices) :
 		DynamicMeshGroup(deviceResources),
 		m_vertices(std::move(vertices)),
 		m_indices(std::move(indices))
@@ -295,8 +295,8 @@ public:
 		// may occur at any point, not necessarily just at program start up, so we can't just assume we are on frame index 0)
 		for (unsigned int iii = 0; iii < gNumFrameResources; ++iii)
 		{
-			memcpy(&m_mappedVertexData[iii * m_vertexBufferView.SizeInBytes], &m_vertices.data(), m_vertexBufferView.SizeInBytes);
-			memcpy(&m_mappedIndexData[iii * m_indexBufferView.SizeInBytes], &m_indices.data(), m_indexBufferView.SizeInBytes);
+			memcpy(&m_mappedVertexData[iii * m_vertexBufferView.SizeInBytes], m_vertices.data(), m_vertexBufferView.SizeInBytes);
+			memcpy(&m_mappedIndexData[iii * m_indexBufferView.SizeInBytes], m_indices.data(), m_indexBufferView.SizeInBytes);
 		}
 
 		// Set the buffer locations as the start of the Upload buffers. This will later be changed each frame when Update() is called
@@ -321,14 +321,14 @@ public:
 		TINY_CORE_ASSERT(newVertices.size() == m_vertices.size(), "The new set of vertices must have the same total number as the original set");
 		TINY_CORE_ASSERT(frameIndex < gNumFrameResources, "Frame index is larger than expected");
 		m_vertices = std::move(newVertices);
-		memcpy(&m_mappedVertexData[frameIndex * m_vertexBufferView.SizeInBytes], &m_vertices.data(), m_vertexBufferView.SizeInBytes);
+		memcpy(&m_mappedVertexData[frameIndex * m_vertexBufferView.SizeInBytes], m_vertices.data(), m_vertexBufferView.SizeInBytes);
 	}
 	inline void CopyIndices(unsigned int frameIndex, std::vector<std::uint16_t>&& newIndices) noexcept
 	{
 		TINY_CORE_ASSERT(newIndices.size() == m_indices.size(), "The new set of indices must have the same total number as the original set");
 		TINY_CORE_ASSERT(frameIndex < gNumFrameResources, "Frame index is larger than expected"); 
 		m_indices = std::move(newIndices);
-		memcpy(&m_mappedIndexData[frameIndex * m_indexBufferView.SizeInBytes], &m_indices.data(), m_indexBufferView.SizeInBytes);
+		memcpy(&m_mappedIndexData[frameIndex * m_indexBufferView.SizeInBytes], m_indices.data(), m_indexBufferView.SizeInBytes);
 	}
 
 private:

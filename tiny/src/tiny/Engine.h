@@ -27,6 +27,7 @@ public:
 	static inline void Present() { Get().PresentImpl(); }
 	static inline void SetViewport(const D3D12_VIEWPORT& vp) noexcept { Get().SetViewportImpl(vp); }
 	static inline void SetScissorRect(const D3D12_RECT& rect) noexcept { Get().SetScissorRectImpl(rect); }
+	ND static inline int GetCurrentFrameIndex() noexcept { return Get().GetCurrentFrameIndexImpl(); }
 
 private:
 	Engine() noexcept = default;
@@ -45,6 +46,8 @@ private:
 	void PresentImpl();
 	inline void SetViewportImpl(const D3D12_VIEWPORT& vp) noexcept { m_viewport = vp; }
 	inline void SetScissorRectImpl(const D3D12_RECT& rect) noexcept { m_scissorRect = rect; }
+	ND inline int GetCurrentFrameIndexImpl() const noexcept { return m_currentFrameIndex; }
+
 
 	void CleanupResources() noexcept;
 	static inline void DelayedDelete(Microsoft::WRL::ComPtr<ID3D12Resource> resource) noexcept { Get().DelayedDeleteImpl(resource); }
@@ -98,5 +101,6 @@ private:
 	friend RenderItem;
 	friend MeshGroup;
 	friend DynamicMeshGroup;
+	template<typename> friend class DynamicMeshGroupT;
 };
 }

@@ -19,15 +19,15 @@ public:
 		// create a root signature with a single slot which points to a descriptor range consisting of a single constant buffer
 		Microsoft::WRL::ComPtr<ID3DBlob> serializedRootSig = nullptr;
 		Microsoft::WRL::ComPtr<ID3DBlob> errorBlob = nullptr;
-		HRESULT hr = D3D12SerializeRootSignature(&desc, D3D_ROOT_SIGNATURE_VERSION_1,
+		HRESULT _hr = D3D12SerializeRootSignature(&desc, D3D_ROOT_SIGNATURE_VERSION_1,
 			serializedRootSig.GetAddressOf(), errorBlob.GetAddressOf());
 
 		if (errorBlob != nullptr)
 		{
 			LOG_ERROR("D3D12SerializeRootSignature() failed with message: {}", (char*)errorBlob->GetBufferPointer());
 		}
-		if (FAILED(hr))
-			throw tiny::DeviceResourcesException(__LINE__, __FILE__, hr);
+		if (FAILED(_hr))
+			throw tiny::DeviceResourcesException(__LINE__, __FILE__, _hr);
 
 		GFX_THROW_INFO(
 			m_deviceResources->GetDevice()->CreateRootSignature(

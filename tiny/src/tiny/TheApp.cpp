@@ -155,8 +155,7 @@ namespace tiny
 
 
 		// Render Pass Layer: Opaque ----------------------------------------------------------------------
-		m_mainRenderPass.RenderPassLayers.emplace_back(m_deviceResources);
-		RenderPassLayer& opaqueLayer = m_mainRenderPass.RenderPassLayers.back();
+		RenderPassLayer& opaqueLayer = m_mainRenderPass.RenderPassLayers.emplace_back(m_deviceResources);
 
 		// PSO
 		m_standardVS = std::make_unique<Shader>(m_deviceResources, "C:/dev/tiny/sandbox/LightingVS.cso"); 
@@ -236,7 +235,7 @@ namespace tiny
 		auto& gridConstantsCBV = gridRI.ConstantBufferViews.emplace_back(1, m_gridObjectConstantsCB.get());
 		gridConstantsCBV.Update = [this](const Timer& timer, RenderItem* ri, int frameIndex)
 		{
-			// Only update the cbuffer data if the constants have changed.  
+			// Only update the cbuffer data if the constants have changed.
 			if (ri->NumFramesDirty > 0)
 			{
 				DirectX::XMMATRIX world = DirectX::XMLoadFloat4x4(&ri->World);
@@ -278,6 +277,171 @@ namespace tiny
 		{
 			// No update here because the texture is static
 		};
+
+
+
+
+
+
+
+
+		// Render Pass Layer: Transparent ----------------------------------------------------------------------
+		RenderPassLayer& transparentLayer = m_mainRenderPass.RenderPassLayers.emplace_back(m_deviceResources);
+
+		// PSO
+		std::unique_ptr<BlendState> transparentBlendState = std::make_unique<BlendState>();
+		transparentBlendState->SetRenderTargetBlendEnabled(true);
+		transparentBlendState->SetRenderTargetLogicOpEnabled(false);
+		transparentBlendState->SetRenderTargetSrcBlend(D3D12_BLEND_SRC_ALPHA);
+		transparentBlendState->SetRenderTargetDestBlend(D3D12_BLEND_INV_SRC_ALPHA);
+		transparentBlendState->SetRenderTargetBlendOp(D3D12_BLEND_OP_ADD);
+		transparentBlendState->SetRenderTargetSrcBlendAlpha(D3D12_BLEND_ONE);
+		transparentBlendState->SetRenderTargetDestBlendAlpha(D3D12_BLEND_ZERO);
+		transparentBlendState->SetRenderTargetBlendOpAlpha(D3D12_BLEND_OP_ADD);
+		transparentBlendState->SetRenderTargetLogicOp(D3D12_LOGIC_OP_NOOP);
+		transparentBlendState->SetRenderTargetWriteMask(D3D12_COLOR_WRITE_ENABLE_ALL);
+
+		D3D12_GRAPHICS_PIPELINE_STATE_DESC transparentDesc = opaqueDesc; 
+		transparentDesc.BlendState = transparentBlendState->GetBlendDesc(); 
+
+		transparentLayer.SetPSO(transparentDesc);
+
+		// Topology
+		transparentLayer.Topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+
+		// MeshGroup
+		m_waves = std::make_unique<Waves>(128, 128, 1.0f, 0.03f, 4.0f, 0.2f);
+		std::vector<std::uint16_t> waveIndices(3 * m_waves->TriangleCount()); // 3 indices per face
+		TINY_CORE_ASSERT(m_waves->VertexCount() < 0x0000ffff, "Too many vertices");
+
+		// Iterate over each quad.
+		int m = m_waves->RowCount();
+		int n = m_waves->ColumnCount();
+		int k = 0;
+		for (int i = 0; i < m - 1; ++i)
+		{
+			for (int j = 0; j < n - 1; ++j)
+			{
+				waveIndices[k] = i * n + j;
+				waveIndices[k + 1] = i * n + j + 1;
+				waveIndices[k + 2] = (i + 1) * n + j;
+
+				waveIndices[k + 3] = (i + 1) * n + j;
+				waveIndices[k + 4] = i * n + j + 1;
+				waveIndices[k + 5] = (i + 1) * n + j + 1;
+
+				k += 6; // next quad
+			}
+		}
+
+		std::vector<Vertex> waveVertices(m_waves->VertexCount());
+		for (int i = 0; i < m_waves->VertexCount(); ++i)
+		{
+			Vertex v;
+
+			v.Pos = m_waves->Position(i);
+			v.Normal = m_waves->Normal(i);
+
+			// Derive tex-coords from position by 
+			// mapping [-w/2,w/2] --> [0,1]
+			v.TexC.x = 0.5f + v.Pos.x / m_waves->Width();
+			v.TexC.y = 0.5f - v.Pos.z / m_waves->Depth();
+
+			waveVertices[i] = v;
+		}
+
+		transparentLayer.Meshes = std::make_unique<DynamicMeshGroupT<Vertex>>(m_deviceResources, std::move(waveVertices), std::move(waveIndices));
+		m_dynamicWaveMesh = static_cast<DynamicMeshGroupT<Vertex>*>(transparentLayer.Meshes.get());
+
+		// Render Items
+		m_wavesObjectConstantsCB = std::make_unique<ConstantBufferT<ObjectConstants>>(m_deviceResources);
+		m_wavesMaterialCB = std::make_unique<ConstantBufferT<Material>>(m_deviceResources);
+
+		RenderItem& wavesRI = transparentLayer.RenderItems.emplace_back();
+
+		wavesRI.World = MathHelper::Identity4x4();
+		DirectX::XMStoreFloat4x4(&wavesRI.TexTransform, DirectX::XMMatrixScaling(5.0f, 5.0f, 1.0f));
+		wavesRI.material = std::make_unique<Material>();
+		wavesRI.material->DiffuseAlbedo = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 0.5f);
+		wavesRI.material->FresnelR0 = DirectX::XMFLOAT3(0.1f, 0.1f, 0.1f);
+		wavesRI.material->Roughness = 0.0f;
+		
+		m_wavesRI = &wavesRI;
+
+		auto& wavesConstantsCBV = wavesRI.ConstantBufferViews.emplace_back(1, m_wavesObjectConstantsCB.get());
+		wavesConstantsCBV.Update = [this](const Timer& timer, RenderItem* ri, int frameIndex)
+		{
+			// Only update the cbuffer data if the constants have changed.  
+			if (ri->NumFramesDirty > 0)
+			{
+				DirectX::XMMATRIX world = DirectX::XMLoadFloat4x4(&ri->World);
+				DirectX::XMMATRIX texTransform = DirectX::XMLoadFloat4x4(&ri->TexTransform);
+
+				ObjectConstants objConstants;
+				DirectX::XMStoreFloat4x4(&objConstants.World, DirectX::XMMatrixTranspose(world));
+				DirectX::XMStoreFloat4x4(&objConstants.TexTransform, DirectX::XMMatrixTranspose(texTransform));
+
+				m_wavesObjectConstantsCB->CopyData(frameIndex, objConstants);
+
+				--ri->NumFramesDirty;
+			}
+		};
+
+		auto& wavesMaterialCBV = wavesRI.ConstantBufferViews.emplace_back(3, m_wavesMaterialCB.get());
+		wavesMaterialCBV.Update = [this](const Timer& timer, RenderItem* ri, int frameIndex)
+		{
+			if (ri->materialNumFramesDirty > 0)
+			{
+				// Must transpose the transform before loading it into the constant buffer
+				DirectX::XMMATRIX transform = DirectX::XMLoadFloat4x4(&ri->material->MatTransform);
+
+				Material mat = *ri->material.get();
+				DirectX::XMStoreFloat4x4(&mat.MatTransform, DirectX::XMMatrixTranspose(transform));
+
+				m_wavesMaterialCB->CopyData(frameIndex, mat);
+
+				// Next FrameResource need to be updated too.
+				--ri->materialNumFramesDirty;
+			}
+		};
+
+		wavesRI.texture = 1; // water is texture #1
+		wavesRI.submeshIndex = 0; // Only using a single mesh, so automatically it is at index 0
+
+		auto& waveDT = wavesRI.DescriptorTables.emplace_back(0, m_textures[wavesRI.texture]->GetGPUHandle());
+		waveDT.Update = [](const Timer& timer, int frameIndex)
+		{
+			// No update here because the texture is static
+		};
+
+
+
+
+
+
+
+
+
+//		GeometryGenerator::MeshData box = geoGen.CreateBox(8.0f, 8.0f, 8.0f, 3);
+//
+//		std::vector<std::uint16_t> indices = box.GetIndices16();
+//		std::vector<Vertex> vertices(box.Vertices.size());
+//		for (size_t i = 0; i < box.Vertices.size(); ++i)
+//		{
+//			auto& p = box.Vertices[i].Position;
+//			vertices[i].Pos = p;
+//			vertices[i].Normal = box.Vertices[i].Normal;
+//			vertices[i].TexC = box.Vertices[i].TexC;
+//		}
+//
+//		std::vector<std::vector<Vertex>> allBoxVertices;
+//		allBoxVertices.push_back(std::move(vertices));
+//		std::vector<std::vector<std::uint16_t>> allBoxIndices;
+//		allBoxIndices.push_back(std::move(indices));
+//
+//		transparentLayer.Meshes = std::make_unique<MeshGroupT<Vertex>>(m_deviceResources, allBoxVertices, allBoxIndices);
+
+
 	}
 
 
@@ -288,6 +452,7 @@ namespace tiny
 		// IMPORTANT: Do all necessary updates/animation first, but then be sure to call Engine::Update()
 
 		UpdateCamera(timer);
+		UpdateWavesVertices(timer);
 
 		// Cycle through the circular frame resource array.
 //		m_currFrameResourceIndex = (m_currFrameResourceIndex + 1) % gNumFrameResources;
@@ -305,7 +470,7 @@ namespace tiny
 //			CloseHandle(eventHandle);
 //		}
 
-		AnimateMaterials(timer);
+		UpdateWavesMaterials(timer);
 //		UpdateObjectCBs(timer);
 //		UpdateMaterialCBs(timer);
 //		UpdateMainPassCB(timer);
@@ -330,6 +495,44 @@ namespace tiny
 
 		DirectX::XMMATRIX view = DirectX::XMMatrixLookAtLH(pos, target, up);
 		DirectX::XMStoreFloat4x4(&m_view, view);
+	}
+	void TheApp::UpdateWavesVertices(const Timer& timer)
+	{
+		// Every quarter second, generate a random wave.
+		static float t_base = 0.0f;
+		if ((timer.TotalTime() - t_base) >= 0.25f)
+		{
+			t_base += 0.25f;
+
+			int i = MathHelper::Rand(4, m_waves->RowCount() - 5);
+			int j = MathHelper::Rand(4, m_waves->ColumnCount() - 5);
+
+			float r = MathHelper::RandF(0.2f, 0.5f);
+
+			m_waves->Disturb(i, j, r);
+		}
+
+		// Update the wave simulation.
+		m_waves->Update(timer.DeltaTime());
+
+		// Update the wave vertex buffer with the new solution.
+		std::vector<Vertex> waveVertices(m_waves->VertexCount());
+		for (int i = 0; i < m_waves->VertexCount(); ++i)
+		{
+			Vertex v;
+
+			v.Pos = m_waves->Position(i);
+			v.Normal = m_waves->Normal(i);
+
+			// Derive tex-coords from position by 
+			// mapping [-w/2,w/2] --> [0,1]
+			v.TexC.x = 0.5f + v.Pos.x / m_waves->Width();
+			v.TexC.y = 0.5f - v.Pos.z / m_waves->Depth();
+
+			waveVertices[i] = v;
+		}
+
+		m_dynamicWaveMesh->CopyVertices(Engine::GetCurrentFrameIndex(), std::move(waveVertices));
 	}
 /*
 	void TheApp::UpdateObjectCBs(const Timer& timer)
@@ -464,31 +667,29 @@ namespace tiny
 		//m_wavesRitem->Geo->VertexBufferGPU = currWavesVB->Resource();
 	}
 */
-	void TheApp::AnimateMaterials(const Timer& timer)
+	void TheApp::UpdateWavesMaterials(const Timer& timer)
 	{
-		// TODO: This animation requires us knowing that water is the first render item
-		//		 This should be replaced with a lambda or something belonging to the render item
-//		auto waterMat = m_allRitems[0]->material.get();
-//
-//		// Scroll the water material texture coordinates.
-//
-//		float& tu = waterMat->MatTransform(3, 0);
-//		float& tv = waterMat->MatTransform(3, 1);
-//
-//		tu += 0.1f * timer.DeltaTime();
-//		tv += 0.02f * timer.DeltaTime();
-//
-//		if (tu >= 1.0f)
-//			tu -= 1.0f;
-//
-//		if (tv >= 1.0f)
-//			tv -= 1.0f;
-//
-//		waterMat->MatTransform(3, 0) = tu;
-//		waterMat->MatTransform(3, 1) = tv;
-//
-//		// Material has changed, so need to update cbuffer.
-//		m_allRitems[0]->materialNumFramesDirty = gNumFrameResources;
+		// Scroll the water material texture coordinates.
+
+		Material* waveMaterial = m_wavesRI->material.get();
+
+		float& tu = waveMaterial->MatTransform(3, 0);
+		float& tv = waveMaterial->MatTransform(3, 1);
+
+		tu += 0.1f * timer.DeltaTime();
+		tv += 0.02f * timer.DeltaTime();
+
+		if (tu >= 1.0f)
+			tu -= 1.0f;
+
+		if (tv >= 1.0f)
+			tv -= 1.0f;
+
+		waveMaterial->MatTransform(3, 0) = tu;
+		waveMaterial->MatTransform(3, 1) = tv;
+
+		// Material has changed, so need to update cbuffer.
+		m_wavesRI->materialNumFramesDirty = gNumFrameResources;
 	}
 
 	void TheApp::Render()
