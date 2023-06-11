@@ -142,13 +142,28 @@ void Sandbox::OnKeyPressed(tiny::KeyPressedEvent& e) {}
 void Sandbox::OnKeyReleased(tiny::KeyReleasedEvent& e) {}
 
 // REQUIRED FOR CRTP - Mouse Events
-void Sandbox::OnMouseMove(tiny::MouseMoveEvent& e) {}
+void Sandbox::OnMouseMove(tiny::MouseMoveEvent& e) 
+{
+    m_app->OnMouseMove(e.GetX(), e.GetY());
+}
 void Sandbox::OnMouseEnter(tiny::MouseEnterEvent& e) {}
 void Sandbox::OnMouseLeave(tiny::MouseLeaveEvent& e) {}
 void Sandbox::OnMouseScrolledVertical(tiny::MouseScrolledEvent& e) {}
 void Sandbox::OnMouseScrolledHorizontal(tiny::MouseScrolledEvent& e) {}
-void Sandbox::OnMouseButtonPressed(tiny::MouseButtonPressedEvent& e) {}
-void Sandbox::OnMouseButtonReleased(tiny::MouseButtonReleasedEvent& e) {}
+void Sandbox::OnMouseButtonPressed(tiny::MouseButtonPressedEvent& e) 
+{
+    if (e.GetMouseButton() == tiny::MOUSE_BUTTON::LBUTTON)
+    {
+        m_app->OnLButtonUpDown(true);
+    }
+}
+void Sandbox::OnMouseButtonReleased(tiny::MouseButtonReleasedEvent& e) 
+{
+    if (e.GetMouseButton() == tiny::MOUSE_BUTTON::LBUTTON)
+    {
+        m_app->OnLButtonUpDown(false);
+    }
+}
 void Sandbox::OnMouseButtonDoubleClick(tiny::MouseButtonDoubleClickEvent& e) {}
 
 }

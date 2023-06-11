@@ -23,6 +23,8 @@
 #include "tiny/rendering/MeshGroup.h"
 #include "tiny/rendering/RenderPass.h"
 
+#include "tiny/scene/Camera.h"
+
 #include "tiny/other/Waves.h"
 
 namespace tiny
@@ -46,7 +48,11 @@ public:
 
 	void OnResize(int height, int width);
 	void SetViewport(float top, float left, float height, float width) noexcept;
-			
+	
+	// Mouse Events
+	void OnMouseMove(float x, float y);
+	void OnLButtonUpDown(bool isDown) { m_lButtonDown = isDown; }
+
 
 private:
 	void LoadTextures();
@@ -85,13 +91,19 @@ private:
 	RenderItem* m_wavesRI = nullptr;
 
 
-	DirectX::XMFLOAT3 m_eyePos = { 0.0f, 0.0f, 0.0f };
-	DirectX::XMFLOAT4X4 m_view = tiny::MathHelper::Identity4x4();
-	DirectX::XMFLOAT4X4 m_proj = tiny::MathHelper::Identity4x4();
+	//DirectX::XMFLOAT3 m_eyePos = { 0.0f, 0.0f, 0.0f };
+	//DirectX::XMFLOAT4X4 m_view = tiny::MathHelper::Identity4x4();
+	//DirectX::XMFLOAT4X4 m_proj = tiny::MathHelper::Identity4x4();
 
-	float m_theta = 1.5f * DirectX::XM_PI;
-	float m_phi = DirectX::XM_PIDIV4;
-	float m_radius = 55.0f;
+	//float m_theta = 1.5f * DirectX::XM_PI;
+	//float m_phi = DirectX::XM_PIDIV4;
+	//float m_radius = 55.0f;
+
+	Camera m_camera;
+	POINT m_lastMousePos;
+	bool m_lButtonDown = false;
+
+
 
 	std::unique_ptr<RasterizerState> m_rasterizerState = nullptr;
 	std::unique_ptr<BlendState> m_blendState = nullptr;
