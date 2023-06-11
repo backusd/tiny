@@ -20,9 +20,6 @@ TheApp::TheApp(std::shared_ptr<DeviceResources> deviceResources) :
 	LoadTextures();
 	BuildMainRenderPass();
 
-	//DirectX::XMMATRIX P = DirectX::XMMatrixPerspectiveFovLH(0.25f * DirectX::XM_PI, m_deviceResources->AspectRatio(), 1.0f, 1000.0f);
-	//DirectX::XMStoreFloat4x4(&m_proj, P);
-
 	// Execute the initialization commands.
 	GFX_THROW_INFO(m_deviceResources->GetCommandList()->Close());
 	ID3D12CommandList* cmdsLists[] = { m_deviceResources->GetCommandList() };
@@ -33,9 +30,6 @@ TheApp::TheApp(std::shared_ptr<DeviceResources> deviceResources) :
 }
 void TheApp::OnResize(int height, int width)
 {
-	//DirectX::XMMATRIX P = DirectX::XMMatrixPerspectiveFovLH(0.25f * DirectX::XM_PI, m_deviceResources->AspectRatio(), 1.0f, 1000.0f);
-	//DirectX::XMStoreFloat4x4(&m_proj, P);
-
 	m_camera.SetLens(0.25f * MathHelper::Pi, m_deviceResources->AspectRatio(), 1.0f, 1000.0f);
 }
 void TheApp::SetViewport(float top, float left, float height, float width) noexcept
@@ -94,9 +88,6 @@ void TheApp::BuildMainRenderPass()
 		DirectX::XMMATRIX view = m_camera.GetView();
 		DirectX::XMMATRIX proj = m_camera.GetProj();
 
-		//DirectX::XMMATRIX view = DirectX::XMLoadFloat4x4(&m_view); 
-		//DirectX::XMMATRIX proj = DirectX::XMLoadFloat4x4(&m_proj); 
-
 		DirectX::XMMATRIX viewProj = DirectX::XMMatrixMultiply(view, proj); 
 
 		DirectX::XMVECTOR _det = DirectX::XMMatrixDeterminant(view); 
@@ -118,7 +109,6 @@ void TheApp::BuildMainRenderPass()
 		DirectX::XMStoreFloat4x4(&passConstants.InvViewProj, DirectX::XMMatrixTranspose(invViewProj));
 		
 		passConstants.EyePosW = m_camera.GetPosition3f();
-		//passConstants.EyePosW = m_eyePos;
 
 		float height = static_cast<float>(m_deviceResources->GetHeight());
 		float width = static_cast<float>(m_deviceResources->GetWidth());
@@ -278,6 +268,103 @@ void TheApp::BuildMainRenderPass()
 
 
 
+	// Render Pass Layer: Alpha Test ----------------------------------------------------------------------
+	RenderPassLayer& alphaTestLayer = m_mainRenderPass.RenderPassLayers.emplace_back(m_deviceResources);
+
+	// PSO
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC alphaTestDesc = opaqueDesc;
+	alphaTestDesc.PS = m_alphaTestedPS->GetShaderByteCode();
+	alphaTestDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
+
+	alphaTestLayer.SetPSO(alphaTestDesc);
+
+	// Topology
+	alphaTestLayer.Topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+
+	// Meshes
+	GeometryGenerator::MeshData box = geoGen.CreateBox(8.0f, 8.0f, 8.0f, 3);
+
+	std::vector<std::uint16_t> boxIndices = box.GetIndices16();
+	std::vector<Vertex> boxVertices(box.Vertices.size());
+	for (size_t i = 0; i < box.Vertices.size(); ++i)
+	{
+		auto& p = box.Vertices[i].Position;
+		boxVertices[i].Pos = p;
+		boxVertices[i].Normal = box.Vertices[i].Normal;
+		boxVertices[i].TexC = box.Vertices[i].TexC;
+	}
+
+	std::vector<std::vector<Vertex>> allBoxVertices;
+	allBoxVertices.push_back(std::move(boxVertices));
+	std::vector<std::vector<std::uint16_t>> allBoxIndices;
+	allBoxIndices.push_back(std::move(boxIndices));
+
+	alphaTestLayer.Meshes = std::make_unique<MeshGroupT<Vertex>>(m_deviceResources, allBoxVertices, allBoxIndices);
+
+	// Render Items
+	m_boxObjectConstantsCB = std::make_unique<ConstantBufferT<ObjectConstants>>(m_deviceResources);
+	m_boxMaterialCB = std::make_unique<ConstantBufferT<Material>>(m_deviceResources);
+
+	RenderItem& boxRI = alphaTestLayer.RenderItems.emplace_back();
+
+	DirectX::XMStoreFloat4x4(&boxRI.World, DirectX::XMMatrixTranslation(3.0f, 2.0f, -9.0f));
+
+	boxRI.material = std::make_unique<Material>();
+	boxRI.material->DiffuseAlbedo = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+	boxRI.material->FresnelR0 = DirectX::XMFLOAT3(0.1f, 0.1f, 0.1f);
+	boxRI.material->Roughness = 0.25f;
+
+	auto& boxConstantsCBV = boxRI.ConstantBufferViews.emplace_back(1, m_boxObjectConstantsCB.get());
+	boxConstantsCBV.Update = [this](const Timer& timer, RenderItem* ri, int frameIndex)
+	{
+		// Only update the cbuffer data if the constants have changed.
+		if (ri->NumFramesDirty > 0)
+		{
+			DirectX::XMMATRIX world = DirectX::XMLoadFloat4x4(&ri->World);
+			DirectX::XMMATRIX texTransform = DirectX::XMLoadFloat4x4(&ri->TexTransform);
+
+			ObjectConstants objConstants;
+			DirectX::XMStoreFloat4x4(&objConstants.World, DirectX::XMMatrixTranspose(world));
+			DirectX::XMStoreFloat4x4(&objConstants.TexTransform, DirectX::XMMatrixTranspose(texTransform));
+
+			m_boxObjectConstantsCB->CopyData(frameIndex, objConstants);
+
+			--ri->NumFramesDirty;
+		}
+	};
+
+	auto& boxMaterialCBV = boxRI.ConstantBufferViews.emplace_back(3, m_boxMaterialCB.get());
+	boxMaterialCBV.Update = [this](const Timer& timer, RenderItem* ri, int frameIndex)
+	{
+		if (ri->materialNumFramesDirty > 0)
+		{
+			// Must transpose the transform before loading it into the constant buffer
+			DirectX::XMMATRIX transform = DirectX::XMLoadFloat4x4(&ri->material->MatTransform);
+
+			Material mat = *ri->material.get();
+			DirectX::XMStoreFloat4x4(&mat.MatTransform, DirectX::XMMatrixTranspose(transform));
+
+			m_boxMaterialCB->CopyData(frameIndex, mat);
+
+			// Next FrameResource need to be updated too.
+			--ri->materialNumFramesDirty;
+		}
+	};
+
+	boxRI.texture = 2; // box is texture #2
+	boxRI.submeshIndex = 0; // Only using a single mesh, so automatically it is at index 0
+
+	auto& boxDT = boxRI.DescriptorTables.emplace_back(0, m_textures[boxRI.texture]->GetGPUHandle());
+	boxDT.Update = [](const Timer& timer, int frameIndex)
+	{
+		// No update here because the texture is static
+	};
+
+
+
+
+
+
 
 	// Render Pass Layer: Transparent ----------------------------------------------------------------------
 	RenderPassLayer& transparentLayer = m_mainRenderPass.RenderPassLayers.emplace_back(m_deviceResources);
@@ -410,100 +497,6 @@ void TheApp::BuildMainRenderPass()
 
 
 
-
-
-
-	// Render Pass Layer: Alpha Test ----------------------------------------------------------------------
-	RenderPassLayer& alphaTestLayer = m_mainRenderPass.RenderPassLayers.emplace_back(m_deviceResources);
-
-	// PSO
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC alphaTestDesc = opaqueDesc;
-	alphaTestDesc.PS = m_alphaTestedPS->GetShaderByteCode();
-	alphaTestDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
-		
-	alphaTestLayer.SetPSO(alphaTestDesc);
-
-	// Topology
-	alphaTestLayer.Topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-
-	// Meshes
-	GeometryGenerator::MeshData box = geoGen.CreateBox(8.0f, 8.0f, 8.0f, 3);
-
-	std::vector<std::uint16_t> boxIndices = box.GetIndices16();
-	std::vector<Vertex> boxVertices(box.Vertices.size());
-	for (size_t i = 0; i < box.Vertices.size(); ++i)
-	{
-		auto& p = box.Vertices[i].Position;
-		boxVertices[i].Pos = p;
-		boxVertices[i].Normal = box.Vertices[i].Normal;
-		boxVertices[i].TexC = box.Vertices[i].TexC;
-	}
-
-	std::vector<std::vector<Vertex>> allBoxVertices;
-	allBoxVertices.push_back(std::move(boxVertices));
-	std::vector<std::vector<std::uint16_t>> allBoxIndices;
-	allBoxIndices.push_back(std::move(boxIndices));
-
-	alphaTestLayer.Meshes = std::make_unique<MeshGroupT<Vertex>>(m_deviceResources, allBoxVertices, allBoxIndices);
-
-	// Render Items
-	m_boxObjectConstantsCB = std::make_unique<ConstantBufferT<ObjectConstants>>(m_deviceResources);
-	m_boxMaterialCB = std::make_unique<ConstantBufferT<Material>>(m_deviceResources);
-
-	RenderItem& boxRI = alphaTestLayer.RenderItems.emplace_back();
-
-	DirectX::XMStoreFloat4x4(&boxRI.World, DirectX::XMMatrixTranslation(3.0f, 2.0f, -9.0f));
-
-	boxRI.material = std::make_unique<Material>();
-	boxRI.material->DiffuseAlbedo = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-	boxRI.material->FresnelR0 = DirectX::XMFLOAT3(0.1f, 0.1f, 0.1f);
-	boxRI.material->Roughness = 0.25f;
-
-	auto& boxConstantsCBV = boxRI.ConstantBufferViews.emplace_back(1, m_boxObjectConstantsCB.get());
-	boxConstantsCBV.Update = [this](const Timer& timer, RenderItem* ri, int frameIndex)
-	{
-		// Only update the cbuffer data if the constants have changed.
-		if (ri->NumFramesDirty > 0)
-		{
-			DirectX::XMMATRIX world = DirectX::XMLoadFloat4x4(&ri->World);
-			DirectX::XMMATRIX texTransform = DirectX::XMLoadFloat4x4(&ri->TexTransform);
-
-			ObjectConstants objConstants;
-			DirectX::XMStoreFloat4x4(&objConstants.World, DirectX::XMMatrixTranspose(world));
-			DirectX::XMStoreFloat4x4(&objConstants.TexTransform, DirectX::XMMatrixTranspose(texTransform));
-
-			m_boxObjectConstantsCB->CopyData(frameIndex, objConstants);
-
-			--ri->NumFramesDirty;
-		}
-	};
-
-	auto& boxMaterialCBV = boxRI.ConstantBufferViews.emplace_back(3, m_boxMaterialCB.get());
-	boxMaterialCBV.Update = [this](const Timer& timer, RenderItem* ri, int frameIndex)
-	{
-		if (ri->materialNumFramesDirty > 0)
-		{
-			// Must transpose the transform before loading it into the constant buffer
-			DirectX::XMMATRIX transform = DirectX::XMLoadFloat4x4(&ri->material->MatTransform);
-
-			Material mat = *ri->material.get();
-			DirectX::XMStoreFloat4x4(&mat.MatTransform, DirectX::XMMatrixTranspose(transform));
-
-			m_boxMaterialCB->CopyData(frameIndex, mat);
-
-			// Next FrameResource need to be updated too.
-			--ri->materialNumFramesDirty;
-		}
-	};
-
-	boxRI.texture = 2; // box is texture #2
-	boxRI.submeshIndex = 0; // Only using a single mesh, so automatically it is at index 0
-
-	auto& boxDT = boxRI.DescriptorTables.emplace_back(0, m_textures[boxRI.texture]->GetGPUHandle());
-	boxDT.Update = [](const Timer& timer, int frameIndex)
-	{
-		// No update here because the texture is static
-	};
 }
 
 
@@ -525,20 +518,21 @@ void TheApp::Update(const Timer& timer)
 
 void TheApp::UpdateCamera(const Timer& timer)
 {
-	m_camera.UpdateViewMatrix();
+	const float dt = timer.DeltaTime();
 
-	// Convert Spherical to Cartesian coordinates.
-//	m_eyePos.x = m_radius * sinf(m_phi) * cosf(m_theta);
-//	m_eyePos.z = m_radius * sinf(m_phi) * sinf(m_theta);
-//	m_eyePos.y = m_radius * cosf(m_phi);
-//
-//	// Build the view matrix.
-//	DirectX::XMVECTOR pos = DirectX::XMVectorSet(m_eyePos.x, m_eyePos.y, m_eyePos.z, 1.0f);
-//	DirectX::XMVECTOR target = DirectX::XMVectorZero();
-//	DirectX::XMVECTOR up = DirectX::XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-//
-//	DirectX::XMMATRIX view = DirectX::XMMatrixLookAtLH(pos, target, up);
-//	DirectX::XMStoreFloat4x4(&m_view, view);
+	if (m_keyWIsDown)
+		m_camera.Walk(10.0f * dt);
+
+	if (m_keySIsDown)
+		m_camera.Walk(-10.0f * dt);
+
+	if (m_keyAIsDown)
+		m_camera.Strafe(-10.0f * dt);
+
+	if (m_keyDIsDown)
+		m_camera.Strafe(10.0f * dt);
+
+	m_camera.UpdateViewMatrix();
 }
 void TheApp::UpdateWavesVertices(const Timer& timer)
 {

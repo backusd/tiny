@@ -138,8 +138,26 @@ void Sandbox::OnAppRender(tiny::AppRenderEvent& e) {}
 
 // REQUIRED FOR CRTP - Key Events
 void Sandbox::OnChar(tiny::CharEvent& e) {}
-void Sandbox::OnKeyPressed(tiny::KeyPressedEvent& e) {}
-void Sandbox::OnKeyReleased(tiny::KeyReleasedEvent& e) {}
+void Sandbox::OnKeyPressed(tiny::KeyPressedEvent& e) 
+{
+    switch (e.GetKeyCode())
+    {
+    case tiny::KEY_CODE::W: m_app->OnWKeyUpDown(true); break;
+    case tiny::KEY_CODE::A: m_app->OnAKeyUpDown(true); break;
+    case tiny::KEY_CODE::S: m_app->OnSKeyUpDown(true); break;
+    case tiny::KEY_CODE::D: m_app->OnDKeyUpDown(true); break;
+    }
+}
+void Sandbox::OnKeyReleased(tiny::KeyReleasedEvent& e) 
+{
+    switch (e.GetKeyCode())
+    {
+    case tiny::KEY_CODE::W: m_app->OnWKeyUpDown(false); break;
+    case tiny::KEY_CODE::A: m_app->OnAKeyUpDown(false); break;
+    case tiny::KEY_CODE::S: m_app->OnSKeyUpDown(false); break;
+    case tiny::KEY_CODE::D: m_app->OnDKeyUpDown(false); break;
+    }
+}
 
 // REQUIRED FOR CRTP - Mouse Events
 void Sandbox::OnMouseMove(tiny::MouseMoveEvent& e) 

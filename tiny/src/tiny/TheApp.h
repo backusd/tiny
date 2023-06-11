@@ -52,7 +52,10 @@ public:
 	// Mouse Events
 	void OnMouseMove(float x, float y);
 	void OnLButtonUpDown(bool isDown) { m_lButtonDown = isDown; }
-
+	void OnWKeyUpDown(bool isDown) noexcept { m_keyWIsDown = isDown; }
+	void OnAKeyUpDown(bool isDown) noexcept { m_keyAIsDown = isDown; }
+	void OnSKeyUpDown(bool isDown) noexcept { m_keySIsDown = isDown; }
+	void OnDKeyUpDown(bool isDown) noexcept { m_keyDIsDown = isDown; }
 
 private:
 	void LoadTextures();
@@ -91,17 +94,14 @@ private:
 	RenderItem* m_wavesRI = nullptr;
 
 
-	//DirectX::XMFLOAT3 m_eyePos = { 0.0f, 0.0f, 0.0f };
-	//DirectX::XMFLOAT4X4 m_view = tiny::MathHelper::Identity4x4();
-	//DirectX::XMFLOAT4X4 m_proj = tiny::MathHelper::Identity4x4();
-
-	//float m_theta = 1.5f * DirectX::XM_PI;
-	//float m_phi = DirectX::XM_PIDIV4;
-	//float m_radius = 55.0f;
-
 	Camera m_camera;
 	POINT m_lastMousePos;
 	bool m_lButtonDown = false;
+	bool m_keyWIsDown = false;
+	bool m_keyAIsDown = false;
+	bool m_keySIsDown = false;
+	bool m_keyDIsDown = false;
+
 
 
 
