@@ -419,29 +419,97 @@ namespace tiny
 
 
 
+		// Render Pass Layer: Alpha Test ----------------------------------------------------------------------
+		RenderPassLayer& alphaTestLayer = m_mainRenderPass.RenderPassLayers.emplace_back(m_deviceResources);
 
+		// PSO
+		D3D12_GRAPHICS_PIPELINE_STATE_DESC alphaTestDesc = opaqueDesc;
+		alphaTestDesc.PS = m_alphaTestedPS->GetShaderByteCode();
+		alphaTestDesc.RasterizerState.CullMode = D3D12_CULL_MODE_NONE;
+		
+		alphaTestLayer.SetPSO(alphaTestDesc);
 
+		// Topology
+		alphaTestLayer.Topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 
-//		GeometryGenerator::MeshData box = geoGen.CreateBox(8.0f, 8.0f, 8.0f, 3);
-//
-//		std::vector<std::uint16_t> indices = box.GetIndices16();
-//		std::vector<Vertex> vertices(box.Vertices.size());
-//		for (size_t i = 0; i < box.Vertices.size(); ++i)
-//		{
-//			auto& p = box.Vertices[i].Position;
-//			vertices[i].Pos = p;
-//			vertices[i].Normal = box.Vertices[i].Normal;
-//			vertices[i].TexC = box.Vertices[i].TexC;
-//		}
-//
-//		std::vector<std::vector<Vertex>> allBoxVertices;
-//		allBoxVertices.push_back(std::move(vertices));
-//		std::vector<std::vector<std::uint16_t>> allBoxIndices;
-//		allBoxIndices.push_back(std::move(indices));
-//
-//		transparentLayer.Meshes = std::make_unique<MeshGroupT<Vertex>>(m_deviceResources, allBoxVertices, allBoxIndices);
+		// Meshes
+		GeometryGenerator::MeshData box = geoGen.CreateBox(8.0f, 8.0f, 8.0f, 3);
 
+		std::vector<std::uint16_t> boxIndices = box.GetIndices16();
+		std::vector<Vertex> boxVertices(box.Vertices.size());
+		for (size_t i = 0; i < box.Vertices.size(); ++i)
+		{
+			auto& p = box.Vertices[i].Position;
+			boxVertices[i].Pos = p;
+			boxVertices[i].Normal = box.Vertices[i].Normal;
+			boxVertices[i].TexC = box.Vertices[i].TexC;
+		}
 
+		std::vector<std::vector<Vertex>> allBoxVertices;
+		allBoxVertices.push_back(std::move(boxVertices));
+		std::vector<std::vector<std::uint16_t>> allBoxIndices;
+		allBoxIndices.push_back(std::move(boxIndices));
+
+		alphaTestLayer.Meshes = std::make_unique<MeshGroupT<Vertex>>(m_deviceResources, allBoxVertices, allBoxIndices);
+
+		// Render Items
+		m_boxObjectConstantsCB = std::make_unique<ConstantBufferT<ObjectConstants>>(m_deviceResources);
+		m_boxMaterialCB = std::make_unique<ConstantBufferT<Material>>(m_deviceResources);
+
+		RenderItem& boxRI = alphaTestLayer.RenderItems.emplace_back();
+
+		DirectX::XMStoreFloat4x4(&boxRI.World, DirectX::XMMatrixTranslation(3.0f, 2.0f, -9.0f));
+
+		boxRI.material = std::make_unique<Material>();
+		boxRI.material->DiffuseAlbedo = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+		boxRI.material->FresnelR0 = DirectX::XMFLOAT3(0.1f, 0.1f, 0.1f);
+		boxRI.material->Roughness = 0.25f;
+
+		auto& boxConstantsCBV = boxRI.ConstantBufferViews.emplace_back(1, m_boxObjectConstantsCB.get());
+		boxConstantsCBV.Update = [this](const Timer& timer, RenderItem* ri, int frameIndex)
+		{
+			// Only update the cbuffer data if the constants have changed.
+			if (ri->NumFramesDirty > 0)
+			{
+				DirectX::XMMATRIX world = DirectX::XMLoadFloat4x4(&ri->World);
+				DirectX::XMMATRIX texTransform = DirectX::XMLoadFloat4x4(&ri->TexTransform);
+
+				ObjectConstants objConstants;
+				DirectX::XMStoreFloat4x4(&objConstants.World, DirectX::XMMatrixTranspose(world));
+				DirectX::XMStoreFloat4x4(&objConstants.TexTransform, DirectX::XMMatrixTranspose(texTransform));
+
+				m_boxObjectConstantsCB->CopyData(frameIndex, objConstants);
+
+				--ri->NumFramesDirty;
+			}
+		};
+
+		auto& boxMaterialCBV = boxRI.ConstantBufferViews.emplace_back(3, m_boxMaterialCB.get());
+		boxMaterialCBV.Update = [this](const Timer& timer, RenderItem* ri, int frameIndex)
+		{
+			if (ri->materialNumFramesDirty > 0)
+			{
+				// Must transpose the transform before loading it into the constant buffer
+				DirectX::XMMATRIX transform = DirectX::XMLoadFloat4x4(&ri->material->MatTransform);
+
+				Material mat = *ri->material.get();
+				DirectX::XMStoreFloat4x4(&mat.MatTransform, DirectX::XMMatrixTranspose(transform));
+
+				m_boxMaterialCB->CopyData(frameIndex, mat);
+
+				// Next FrameResource need to be updated too.
+				--ri->materialNumFramesDirty;
+			}
+		};
+
+		boxRI.texture = 2; // box is texture #2
+		boxRI.submeshIndex = 0; // Only using a single mesh, so automatically it is at index 0
+
+		auto& boxDT = boxRI.DescriptorTables.emplace_back(0, m_textures[boxRI.texture]->GetGPUHandle());
+		boxDT.Update = [](const Timer& timer, int frameIndex)
+		{
+			// No update here because the texture is static
+		};
 	}
 
 
