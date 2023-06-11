@@ -566,7 +566,6 @@ namespace tiny
 
 		m_dynamicWaveMesh->CopyVertices(Engine::GetCurrentFrameIndex(), std::move(waveVertices));
 	}
-
 	void TheApp::UpdateWavesMaterials(const Timer& timer)
 	{
 		// Scroll the water material texture coordinates.
@@ -592,14 +591,6 @@ namespace tiny
 		m_wavesRI->materialNumFramesDirty = gNumFrameResources;
 	}
 
-	void TheApp::Render()
-	{
-		Engine::Render();
-	}
-	void TheApp::Present() 
-	{ 
-		Engine::Present();
-	}
 
 	std::array<const CD3DX12_STATIC_SAMPLER_DESC, 6> TheApp::GetStaticSamplers()
 	{

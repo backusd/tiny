@@ -41,8 +41,8 @@ public:
 	TheApp(std::shared_ptr<DeviceResources> deviceResources);
 
 	void Update(const Timer& timer);
-	void Render();
-	void Present();
+	void Render() { Engine::Render(); }
+	void Present() { Engine::Present(); }
 
 	void OnResize(int height, int width);
 	void SetViewport(float top, float left, float height, float width) noexcept;
