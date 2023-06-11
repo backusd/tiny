@@ -98,75 +98,8 @@ private:
 	std::unique_ptr<DepthStencilState> m_depthStencilState = nullptr;
 
 
-
-
-//	void BuildRootSignature();
-//	void BuildShadersAndInputLayout();
-//	void BuildLandGeometry();
-//	void BuildWavesGeometry();
-//	void BuildBoxGeometry();
-//	void BuildPSOs();
-//	void BuildFrameResources();
-//	void BuildRenderItems();
-//	void DrawRenderItems(ID3D12GraphicsCommandList* commandList, const std::vector<RenderItem*>& ritems, MeshGroup* meshGroup);
-
 	void UpdateCamera(const Timer& timer);
-//	void UpdateObjectCBs(const Timer& timer);
-//	void UpdateMaterialCBs(const Timer& timer);
-//	void UpdateMainPassCB(const Timer& timer);
-//	void UpdateWaves(const Timer& timer);
-
 
 	std::array<const CD3DX12_STATIC_SAMPLER_DESC, 6> GetStaticSamplers();
-
-
-
-
-//	std::vector<std::unique_ptr<FrameResource>> m_frameResources;
-//	FrameResource* m_currFrameResource = nullptr;
-//	int m_currFrameResourceIndex = 0;
-//
-//	Microsoft::WRL::ComPtr<ID3D12RootSignature> m_rootSignature = nullptr;
-//
-//	// Geometry
-//	std::unique_ptr<MeshGroupT<Vertex>> m_landMesh = nullptr;
-//	std::unique_ptr<MeshGroupT<Vertex>> m_waterMesh = nullptr;
-//	std::unique_ptr<MeshGroupT<Vertex>> m_boxMesh = nullptr;
-//
-//	//std::unordered_map<std::string, std::unique_ptr<MeshGeometry>> m_geometries;
-//	std::unordered_map<std::string, Microsoft::WRL::ComPtr<ID3D12PipelineState>> m_psos;
-//	std::unordered_map<std::string, std::unique_ptr<Shader>> m_shaders;
-//
-//
-//	// List of all the render items.
-//	std::vector<std::unique_ptr<RenderItem>> m_allRitems;
-//	RenderItem* m_wavesRitem = nullptr;
-//
-//	// Render items and mesh groups divided by PSO.
-//	std::vector<RenderItem*> m_renderItemLayer[(int)RenderLayer::Count];
-//	std::array<MeshGroup*, (int)RenderLayer::Count> m_meshGroups;
-//	std::unique_ptr<Waves> m_waves;
-//
-//	// States
-//	std::unique_ptr<RasterizerState> m_rasterizerState = nullptr;
-//	std::unique_ptr<BlendState> m_blendState = nullptr;
-//	std::unique_ptr<DepthStencilState> m_depthStencilState = nullptr;
-//
-//	// Pass constants and the constant buffer the data is uploaded to
-//	PassConstants m_mainPassCB;
-//	std::unique_ptr<ConstantBuffer<PassConstants>> m_passConstantsConstantBuffer = nullptr;
-//
-//	UINT m_passCbvOffset = 0;
-//
-//	DirectX::XMFLOAT3 m_eyePos = { 0.0f, 0.0f, 0.0f };
-//	DirectX::XMFLOAT4X4 m_view = tiny::MathHelper::Identity4x4();
-//	DirectX::XMFLOAT4X4 m_proj = tiny::MathHelper::Identity4x4();
-//
-//	float m_theta = 1.5f * DirectX::XM_PI;
-//	float m_phi = DirectX::XM_PIDIV4;
-//	float m_radius = 55.0f;
-//
-//	D3D12_VIEWPORT m_viewport;
-//	D3D12_RECT m_scissorRect;
 };
 }
