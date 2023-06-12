@@ -9,8 +9,9 @@ TheApp::TheApp(std::shared_ptr<DeviceResources> deviceResources) :
 	m_deviceResources(deviceResources),
 	m_mainRenderPass()
 {
-	TextureManager::Init(m_deviceResources);
 	Engine::Init(m_deviceResources);
+	TextureManager::Init(m_deviceResources);
+
 
 	GFX_THROW_INFO(m_deviceResources->GetCommandList()->Reset(m_deviceResources->GetCommandAllocator(), nullptr));
 

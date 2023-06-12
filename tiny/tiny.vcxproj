@@ -117,7 +117,6 @@
     <ClInclude Include="src\tiny\rendering\ConstantBuffer.h" />
     <ClInclude Include="src\tiny\rendering\DepthStencilState.h" />
     <ClInclude Include="src\tiny\rendering\DescriptorVector.h" />
-    <ClInclude Include="src\tiny\rendering\FrameResource.h" />
     <ClInclude Include="src\tiny\rendering\GeometryGenerator.h" />
     <ClInclude Include="src\tiny\rendering\InputLayout.h" />
     <ClInclude Include="src\tiny\rendering\Light.h" />
@@ -133,7 +132,6 @@
     <ClInclude Include="src\tiny\rendering\RootSignature.h" />
     <ClInclude Include="src\tiny\rendering\Shader.h" />
     <ClInclude Include="src\tiny\rendering\Texture.h" />
-    <ClInclude Include="src\tiny\rendering\UploadBuffer.h" />
     <ClInclude Include="src\tiny\scene\Camera.h" />
     <ClInclude Include="src\tiny\TheApp.h" />
     <ClInclude Include="src\tiny\utils\Constants.h" />
@@ -153,7 +151,6 @@
     <ClCompile Include="src\tiny\Log.cpp" />
     <ClCompile Include="src\tiny\other\Waves.cpp" />
     <ClCompile Include="src\tiny\rendering\DescriptorVector.cpp" />
-    <ClCompile Include="src\tiny\rendering\FrameResource.cpp" />
     <ClCompile Include="src\tiny\rendering\GeometryGenerator.cpp" />
     <ClCompile Include="src\tiny\rendering\Texture.cpp" />
     <ClCompile Include="src\tiny\scene\Camera.cpp" />

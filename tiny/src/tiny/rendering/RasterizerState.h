@@ -7,7 +7,7 @@ namespace tiny
 	class RasterizerState
 	{
 	public:
-		RasterizerState()
+		RasterizerState() noexcept
 		{
 			m_desc.FillMode = D3D12_FILL_MODE_SOLID;
 			m_desc.CullMode = D3D12_CULL_MODE_BACK;
@@ -21,8 +21,10 @@ namespace tiny
 			m_desc.ForcedSampleCount = 0;
 			m_desc.ConservativeRaster = D3D12_CONSERVATIVE_RASTERIZATION_MODE_OFF;
 		}
-		RasterizerState(const RasterizerState&) noexcept = delete;
-		RasterizerState& operator=(const RasterizerState&) noexcept = delete;
+		RasterizerState(const RasterizerState&) noexcept = default;
+		RasterizerState(RasterizerState&&) noexcept = default;
+		RasterizerState& operator=(const RasterizerState&) noexcept = default;
+		RasterizerState& operator=(RasterizerState&&) noexcept = default;
 		~RasterizerState() noexcept {}
 
 		ND inline D3D12_RASTERIZER_DESC GetRasterizerDesc() const noexcept { return m_desc;	}

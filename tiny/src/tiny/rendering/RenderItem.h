@@ -1,7 +1,6 @@
 #pragma once
 #include "tiny-pch.h"
 #include "tiny/Core.h"
-#include "FrameResource.h"
 #include "MeshGeometry.h"
 #include "Material.h"
 #include "ConstantBuffer.h"

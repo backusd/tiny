@@ -10,25 +10,24 @@ extern std::size_t GetTotalTextureCount();
 
 namespace tiny
 {
-// TextureResources ==============================================================================================
-struct TextureResources
-{
-	Microsoft::WRL::ComPtr<ID3D12Resource> Resource   = nullptr;
-	Microsoft::WRL::ComPtr<ID3D12Resource> UploadHeap = nullptr;
-};
-
 // Texture =======================================================================================================
 class TextureManager; // Forward declare so we can set it as a friend
 class Texture
 {
 public:	
 	~Texture() noexcept;
+
 	ND inline D3D12_GPU_DESCRIPTOR_HANDLE GetGPUHandle() const noexcept { return m_descriptorVector->GetGPUHandleAt(m_indexIntoDescriptorVector); }
 
 private:
 	Texture(DescriptorVector* descriptorVector, unsigned int indexIntoDescriptorVector, unsigned int indexIntoAllTextures) noexcept;
-	Texture(const Texture&) = delete;
+	// Note, we need to delete all copy/move constructors. You might think it would be okay to implement move operations, however, if this was
+	// allowed, then we could in theory copy the data over to the new texture object, but when the destructor is called on the rhs object, it would
+	// potentially release the texture resource from the resource manager's data
+	Texture(const Texture&) = delete;	
+	Texture(Texture&&) = delete;
 	Texture& operator=(const Texture&) = delete;
+	Texture& operator=(Texture&&) = delete;
 
 	DescriptorVector* m_descriptorVector;
 	unsigned int	  m_indexIntoDescriptorVector;
@@ -44,7 +43,7 @@ class TextureManager
 private:
 	struct TextureInstanceData
 	{
-		TextureResources textureResources = TextureResources();
+		Microsoft::WRL::ComPtr<ID3D12Resource> textureResource = nullptr;
 		unsigned int refCount = 0;
 		unsigned int descriptorVectorIndex = 0;
 	};
@@ -56,14 +55,12 @@ public:
 
 private:
 	TextureManager() noexcept = default;
-	TextureManager(const TextureManager& rhs) = delete;
-	TextureManager& operator=(const TextureManager& rhs) = delete;
+	TextureManager(const TextureManager&) = delete;
+	TextureManager(TextureManager&&) = delete;
+	TextureManager& operator=(const TextureManager&) = delete;
+	TextureManager& operator=(TextureManager&&) = delete;
 
-	static TextureManager& Get() noexcept
-	{
-		static TextureManager tm;
-		return tm;
-	}
+	static TextureManager& Get() noexcept { static TextureManager tm; return tm; }
 
 	void InitImpl(std::shared_ptr<DeviceResources> deviceResources) noexcept;
 	ND std::unique_ptr<Texture> GetTextureImpl(unsigned int indexIntoAllTextures);

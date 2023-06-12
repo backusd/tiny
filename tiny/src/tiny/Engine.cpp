@@ -104,7 +104,6 @@ void Engine::RenderImpl()
 	ID3D12DescriptorHeap* descriptorHeaps[] = { TextureManager::GetHeapPointer() };
 	commandList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
 
-
 	for (RenderPass* pass : m_renderPasses)
 	{
 		TINY_CORE_ASSERT(pass != nullptr, "Pass should never be nullptr");

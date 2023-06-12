@@ -6,7 +6,6 @@
 #include "tiny/Engine.h"
 
 #include "tiny/rendering/MeshGeometry.h"
-#include "tiny/rendering/UploadBuffer.h"
 
 #include "tiny/utils/Timer.h"
 

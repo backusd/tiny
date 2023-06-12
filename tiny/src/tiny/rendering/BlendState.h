@@ -8,7 +8,7 @@ namespace tiny
 	class BlendState
 	{
 	public:
-		BlendState()
+		BlendState() noexcept
 		{
 			m_desc.AlphaToCoverageEnable = FALSE;
 			m_desc.IndependentBlendEnable = FALSE;
@@ -25,8 +25,10 @@ namespace tiny
 			for (UINT i = 0; i < D3D12_SIMULTANEOUS_RENDER_TARGET_COUNT; ++i)
 				m_desc.RenderTarget[i] = defaultRenderTargetBlendDesc;
 		}
-		BlendState(const BlendState&) noexcept = delete;
-		BlendState& operator=(const BlendState&) noexcept = delete;
+		BlendState(const BlendState&) noexcept = default;
+		BlendState(BlendState&&) noexcept = default;
+		BlendState& operator=(const BlendState&) noexcept = default;
+		BlendState& operator=(BlendState&&) noexcept = default;
 		~BlendState() noexcept {}
 
 		ND inline D3D12_BLEND_DESC GetBlendDesc() const noexcept { return m_desc; }

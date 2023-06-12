@@ -17,13 +17,34 @@ public:
 		TINY_CORE_ASSERT(m_deviceResources != nullptr, "No device resources");
 		TINY_CORE_ASSERT(m_filename.size() > 0, "Filename cannot be empty");
 
-		// Create Pixel Shader
-		GFX_THROW_INFO(
-			D3DReadFileToBlob(utility::ToWString(filename).c_str(), m_blob.ReleaseAndGetAddressOf())
-		);
+		ReadFileToBlob();
 	}
-	Shader(const Shader&) noexcept = delete;
-	Shader& operator=(const Shader&) noexcept = delete;
+	Shader(const Shader& rhs) :
+		m_deviceResources(rhs.m_deviceResources),
+		m_filename(rhs.m_filename),
+		m_blob(nullptr)
+	{
+		ReadFileToBlob();
+	}
+	Shader(Shader&& rhs) noexcept :
+		m_deviceResources(rhs.m_deviceResources),
+		m_filename(rhs.m_filename),
+		m_blob(rhs.m_blob) // Just make a copy of the ComPtr to the underlying blob because the rhs object will die soon, so no need to worry about multiple objects managing the same blob
+	{}
+	Shader& operator=(const Shader& rhs)
+	{
+		m_deviceResources = rhs.m_deviceResources;
+		m_filename = rhs.m_filename;
+		ReadFileToBlob();
+		return *this;
+	}
+	Shader& operator=(Shader&& rhs) noexcept
+	{
+		m_deviceResources = rhs.m_deviceResources;
+		m_filename = rhs.m_filename;
+		m_blob = rhs.m_blob;
+		return *this;
+	}
 	~Shader() noexcept {}
 
 	ND inline void* GetBufferPointer() const noexcept { return m_blob->GetBufferPointer(); }
@@ -31,6 +52,13 @@ public:
 	ND inline D3D12_SHADER_BYTECODE GetShaderByteCode() const noexcept { return { reinterpret_cast<BYTE*>(m_blob->GetBufferPointer()), m_blob->GetBufferSize() }; }
 
 protected:
+	void ReadFileToBlob()
+	{
+		GFX_THROW_INFO(
+			D3DReadFileToBlob(utility::ToWString(m_filename).c_str(), m_blob.ReleaseAndGetAddressOf())
+		);
+	}
+
 	std::shared_ptr<DeviceResources> m_deviceResources;
 	std::string						 m_filename;
 	Microsoft::WRL::ComPtr<ID3DBlob> m_blob;
