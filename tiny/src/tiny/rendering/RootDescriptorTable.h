@@ -15,6 +15,11 @@ public:
 		RootParameterIndex(rootParameterIndex),
 		DescriptorHandle(descriptorHandle)
 	{}
+	RootDescriptorTable(const RootDescriptorTable&) noexcept = default;
+	RootDescriptorTable(RootDescriptorTable&&) noexcept = default;
+	RootDescriptorTable& operator=(const RootDescriptorTable&) noexcept = default;
+	RootDescriptorTable& operator=(RootDescriptorTable&&) noexcept = default;
+	~RootDescriptorTable() noexcept {}
 
 	inline void Bind(ID3D12GraphicsCommandList* commandList) const noexcept
 	{

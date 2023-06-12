@@ -16,6 +16,8 @@ DescriptorVector::DescriptorVector(std::shared_ptr<DeviceResources> deviceResour
     TINY_CORE_ASSERT(m_deviceResources != nullptr, "No device resources");
     TINY_CORE_ASSERT(m_capacity > 0, "Capacity must be greater than 0 so that we can safely double the capacity when necessary");
     
+    auto device = m_deviceResources->GetDevice();
+
     D3D12_DESCRIPTOR_HEAP_DESC desc;
     desc.NumDescriptors = m_capacity;
     desc.Type = m_type;
@@ -23,11 +25,11 @@ DescriptorVector::DescriptorVector(std::shared_ptr<DeviceResources> deviceResour
     desc.NodeMask = 0;
 
     // Create the CPU copyable descriptor heap
-    GFX_THROW_INFO(m_deviceResources->GetDevice()->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_descriptorHeapCopyable)));
+    GFX_THROW_INFO(device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_descriptorHeapCopyable)));
 
     // Create the descriptor heap that will actually be use for retrieving descriptors for rendering
     desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-    GFX_THROW_INFO(m_deviceResources->GetDevice()->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_descriptorHeapShaderVisible)));
+    GFX_THROW_INFO(device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_descriptorHeapShaderVisible)));
 
     m_cpuHeapStart = m_descriptorHeapShaderVisible->GetCPUDescriptorHandleForHeapStart();
     m_gpuHeapStart = m_descriptorHeapShaderVisible->GetGPUDescriptorHandleForHeapStart();
@@ -110,53 +112,79 @@ D3D12_GPU_DESCRIPTOR_HANDLE DescriptorVector::GetGPUCopyableHandleAt(UINT index)
     return handle;
 }
 
-unsigned int DescriptorVector::EmplaceBackShaderResourceView(ID3D12Resource* pResource, const D3D12_SHADER_RESOURCE_VIEW_DESC* desc)
+unsigned int DescriptorVector::GetNextIndexAndEnsureCapacity() noexcept
 {
-    TINY_CORE_ASSERT(m_type == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, "Invalid to create a Shader Resource View if the type is not D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV");
+    // Get the index that will be used for the next object and increment the count
+    unsigned int indexIntoHeap = m_count;
 
-    // If there have been any released descriptors, we can just re-use that memory first
+    // If there have been any released descriptors, we can just re-use that memory instead
     if (m_releasedIndices.size() > 0)
     {
         // Get the most recently removed index
-        unsigned int index = m_releasedIndices.back();
-
-        // Get the handles to the two descriptor heaps
-        D3D12_CPU_DESCRIPTOR_HANDLE handleToCopyable = GetCPUCopyableHandleAt(index);
-        D3D12_CPU_DESCRIPTOR_HANDLE handleToShaderVisible = GetCPUHandleAt(index);
-
-        // Create the Shader Resource Views in both heaps
-        m_deviceResources->GetDevice()->CreateShaderResourceView(pResource, desc, handleToCopyable);
-        m_deviceResources->GetDevice()->CreateShaderResourceView(pResource, desc, handleToShaderVisible);
-
+        indexIntoHeap = m_releasedIndices.back();
         // Remove the index from the list of released indices
         m_releasedIndices.pop_back();
-
-        // Increment the count
-        ++m_count;
-
-        // return the index 
-        return index;
     }
 
-    // No released descriptors to re-use, so we append to the end
-    //
-    // Increment the count
+    // Increment the count (NOTE: This MUST be done AFTER calling GetNextIndex because that function uses m_count to compute the next index)
     ++m_count;
 
     // If we are over capacity, resize the descriptor heaps
     if (m_count > m_capacity)
         DoubleTheCapacity();
 
-    // Get the handles to the two descriptor heaps
-    D3D12_CPU_DESCRIPTOR_HANDLE handleToCopyable = GetCPUCopyableHandleAt(m_count - 1);
-    D3D12_CPU_DESCRIPTOR_HANDLE handleToShaderVisible = GetCPUHandleAt(m_count - 1);
+    return indexIntoHeap;
+}
+
+unsigned int DescriptorVector::EmplaceBackShaderResourceView(ID3D12Resource* pResource, const D3D12_SHADER_RESOURCE_VIEW_DESC* desc)
+{
+    TINY_CORE_ASSERT(m_type == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, "Invalid to create a Shader Resource View if the type is not D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV");
+
+    // Get the next available index into the heap and increase the capacity if necessary
+    unsigned int indexIntoHeap = GetNextIndexAndEnsureCapacity();
 
     // Create the Shader Resource Views in both heaps
-    m_deviceResources->GetDevice()->CreateShaderResourceView(pResource, desc, handleToCopyable);
-    m_deviceResources->GetDevice()->CreateShaderResourceView(pResource, desc, handleToShaderVisible);
-    
-    // Return the index to the shader resource view
-    return m_count - 1;
+    auto device = m_deviceResources->GetDevice();
+    device->CreateShaderResourceView(pResource, desc, GetCPUCopyableHandleAt(indexIntoHeap));
+    device->CreateShaderResourceView(pResource, desc, GetCPUHandleAt(indexIntoHeap));
+
+    return indexIntoHeap;
+}
+unsigned int DescriptorVector::EmplaceBackConstantBufferView(const D3D12_CONSTANT_BUFFER_VIEW_DESC* desc)
+{
+    LOG_CORE_WARN("{}", "DescriptorVector::EmplaceBackConstantBufferView() has been called, but I've never tested this function.");
+
+    TINY_CORE_ASSERT(m_type == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, "Invalid to create a Constant Buffer View if the type is not D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV");
+
+    // Get the next available index into the heap and increase the capacity if necessary
+    unsigned int indexIntoHeap = GetNextIndexAndEnsureCapacity();
+
+    // Create the Constant Buffer Views in both heaps
+    auto device = m_deviceResources->GetDevice();
+    device->CreateConstantBufferView(desc, GetCPUCopyableHandleAt(indexIntoHeap));
+    device->CreateConstantBufferView(desc, GetCPUHandleAt(indexIntoHeap));
+
+    return indexIntoHeap;
+}
+unsigned int DescriptorVector::EmplaceBackUnorderedAccessView(ID3D12Resource* pResource, const D3D12_UNORDERED_ACCESS_VIEW_DESC* desc)
+{
+    LOG_CORE_WARN("{}", "DescriptorVector::EmplaceBackUnorderedAccessView() has been called, but I've never tested this function.");
+    LOG_CORE_WARN("{}", "That being said, I think it works correctly - However, in the call to CreateUnorderedAccessView(), I pass nullptr for the (optional) pCounterResource parameter and I'm not sure what this parameter is used for exactly");
+
+    TINY_CORE_ASSERT(m_type == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, "Invalid to create an Unordered Access View if the type is not D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV");
+
+    // Get the next available index into the heap and increase the capacity if necessary
+    unsigned int indexIntoHeap = GetNextIndexAndEnsureCapacity();
+
+    // Create the Unordered Access View in both heaps
+    // NOTE: Setting optional second parameter (pCounterResource) to NULL. (I'm not entirely sure what it does exactly)
+    //       However, when this parameter is nullptr, the buffer CounterOffsetInBytes value must be 0 (according to the documentation)
+    TINY_CORE_ASSERT(desc->Buffer.CounterOffsetInBytes == 0, "When passing nullptr for pCounterResource, the buffer CounterOffsetInBytes must be 0");
+    auto device = m_deviceResources->GetDevice();
+    device->CreateUnorderedAccessView(pResource, nullptr, desc, GetCPUCopyableHandleAt(indexIntoHeap));
+    device->CreateUnorderedAccessView(pResource, nullptr, desc, GetCPUHandleAt(indexIntoHeap));
+
+    return indexIntoHeap;
 }
 
 void DescriptorVector::ReleaseAt(unsigned int index) noexcept

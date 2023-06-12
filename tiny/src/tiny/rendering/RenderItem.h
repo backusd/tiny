@@ -39,7 +39,6 @@ public:
 		TexTransform = rhs.TexTransform;
 		material = std::move(rhs.material);
 		materialNumFramesDirty = rhs.materialNumFramesDirty;
-		texture = rhs.texture;
 		submeshIndex = rhs.submeshIndex;
 	}
 	RenderItem& operator=(RenderItem&& rhs) noexcept
@@ -54,7 +53,6 @@ public:
 		TexTransform = rhs.TexTransform;
 		material = std::move(rhs.material);
 		materialNumFramesDirty = rhs.materialNumFramesDirty;
-		texture = rhs.texture;
 		submeshIndex = rhs.submeshIndex;
 
 		return *this;
@@ -100,8 +98,6 @@ public:
 	std::unique_ptr<Material> material = nullptr;
 	int materialNumFramesDirty = gNumFrameResources; // <-- Set this as dirty so the constant buffer gets updated immediately
 
-	// Index into the vector of all Textures
-	unsigned int texture = 0;
 
 	// The PSO will hold and bind the mesh-group for all of the render items it will render.
 	// Here, we just need to keep track of which submesh index the render item references

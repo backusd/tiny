@@ -20,6 +20,12 @@ public:
 	{
 		TINY_CORE_ASSERT(ConstantBuffer != nullptr, "ConstantBuffer should not be nullptr");
 	}
+	RootConstantBufferView(const RootConstantBufferView&) noexcept = default;
+	RootConstantBufferView(RootConstantBufferView&&) noexcept = default;
+	RootConstantBufferView& operator=(const RootConstantBufferView&) noexcept = default;
+	RootConstantBufferView& operator=(RootConstantBufferView&&) noexcept = default;
+	~RootConstantBufferView() noexcept {}
+
 	inline void Bind(ID3D12GraphicsCommandList* commandList, int frameIndex) const noexcept
 	{
 		commandList->SetGraphicsRootConstantBufferView(RootParameterIndex, ConstantBuffer->GetGPUVirtualAddress(frameIndex));

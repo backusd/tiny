@@ -254,10 +254,10 @@ void TheApp::BuildMainRenderPass()
 		}
 	};
 
-	gridRI.texture = 0; // grass is texture #0
 	gridRI.submeshIndex = 0; // Only using a single mesh, so automatically it is at index 0
-		
-	auto& dt = gridRI.DescriptorTables.emplace_back(0, m_textures[gridRI.texture]->GetGPUHandle());
+	
+	int grassTexture = 0; // grass is texture #0
+	auto& dt = gridRI.DescriptorTables.emplace_back(0, m_textures[grassTexture]->GetGPUHandle());
 	dt.Update = [](const Timer& timer, int frameIndex)
 	{
 		// No update here because the texture is static
@@ -352,10 +352,10 @@ void TheApp::BuildMainRenderPass()
 		}
 	};
 
-	boxRI.texture = 2; // box is texture #2
 	boxRI.submeshIndex = 0; // Only using a single mesh, so automatically it is at index 0
 
-	auto& boxDT = boxRI.DescriptorTables.emplace_back(0, m_textures[boxRI.texture]->GetGPUHandle());
+	int boxTexture = 2; // box is texture #2
+	auto& boxDT = boxRI.DescriptorTables.emplace_back(0, m_textures[boxTexture]->GetGPUHandle());
 	boxDT.Update = [](const Timer& timer, int frameIndex)
 	{
 		// No update here because the texture is static
@@ -487,10 +487,10 @@ void TheApp::BuildMainRenderPass()
 		}
 	};
 
-	wavesRI.texture = 1; // water is texture #1
 	wavesRI.submeshIndex = 0; // Only using a single mesh, so automatically it is at index 0
 
-	auto& waveDT = wavesRI.DescriptorTables.emplace_back(0, m_textures[wavesRI.texture]->GetGPUHandle());
+	int waterTexture = 1; // water is texture #1
+	auto& waveDT = wavesRI.DescriptorTables.emplace_back(0, m_textures[waterTexture]->GetGPUHandle());
 	waveDT.Update = [](const Timer& timer, int frameIndex)
 	{
 		// No update here because the texture is static
