@@ -24,88 +24,37 @@ struct SubmeshGeometry
 	DirectX::BoundingBox Bounds;
 };
 
+//
+// MeshGroup ======================================================================================================
+//
 class MeshGroup
 {
 public:
 	MeshGroup(std::shared_ptr<DeviceResources> deviceResources) noexcept : m_deviceResources(deviceResources) {}
-	virtual ~MeshGroup() {}
+	MeshGroup(MeshGroup&& rhs) noexcept;
+	MeshGroup& operator=(MeshGroup&& rhs) noexcept;
+	virtual ~MeshGroup() noexcept {}
 
-	inline void Bind(ID3D12GraphicsCommandList* commandList) const
+	inline void Bind(ID3D12GraphicsCommandList* commandList) const noexcept
 	{
 		commandList->IASetVertexBuffers(0, 1, &m_vertexBufferView);
 		commandList->IASetIndexBuffer(&m_indexBufferView);
 	}
 
-	ND inline SubmeshGeometry GetSubmesh(unsigned int index) const noexcept
-	{
-		return m_submeshes[index];
-	}
+	ND inline const SubmeshGeometry& GetSubmesh(unsigned int index) const noexcept { return m_submeshes[index]; }
 
 protected:
-	ND Microsoft::WRL::ComPtr<ID3D12Resource> CreateDefaultBuffer(const void* initData, UINT64 byteSize)
+	ND Microsoft::WRL::ComPtr<ID3D12Resource> CreateDefaultBuffer(const void* initData, UINT64 byteSize) const;
+	inline void CleanUp() noexcept
 	{
-		Microsoft::WRL::ComPtr<ID3D12Resource> defaultBuffer = nullptr;
-		Microsoft::WRL::ComPtr<ID3D12Resource> uploadBuffer = nullptr;
-
-		// Create the actual default buffer resource.
-		auto props = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT); 
-		auto desc = CD3DX12_RESOURCE_DESC::Buffer(byteSize);
-		GFX_THROW_INFO(
-			m_deviceResources->GetDevice()->CreateCommittedResource(
-				&props,
-				D3D12_HEAP_FLAG_NONE,
-				&desc,
-				D3D12_RESOURCE_STATE_COMMON,
-				nullptr,
-				IID_PPV_ARGS(defaultBuffer.GetAddressOf())
-			)
-		);
-
-		// In order to copy CPU memory data into our default buffer, we need to create an intermediate upload heap. 
-		auto props2 = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD); 
-		auto desc2 = CD3DX12_RESOURCE_DESC::Buffer(byteSize);
-		GFX_THROW_INFO(
-			m_deviceResources->GetDevice()->CreateCommittedResource(
-				&props2,
-				D3D12_HEAP_FLAG_NONE,
-				&desc2,
-				D3D12_RESOURCE_STATE_GENERIC_READ,
-				nullptr,
-				IID_PPV_ARGS(uploadBuffer.GetAddressOf())
-			)
-		);
-
-		// Describe the data we want to copy into the default buffer.
-		D3D12_SUBRESOURCE_DATA subResourceData = {};
-		subResourceData.pData = initData;
-		subResourceData.RowPitch = byteSize;
-		subResourceData.SlicePitch = subResourceData.RowPitch;
-
-		// Schedule to copy the data to the default buffer resource. At a high level, the helper function UpdateSubresources
-		// will copy the CPU memory into the intermediate upload heap. Then, using ID3D12CommandList::CopySubresourceRegion,
-		// the intermediate upload heap data will be copied to mBuffer.
-		auto commandList = m_deviceResources->GetCommandList();
-		
-		auto _b = CD3DX12_RESOURCE_BARRIER::Transition(defaultBuffer.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST);
-		commandList->ResourceBarrier(1, &_b);
-		
-		UpdateSubresources<1>(commandList, defaultBuffer.Get(), uploadBuffer.Get(), 0, 0, 1, &subResourceData);
-		
-		auto _b2 = CD3DX12_RESOURCE_BARRIER::Transition(defaultBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ);
-		commandList->ResourceBarrier(1, &_b2);
-
-		// MUST delete the upload buffer AFTER it is done being referenced by the GPU
-		Engine::DelayedDelete(uploadBuffer);
-
-		// Note: uploadBuffer has to be kept alive after the above function calls because
-		// the command list has not been executed yet that performs the actual copy.
-		// The caller can Release the uploadBuffer after it knows the copy has been executed.
-		return defaultBuffer;
-	}
-	void CleanUp()
-	{
-		Engine::DelayedDelete(m_vertexBufferGPU);
-		Engine::DelayedDelete(m_indexBufferGPU);
+		// If the MeshGroup is being destructed because it was moved from, then we don't want to delete the resources
+		// because they now belong to a new MeshGroup object. However, if the object simply went out of scope or was
+		// intentially deleted, then the resources are no longer necessary and should be delayed deleted
+		if (!m_movedFrom)
+		{
+			Engine::DelayedDelete(m_vertexBufferGPU);
+			Engine::DelayedDelete(m_indexBufferGPU);
+		}
 	}
 
 	std::shared_ptr<DeviceResources> m_deviceResources;
@@ -120,7 +69,12 @@ protected:
 
 	std::vector<SubmeshGeometry> m_submeshes;
 
+	bool m_movedFrom = false;
 
+private:
+	// There is too much state to worry about copying, so just delete copy operations until we find a good use case
+	MeshGroup(const MeshGroup&) noexcept = delete;
+	MeshGroup& operator=(const MeshGroup&) noexcept = delete;
 };
 
 
@@ -134,9 +88,31 @@ public:
 	MeshGroupT(std::shared_ptr<DeviceResources> deviceResources,
 		const std::vector<std::vector<T>>& vertices,
 		const std::vector<std::vector<std::uint16_t>>& indices);
-	virtual ~MeshGroupT() override { CleanUp(); }
+	MeshGroupT(MeshGroupT&& rhs) noexcept :
+		MeshGroup(std::move(rhs)),
+		m_vertices(std::move(rhs.m_vertices)),
+		m_indices(std::move(rhs.m_indices))
+	{
+		LOG_CORE_WARN("{}", "MeshGroupT Move Constructor called, but this method has not been tested. Make sure this call was intentional and, if so, that the constructor works as expected");
+		// Specifically, see this SO post above calling std::move(rhs) but then proceding to use the rhs object: https://stackoverflow.com/questions/22977230/move-constructors-in-inheritance-hierarchy
+	}
+	MeshGroupT& operator=(MeshGroupT&& rhs) noexcept
+	{
+		LOG_CORE_WARN("{}", "MeshGroupT Move Assignment operator called, but this method has not been tested. Make sure this call was intentional and, if so, that the constructor works as expected");
+		// Specifically, see this SO post above calling std::move(rhs) but then proceding to use the rhs object: https://stackoverflow.com/questions/22977230/move-constructors-in-inheritance-hierarchy
+
+		MeshGroup::operator=(std::move(rhs));
+		m_vertices = std::move(rhs.m_vertices);
+		m_indices = std::move(rhs.m_indices);
+		return *this;
+	}
+	virtual ~MeshGroupT() noexcept override { CleanUp(); }
 
 private:
+	// There is too much state to worry about copying, so just delete copy operations until we find a good use case
+	MeshGroupT(const MeshGroupT&) noexcept = delete;
+	MeshGroupT& operator=(const MeshGroupT&) noexcept = delete;
+
 	// System memory copies. 
 	std::vector<T> m_vertices;
 	std::vector<std::uint16_t> m_indices;
@@ -205,7 +181,21 @@ class DynamicMeshGroup : public MeshGroup
 {
 public:
 	DynamicMeshGroup(std::shared_ptr<DeviceResources> deviceResources) : MeshGroup(deviceResources) {}
-	virtual ~DynamicMeshGroup() override {}
+	DynamicMeshGroup(DynamicMeshGroup&& rhs) noexcept : 
+		MeshGroup(std::move(rhs)) 
+	{
+		LOG_CORE_WARN("{}", "DynamicMeshGroup Move Constructor called, but this method has not been tested. Make sure this call was intentional and, if so, that the function works as expected");
+		// Specifically, see this SO post above calling std::move(rhs) but then proceding to use the rhs object: https://stackoverflow.com/questions/22977230/move-constructors-in-inheritance-hierarchy
+	}
+	DynamicMeshGroup& operator=(DynamicMeshGroup&& rhs) noexcept
+	{
+		LOG_CORE_WARN("{}", "DynamicMeshGroup Move Assignment operator called, but this method has not been tested. Make sure this call was intentional and, if so, that the function works as expected");
+		// Specifically, see this SO post above calling std::move(rhs) but then proceding to use the rhs object: https://stackoverflow.com/questions/22977230/move-constructors-in-inheritance-hierarchy
+
+		MeshGroup::operator=(std::move(rhs));
+		return *this;
+	}
+	virtual ~DynamicMeshGroup() noexcept override {}
 	inline void Update(int frameIndex) noexcept
 	{
 		// For dynamic meshes, we keep gNumFrameResources copies of the vertex/index buffer in a single, continuous buffer
@@ -216,37 +206,12 @@ public:
 	}
 
 protected:
-	ND Microsoft::WRL::ComPtr<ID3D12Resource> CreateUploadBuffer(UINT64 totalBufferSize)
-	{
-		Microsoft::WRL::ComPtr<ID3D12Resource> uploadBuffer;
-
-		// Need to create the buffer in an upload heap so the CPU can regularly send new data to it
-		auto props = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
-
-		// Create a buffer that will hold an entire buffer per frame resource
-		auto desc = CD3DX12_RESOURCE_DESC::Buffer(totalBufferSize * gNumFrameResources);
-
-		GFX_THROW_INFO(
-			m_deviceResources->GetDevice()->CreateCommittedResource(
-				&props,
-				D3D12_HEAP_FLAG_NONE,
-				&desc,
-				D3D12_RESOURCE_STATE_GENERIC_READ,
-				nullptr,
-				IID_PPV_ARGS(&uploadBuffer)
-			)
-		);
-
-		return uploadBuffer;
-	}
+	ND Microsoft::WRL::ComPtr<ID3D12Resource> CreateUploadBuffer(UINT64 totalBufferSize) const;
 
 private:
-	// NOTE: We need to make DynamicMeshGroup immovable because the DynamicMeshGroupT passes the 'this' pointer
-	//       to the engine so that this object can be tracked. However, if the DynamicMeshGroup is later
-	//       moved, the 'this' pointer will no longer be valid. 
-	//		 See: https://stackoverflow.com/questions/28492326/c11-does-a-move-operation-change-the-address#:~:text=Short%20answer%3A%20no%2C%20the%20address,not%20be%20a%20useful%20state.
-	DynamicMeshGroup(DynamicMeshGroup&&) = delete;
-	DynamicMeshGroup& operator=(DynamicMeshGroup&& rhs) = delete;
+	// There is too much state to worry about copying, so just delete copy operations until we find a good use case
+	DynamicMeshGroup(const DynamicMeshGroup&) = delete;
+	DynamicMeshGroup& operator=(const DynamicMeshGroup&) = delete;
 };
 
 
@@ -303,6 +268,39 @@ public:
 		m_vertexBufferView.BufferLocation = m_vertexBufferGPU->GetGPUVirtualAddress();
 		m_indexBufferView.BufferLocation = m_indexBufferGPU->GetGPUVirtualAddress();
 	}
+	DynamicMeshGroupT(DynamicMeshGroupT&& rhs) noexcept :
+		DynamicMeshGroup(std::move(rhs)),
+		m_vertices(std::move(rhs.m_vertices)),
+		m_indices(std::move(rhs.m_indices))
+	{
+		LOG_CORE_WARN("{}", "DynamicMeshGroupT Move Constructor called, but this method has not been tested. Make sure this call was intentional and, if so, that the function works as expected");
+		// Specifically, see this SO post above calling std::move(rhs) but then proceding to use the rhs object: https://stackoverflow.com/questions/22977230/move-constructors-in-inheritance-hierarchy
+	
+		// Register the DynamicMeshGroup with the Engine (don't explicitly remove the rhs object because its destructor should handle that)
+		Engine::AddDynamicMeshGroup(this);
+
+		// Map the vertex and index buffers
+		GFX_THROW_INFO(m_vertexBufferGPU->Map(0, nullptr, reinterpret_cast<void**>(&m_mappedVertexData)));
+		GFX_THROW_INFO(m_indexBufferGPU->Map(0, nullptr, reinterpret_cast<void**>(&m_mappedIndexData))); 
+	}
+	DynamicMeshGroupT& operator=(DynamicMeshGroupT&& rhs) noexcept
+	{
+		LOG_CORE_WARN("{}", "DynamicMeshGroupT Move Assignment operator called, but this method has not been tested. Make sure this call was intentional and, if so, that the function works as expected");
+		// Specifically, see this SO post above calling std::move(rhs) but then proceding to use the rhs object: https://stackoverflow.com/questions/22977230/move-constructors-in-inheritance-hierarchy
+
+		// Register the DynamicMeshGroup with the Engine (don't explicitly remove the rhs object because its destructor should handle that)
+		Engine::AddDynamicMeshGroup(this);
+
+		DynamicMeshGroup::operator=(std::move(rhs));
+		m_vertices = std::move(rhs.m_vertices);
+		m_indices = std::move(rhs.m_indices);
+
+		// Map the vertex and index buffers
+		GFX_THROW_INFO(m_vertexBufferGPU->Map(0, nullptr, reinterpret_cast<void**>(&m_mappedVertexData)));
+		GFX_THROW_INFO(m_indexBufferGPU->Map(0, nullptr, reinterpret_cast<void**>(&m_mappedIndexData)));
+
+		return *this;
+	}
 	virtual ~DynamicMeshGroupT() noexcept override 
 	{ 
 		Engine::RemoveDynamicMeshGroup(this);
@@ -332,12 +330,9 @@ public:
 	}
 
 private:
-	// NOTE: We need to make DynamicMeshGroupT immovable because the constructor passes the 'this' pointer
-	//       to the engine so that this object can be tracked. However, if the DynamicMeshGroupT is later
-	//       moved, the 'this' pointer will no longer be valid. 
-	//		 See: https://stackoverflow.com/questions/28492326/c11-does-a-move-operation-change-the-address#:~:text=Short%20answer%3A%20no%2C%20the%20address,not%20be%20a%20useful%20state.
-	DynamicMeshGroupT(DynamicMeshGroupT&&) = delete;
-	DynamicMeshGroupT& operator=(DynamicMeshGroupT&& rhs) = delete;
+	// There is too much state to worry about copying, so just delete copy operations until we find a good use case
+	DynamicMeshGroupT(const DynamicMeshGroupT&) = delete;
+	DynamicMeshGroupT& operator=(const DynamicMeshGroupT& rhs) = delete;
 
 	// System memory copies. 
 	std::vector<T> m_vertices;

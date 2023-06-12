@@ -1,7 +1,6 @@
 #pragma once
 #include "tiny-pch.h"
 #include "tiny/Core.h"
-#include "MeshGeometry.h"
 #include "Material.h"
 #include "ConstantBuffer.h"
 #include "RootConstantBufferView.h"
@@ -29,6 +28,8 @@ public:
 	// move operations. However, moving the object causes the 'this' pointer to change, so we must update the Engine
 	RenderItem(RenderItem&& rhs) noexcept
 	{
+		LOG_CORE_WARN("{}", "RenderItem Move Constructor called, but this method has not been tested. Make sure updates to the Engine are correct");
+
 		// I don't think we need to explicitly call RemoveRenderItem on the rhs object because its destructor should do that
 		Engine::AddRenderItem(this);
 
@@ -43,6 +44,8 @@ public:
 	}
 	RenderItem& operator=(RenderItem&& rhs) noexcept
 	{
+		LOG_CORE_WARN("{}", "RenderItem Move Assignment operator called, but this method has not been tested. Make sure updates to the Engine are correct");
+
 		// I don't think we need to explicitly call RemoveRenderItem on the rhs object because its destructor should do that
 		Engine::AddRenderItem(this);
 

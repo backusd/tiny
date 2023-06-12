@@ -9,7 +9,6 @@
 #include "tiny/rendering/DepthStencilState.h"
 #include "tiny/rendering/InputLayout.h"
 #include "tiny/rendering/Shader.h"
-#include "tiny/rendering/MeshGeometry.h"
 #include "tiny/rendering/RasterizerState.h"
 #include "tiny/rendering/RenderItem.h"
 #include "tiny/rendering/GeometryGenerator.h"

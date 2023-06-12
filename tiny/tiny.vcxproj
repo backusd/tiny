@@ -121,7 +121,6 @@
     <ClInclude Include="src\tiny\rendering\InputLayout.h" />
     <ClInclude Include="src\tiny\rendering\Light.h" />
     <ClInclude Include="src\tiny\rendering\Material.h" />
-    <ClInclude Include="src\tiny\rendering\MeshGeometry.h" />
     <ClInclude Include="src\tiny\rendering\MeshGroup.h" />
     <ClInclude Include="src\tiny\rendering\RasterizerState.h" />
     <ClInclude Include="src\tiny\rendering\RenderItem.h" />
@@ -152,6 +151,7 @@
     <ClCompile Include="src\tiny\other\Waves.cpp" />
     <ClCompile Include="src\tiny\rendering\DescriptorVector.cpp" />
     <ClCompile Include="src\tiny\rendering\GeometryGenerator.cpp" />
+    <ClCompile Include="src\tiny\rendering\MeshGroup.cpp" />
     <ClCompile Include="src\tiny\rendering\Texture.cpp" />
     <ClCompile Include="src\tiny\scene\Camera.cpp" />
     <ClCompile Include="src\tiny\TheApp.cpp" />

@@ -38,6 +38,11 @@ public:
 			)
 		);
 	}
+	RootSignature(const RootSignature&) noexcept = default;
+	RootSignature(RootSignature&&) noexcept = default;
+	RootSignature& operator=(const RootSignature&) noexcept = default;
+	RootSignature& operator=(RootSignature&&) noexcept = default;
+	~RootSignature() noexcept {}
 
 	ND inline ID3D12RootSignature* Get() const noexcept { return m_rootSignature.Get(); }
 

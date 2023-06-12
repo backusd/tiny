@@ -21,6 +21,33 @@ public:
 		// Register the RenderPass with the Engine
 		Engine::AddRenderPass(this);
 	}
+	RenderPass(RenderPass&& rhs) noexcept :
+		PreWork(rhs.PreWork),
+		PostWork(rhs.PostWork),
+		RootSignature(rhs.RootSignature),
+		ConstantBufferViews(std::move(rhs.ConstantBufferViews)),
+		RenderPassLayers(std::move(RenderPassLayers))
+	{
+		LOG_CORE_WARN("{}", "RenderPass Move Constructor called, but this method has not been tested. Make sure updates to the Engine are correct");
+
+		// Register the RenderPass with the Engine (don't explicitly remove the rhs object because its destructor should handle that)
+		Engine::AddRenderPass(this);
+	}
+	RenderPass& operator=(RenderPass&& rhs) noexcept
+	{
+		LOG_CORE_WARN("{}", "RenderPass Move Assignment operator called, but this method has not been tested. Make sure updates to the Engine are correct");
+
+		// Register the RenderPass with the Engine (don't explicitly remove the rhs object because its destructor should handle that)
+		Engine::AddRenderPass(this);
+
+		PreWork = rhs.PreWork;
+		PostWork = rhs.PostWork;
+		RootSignature = rhs.RootSignature;
+		ConstantBufferViews = std::move(rhs.ConstantBufferViews);
+		RenderPassLayers = std::move(RenderPassLayers);
+
+		return *this;
+	}
 	~RenderPass() noexcept
 	{
 		// Unregister the RenderPass with the Engine
@@ -29,15 +56,14 @@ public:
 
 	void Update(const Timer& timer, int frameIndex)
 	{
-		// Loop over the constant buffer views to update them
+		// Loop over the constant buffer views to update per-pass constants
 		for (auto& rcbv : ConstantBufferViews)
 			rcbv.Update(timer, nullptr, frameIndex);
 	}
 
-	// Function pointers for Pre/Post-Work/Update
-	// NOTE: You ARE allowed to assign a lambda to a function pointer as long as the lambda does NOT capture anything
-	void (*PreWork)(RenderPass*, ID3D12GraphicsCommandList*) = [](RenderPass*, ID3D12GraphicsCommandList*) {};
-	void (*PostWork)(RenderPass*, ID3D12GraphicsCommandList*) = [](RenderPass*, ID3D12GraphicsCommandList*) {};
+	// Function pointers for Pre/Post-Work 
+	std::function<void(RenderPass*, ID3D12GraphicsCommandList*)> PreWork = [](RenderPass*, ID3D12GraphicsCommandList*) {};
+	std::function<void(RenderPass*, ID3D12GraphicsCommandList*)> PostWork = [](RenderPass*, ID3D12GraphicsCommandList*) {};
 
 	// Shared pointer because root signatures may be shared
 	std::shared_ptr<RootSignature> RootSignature = nullptr;
@@ -49,14 +75,8 @@ public:
 	std::vector<RenderPassLayer> RenderPassLayers;
 
 private:
-	RenderPass(const RenderPass& rhs) = delete;
-	RenderPass& operator=(const RenderPass& rhs) = delete;
-	
-	// NOTE: We need to make RenderPass immovable because the constructor passes the 'this' pointer
-	//       to the engine so that this object can be tracked. However, if the RenderPass is later
-	//       moved, the 'this' pointer will no longer be valid. 
-	//		 See: https://stackoverflow.com/questions/28492326/c11-does-a-move-operation-change-the-address#:~:text=Short%20answer%3A%20no%2C%20the%20address,not%20be%20a%20useful%20state.
-	RenderPass(RenderPass&&) = delete;
-	RenderPass& operator=(RenderPass&& rhs) = delete;
+	// There is too much state to worry about copying, so just delete copy operations until we find a good use case
+	RenderPass(const RenderPass&) = delete;
+	RenderPass& operator=(const RenderPass&) = delete;
 };
 }
