@@ -1,5 +1,6 @@
 #include "tiny-pch.h"
 #include "Waves.h"
+#include "tiny/utils/Profile.h"
 
 using namespace DirectX;
 
@@ -82,6 +83,8 @@ float Waves::Depth()const
 
 void Waves::Update(float dt)
 {
+	PROFILE_FUNCTION();
+
 	static float t = 0;
 
 	// Accumulate time.

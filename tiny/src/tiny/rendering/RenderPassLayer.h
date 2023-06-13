@@ -23,7 +23,8 @@ public:
 		RenderItems(std::move(rhs.RenderItems)),
 		PipelineState(rhs.PipelineState),
 		Topology(rhs.Topology),
-		Meshes(std::move(rhs.Meshes))
+		Meshes(std::move(rhs.Meshes)),
+		Name(std::move(rhs.Name))
 	{}
 	RenderPassLayer& operator=(RenderPassLayer&& rhs) noexcept
 	{
@@ -32,6 +33,7 @@ public:
 		PipelineState = rhs.PipelineState;
 		Topology = rhs.Topology;
 		Meshes = std::move(rhs.Meshes);
+		Name = std::move(rhs.Name);
 		return *this;
 	}
 	~RenderPassLayer() noexcept {}
@@ -48,6 +50,9 @@ public:
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> PipelineState;
 	D3D12_PRIMITIVE_TOPOLOGY Topology;
 	std::unique_ptr<MeshGroup> Meshes;
+
+	// Name (for debug/profiling purposes)
+	std::string Name = "Unnamed RenderPassLayer";
 
 private:
 	// There is too much state to worry about copying, so just delete copy operations until we find a good use case

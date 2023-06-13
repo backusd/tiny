@@ -455,6 +455,8 @@ void DeviceResources::LogOutputDisplayModes(IDXGIOutput* output, DXGI_FORMAT for
 
 void DeviceResources::Present()
 {
+	PROFILE_SCOPE("m_swapChain->Present()");
+
 	// swap the back and front buffers
 	GFX_THROW_INFO(m_swapChain->Present(0, 0));
 	m_currBackBuffer = (m_currBackBuffer + 1) % SwapChainBufferCount;

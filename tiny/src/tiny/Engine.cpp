@@ -4,6 +4,7 @@
 #include "rendering/RenderPassLayer.h"
 #include "rendering/RenderItem.h"
 #include "rendering/MeshGroup.h"
+#include "tiny/utils/Profile.h"
 
 
 namespace tiny
@@ -33,6 +34,7 @@ void Engine::InitImpl(std::shared_ptr<DeviceResources> deviceResources)
 }
 void Engine::UpdateImpl(const Timer& timer)
 {
+	PROFILE_FUNCTION();
 	TINY_CORE_ASSERT(m_initialized, "Engine has not been initialized");
 
 	// Cycle through the circular frame resource array.
@@ -41,14 +43,18 @@ void Engine::UpdateImpl(const Timer& timer)
 	// Has the GPU finished processing the commands of the current frame?
 	// If not, wait until the GPU has completed commands up to this fence point.
 	UINT64 currentFence = m_fences[m_currentFrameIndex];
-	if (currentFence != 0 && m_deviceResources->GetFence()->GetCompletedValue() < currentFence)
 	{
-		HANDLE eventHandle = CreateEventEx(nullptr, nullptr, false, EVENT_ALL_ACCESS);
-		GFX_THROW_INFO(
-			m_deviceResources->GetFence()->SetEventOnCompletion(currentFence, eventHandle)
-		);
-		WaitForSingleObject(eventHandle, INFINITE);
-		CloseHandle(eventHandle);
+		PROFILE_SCOPE("Waiting for GPU to update fence");
+
+		if (currentFence != 0 && m_deviceResources->GetFence()->GetCompletedValue() < currentFence)
+		{
+			HANDLE eventHandle = CreateEventEx(nullptr, nullptr, false, EVENT_ALL_ACCESS);
+			GFX_THROW_INFO(
+				m_deviceResources->GetFence()->SetEventOnCompletion(currentFence, eventHandle)
+			);
+			WaitForSingleObject(eventHandle, INFINITE);
+			CloseHandle(eventHandle);
+		}
 	}
 
 	// Cleanup resources that were passed to DelayedDelete()
@@ -61,13 +67,17 @@ void Engine::UpdateImpl(const Timer& timer)
 }
 void Engine::RenderImpl()
 {
+	PROFILE_FUNCTION();
 	TINY_CORE_ASSERT(m_initialized, "Engine has not been initialized");
 	TINY_CORE_ASSERT(m_renderPasses.size() > 0, "No render passes");
 
 	// Reuse the memory associated with command recording.
 	// We can only reset when the associated command lists have finished execution on the GPU.
 	auto commandAllocator = m_allocators[m_currentFrameIndex];
-	GFX_THROW_INFO(commandAllocator->Reset());
+	{
+		PROFILE_SCOPE("commandAllocator->Reset()");
+		GFX_THROW_INFO(commandAllocator->Reset());
+	}
 
 	// A command list can be reset after it has been added to the command queue via ExecuteCommandList.
 	// Reusing the command list reuses memory.
@@ -78,34 +88,53 @@ void Engine::RenderImpl()
 	//		 particularly for a command list, for which the overall cost of recording the command list likely 
 	//		 dwarfs the cost of one initial state setting."
 	auto commandList = m_deviceResources->GetCommandList();
-	GFX_THROW_INFO(commandList->Reset(commandAllocator.Get(), nullptr));
+	{
+		PROFILE_SCOPE("commandList->Reset()");
+		GFX_THROW_INFO(commandList->Reset(commandAllocator.Get(), nullptr));
+	}
 
-	commandList->RSSetViewports(1, &m_viewport);
-	commandList->RSSetScissorRects(1, &m_scissorRect);
+	{
+		PROFILE_SCOPE("SetViewport/ScissorRects");
+		commandList->RSSetViewports(1, &m_viewport);
+		commandList->RSSetScissorRects(1, &m_scissorRect);
+	}
 
 	// Indicate a state transition on the resource usage.
-	auto _b = CD3DX12_RESOURCE_BARRIER::Transition(
-		m_deviceResources->CurrentBackBuffer(),
-		D3D12_RESOURCE_STATE_PRESENT,
-		D3D12_RESOURCE_STATE_RENDER_TARGET
-	);
-	commandList->ResourceBarrier(1, &_b);
+	{
+		PROFILE_SCOPE("Back Buffer Transition: PRESENT -> RENDER_TARGET");
+		auto _b = CD3DX12_RESOURCE_BARRIER::Transition(
+			m_deviceResources->CurrentBackBuffer(),
+			D3D12_RESOURCE_STATE_PRESENT,
+			D3D12_RESOURCE_STATE_RENDER_TARGET
+		);
+		commandList->ResourceBarrier(1, &_b);
+	}
 
 	// Clear the back buffer and depth buffer.
-	FLOAT color[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
-	commandList->ClearRenderTargetView(m_deviceResources->CurrentBackBufferView(), color, 0, nullptr);
-	commandList->ClearDepthStencilView(m_deviceResources->DepthStencilView(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
-
+	{
+		PROFILE_SCOPE("Clear RTV & DSV");
+		FLOAT color[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
+		commandList->ClearRenderTargetView(m_deviceResources->CurrentBackBufferView(), color, 0, nullptr);
+		commandList->ClearDepthStencilView(m_deviceResources->DepthStencilView(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
+	}
 	// Specify the buffers we are going to render to.
 	auto currentBackBufferView = m_deviceResources->CurrentBackBufferView();
 	auto depthStencilView = m_deviceResources->DepthStencilView();
-	commandList->OMSetRenderTargets(1, &currentBackBufferView, true, &depthStencilView);
+	{
+		PROFILE_SCOPE("OMSetRenderTargets");
+		commandList->OMSetRenderTargets(1, &currentBackBufferView, true, &depthStencilView);
+	}
 
-	ID3D12DescriptorHeap* descriptorHeaps[] = { TextureManager::GetHeapPointer() };
-	commandList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
+	{
+		PROFILE_SCOPE("SetDescriptorHeaps");
+		ID3D12DescriptorHeap* descriptorHeaps[] = { TextureManager::GetHeapPointer() };
+		commandList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
+	}
 
 	for (RenderPass* pass : m_renderPasses)
 	{
+		PROFILE_SCOPE(pass->Name.c_str());
+
 		TINY_CORE_ASSERT(pass != nullptr, "Pass should never be nullptr");
 		TINY_CORE_ASSERT(pass->RootSignature != nullptr, "Pass has no root signature");
 		TINY_CORE_ASSERT(pass->RenderPassLayers.size() > 0, "Pass has no render layers");
@@ -123,6 +152,8 @@ void Engine::RenderImpl()
 		// Render the render layers for the pass
 		for (const RenderPassLayer& layer : pass->RenderPassLayers)
 		{
+			PROFILE_SCOPE(layer.Name.c_str());
+
 			TINY_CORE_ASSERT(layer.RenderItems.size() > 0, "Layer has no render items");
 			TINY_CORE_ASSERT(layer.PipelineState != nullptr, "Layer has no pipeline state");
 			TINY_CORE_ASSERT(layer.Meshes != nullptr, "Layer has no mesh group");
@@ -151,23 +182,33 @@ void Engine::RenderImpl()
 		pass->PostWork(pass, commandList);
 	}
 
-	// Indicate a state transition on the resource usage.
-	auto _b2 = CD3DX12_RESOURCE_BARRIER::Transition(
-		m_deviceResources->CurrentBackBuffer(),
-		D3D12_RESOURCE_STATE_RENDER_TARGET,
-		D3D12_RESOURCE_STATE_PRESENT
-	);
-	commandList->ResourceBarrier(1, &_b2);
+	{
+		PROFILE_SCOPE("Back Buffer Transition: RENDER_TARGET -> PRESENT");
+		// Indicate a state transition on the resource usage.
+		auto _b2 = CD3DX12_RESOURCE_BARRIER::Transition(
+			m_deviceResources->CurrentBackBuffer(),
+			D3D12_RESOURCE_STATE_RENDER_TARGET,
+			D3D12_RESOURCE_STATE_PRESENT
+		);
+		commandList->ResourceBarrier(1, &_b2);
+	}
 
 	// Done recording commands.
-	GFX_THROW_INFO(commandList->Close());
+	{
+		PROFILE_SCOPE("commandList->Close()");
+		GFX_THROW_INFO(commandList->Close());
+	}
 
 	// Add the command list to the queue for execution.
-	ID3D12CommandList* cmdsLists[] = { commandList };
-	m_deviceResources->GetCommandQueue()->ExecuteCommandLists(_countof(cmdsLists), cmdsLists);
+	{
+		PROFILE_SCOPE("commandQueue->ExecuteCommandLists()");
+		ID3D12CommandList* cmdsLists[] = { commandList };
+		m_deviceResources->GetCommandQueue()->ExecuteCommandLists(_countof(cmdsLists), cmdsLists);
+	}
 }
 void Engine::PresentImpl()
 {
+	PROFILE_FUNCTION();
 	TINY_CORE_ASSERT(m_initialized, "Engine has not been initialized");
 
 	m_deviceResources->Present();
@@ -178,10 +219,11 @@ void Engine::PresentImpl()
 	// Because we are on the GPU timeline, the new fence point won't be 
 	// set until the GPU finishes processing all the commands prior to this Signal().
 	m_deviceResources->GetCommandQueue()->Signal(m_deviceResources->GetFence(), m_fences[m_currentFrameIndex]);
-
 }
 void Engine::CleanupResources() noexcept
 {
+	PROFILE_FUNCTION();
+
 	if (m_resourcesToDelete.size() > 0)
 	{
 		UINT64 completedFence = m_deviceResources->GetFence()->GetCompletedValue();
@@ -196,6 +238,8 @@ void Engine::CleanupResources() noexcept
 }
 void Engine::UpdateRenderItems(const Timer& timer)
 {
+	PROFILE_FUNCTION();
+
 	for (RenderItem* item : m_allRenderItems)
 	{
 		TINY_CORE_ASSERT(item != nullptr, "RenderItem should never be nullptr");
@@ -204,6 +248,8 @@ void Engine::UpdateRenderItems(const Timer& timer)
 }
 void Engine::UpdateRenderPasses(const Timer& timer)
 {
+	PROFILE_FUNCTION();
+
 	for (RenderPass* pass : m_renderPasses)
 	{
 		TINY_CORE_ASSERT(pass != nullptr, "RenderPass should never be nullptr");
@@ -212,6 +258,8 @@ void Engine::UpdateRenderPasses(const Timer& timer)
 }
 void Engine::UpdateDynamicMeshes(const Timer& timer)
 {
+	PROFILE_FUNCTION();
+
 	for (DynamicMeshGroup* mesh : m_dynamicMeshes)
 	{
 		TINY_CORE_ASSERT(mesh != nullptr, "DynamicMeshGroup should never be nullptr");

@@ -63,6 +63,10 @@ void TheApp::BuildMainRenderPass()
 {
 	PROFILE_FUNCTION();
 
+	// Add name for debug/profiling purposes
+	m_mainRenderPass.Name = "Main Render Pass";
+	m_mainRenderPass.RenderPassLayers.reserve(3);
+
 	// Root Signature --------------------------------------------------------------------------------
 	CD3DX12_DESCRIPTOR_RANGE texTable; 
 	texTable.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0); 
@@ -148,6 +152,7 @@ void TheApp::BuildMainRenderPass()
 
 	// Render Pass Layer: Opaque ----------------------------------------------------------------------
 	RenderPassLayer& opaqueLayer = m_mainRenderPass.RenderPassLayers.emplace_back(m_deviceResources);
+	opaqueLayer.Name = "Opaque Layer";
 
 	// PSO
 	m_standardVS = std::make_unique<Shader>(m_deviceResources, "C:/dev/tiny/sandbox/LightingVS.cso"); 
@@ -278,6 +283,7 @@ void TheApp::BuildMainRenderPass()
 
 	// Render Pass Layer: Alpha Test ----------------------------------------------------------------------
 	RenderPassLayer& alphaTestLayer = m_mainRenderPass.RenderPassLayers.emplace_back(m_deviceResources);
+	alphaTestLayer.Name = "Alpha Test Layer";
 
 	// PSO
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC alphaTestDesc = opaqueDesc;
@@ -376,6 +382,7 @@ void TheApp::BuildMainRenderPass()
 
 	// Render Pass Layer: Transparent ----------------------------------------------------------------------
 	RenderPassLayer& transparentLayer = m_mainRenderPass.RenderPassLayers.emplace_back(m_deviceResources);
+	transparentLayer.Name = "Transparent Layer";
 
 	// PSO
 	std::unique_ptr<BlendState> transparentBlendState = std::make_unique<BlendState>();
@@ -512,6 +519,8 @@ void TheApp::BuildMainRenderPass()
 
 void TheApp::Update(const Timer& timer)
 {
+	PROFILE_FUNCTION();
+
 	// IMPORTANT: Do all necessary updates/animation first, but then be sure to call Engine::Update()
 
 	UpdateCamera(timer);
@@ -526,6 +535,8 @@ void TheApp::Update(const Timer& timer)
 
 void TheApp::UpdateCamera(const Timer& timer)
 {
+	PROFILE_FUNCTION();
+
 	const float dt = timer.DeltaTime();
 
 	if (m_keyWIsDown)
@@ -544,44 +555,64 @@ void TheApp::UpdateCamera(const Timer& timer)
 }
 void TheApp::UpdateWavesVertices(const Timer& timer)
 {
+	PROFILE_FUNCTION();
+
 	// Every quarter second, generate a random wave.
 	static float t_base = 0.0f;
-	if ((timer.TotalTime() - t_base) >= 0.25f)
 	{
-		t_base += 0.25f;
+		PROFILE_SCOPE("Disturbing Waves");
 
-		int i = MathHelper::Rand(4, m_waves->RowCount() - 5);
-		int j = MathHelper::Rand(4, m_waves->ColumnCount() - 5);
+		if ((timer.TotalTime() - t_base) >= 0.25f)
+		{
+			t_base += 0.25f;
 
-		float r = MathHelper::RandF(0.2f, 0.5f);
+			int i = MathHelper::Rand(4, m_waves->RowCount() - 5);
+			int j = MathHelper::Rand(4, m_waves->ColumnCount() - 5);
 
-		m_waves->Disturb(i, j, r);
+			float r = MathHelper::RandF(0.2f, 0.5f);
+
+			m_waves->Disturb(i, j, r);
+		}
 	}
 
 	// Update the wave simulation.
 	m_waves->Update(timer.DeltaTime());
 
 	// Update the wave vertex buffer with the new solution.
-	std::vector<Vertex> waveVertices(m_waves->VertexCount());
-	for (int i = 0; i < m_waves->VertexCount(); ++i)
 	{
-		Vertex v;
+		PROFILE_SCOPE("Extracting vertices");
 
-		v.Pos = m_waves->Position(i);
-		v.Normal = m_waves->Normal(i);
+		std::vector<Vertex>& vertices = m_dynamicWaveMesh->GetVertices();
+		{
+			PROFILE_SCOPE("Constructing new vertices");
 
-		// Derive tex-coords from position by 
-		// mapping [-w/2,w/2] --> [0,1]
-		v.TexC.x = 0.5f + v.Pos.x / m_waves->Width();
-		v.TexC.y = 0.5f - v.Pos.z / m_waves->Depth();
+			float width = m_waves->Width();
+			float depth = m_waves->Depth();
+			
+			// Using a parallel_for loop here speeds this up from 1.5ms to 0.3ms when compared to a raw for-loop
+			concurrency::parallel_for(1, m_waves->VertexCount() - 1, [&,this](int i)
+				{
+					vertices[i].Pos = m_waves->Position(i);
+					vertices[i].Normal = m_waves->Normal(i);
 
-		waveVertices[i] = v;
+					// Derive tex-coords from position by 
+					// mapping [-w/2,w/2] --> [0,1]
+					vertices[i].TexC.x = 0.5f + vertices[i].Pos.x / width;
+					vertices[i].TexC.y = 0.5f - vertices[i].Pos.z / depth;
+				}
+			);
+		}
+
+		{
+			PROFILE_SCOPE("Dynamic Wave Mesh -> Copy Vertices");
+			m_dynamicWaveMesh->UploadVertices(Engine::GetCurrentFrameIndex());
+		}
 	}
-
-	m_dynamicWaveMesh->CopyVertices(Engine::GetCurrentFrameIndex(), std::move(waveVertices));
 }
 void TheApp::UpdateWavesMaterials(const Timer& timer)
 {
+	PROFILE_FUNCTION();
+
 	// Scroll the water material texture coordinates.
 
 	Material* waveMaterial = m_wavesRI->material.get();

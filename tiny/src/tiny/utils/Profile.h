@@ -47,6 +47,9 @@ struct InstrumentationSession
 	std::string name;
 };
 
+// -----------------------------------------------------------------------
+// Instrumentor
+// -----------------------------------------------------------------------
 class Instrumentor
 {
 public:
@@ -97,7 +100,9 @@ private:
 	long long m_capturingEndTime;
 };
 
-
+// -----------------------------------------------------------------------
+// InstrumentationTimer
+// -----------------------------------------------------------------------
 class InstrumentationTimer
 {
 public:

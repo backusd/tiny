@@ -26,7 +26,8 @@ public:
 		PostWork(rhs.PostWork),
 		RootSignature(rhs.RootSignature),
 		ConstantBufferViews(std::move(rhs.ConstantBufferViews)),
-		RenderPassLayers(std::move(RenderPassLayers))
+		RenderPassLayers(std::move(RenderPassLayers)),
+		Name(std::move(rhs.Name))
 	{
 		LOG_CORE_WARN("{}", "RenderPass Move Constructor called, but this method has not been tested. Make sure updates to the Engine are correct");
 
@@ -44,7 +45,8 @@ public:
 		PostWork = rhs.PostWork;
 		RootSignature = rhs.RootSignature;
 		ConstantBufferViews = std::move(rhs.ConstantBufferViews);
-		RenderPassLayers = std::move(RenderPassLayers);
+		RenderPassLayers = std::move(rhs.RenderPassLayers);
+		Name = std::move(rhs.Name);
 
 		return *this;
 	}
@@ -73,6 +75,9 @@ public:
 
 	// 1+ render layers
 	std::vector<RenderPassLayer> RenderPassLayers;
+
+	// Name (for debug/profiling purposes)
+	std::string Name = "Unnamed RenderPass";
 
 private:
 	// There is too much state to worry about copying, so just delete copy operations until we find a good use case

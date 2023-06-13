@@ -45,8 +45,12 @@ Sandbox::Sandbox() :
 }
 bool Sandbox::DoFrame() noexcept
 {
+    PROFILE_NEXT_FRAME();
+
 	try
 	{
+        PROFILE_SCOPE("Sandbox::DoFrame()");
+
         m_timer.Tick();
         CalculateFrameStats();
 
@@ -94,6 +98,8 @@ void Sandbox::Present()
 
 void Sandbox::CalculateFrameStats()
 {
+    PROFILE_FUNCTION();
+
     // Code computes the average frames per second, and also the 
     // average time it takes to render one frame.  These stats 
     // are appended to the window caption bar.
@@ -162,6 +168,8 @@ void Sandbox::OnKeyReleased(tiny::KeyReleasedEvent& e)
     case tiny::KEY_CODE::A: m_app->OnAKeyUpDown(false); break;
     case tiny::KEY_CODE::S: m_app->OnSKeyUpDown(false); break;
     case tiny::KEY_CODE::D: m_app->OnDKeyUpDown(false); break;
+
+    case tiny::KEY_CODE::P: tiny::Instrumentor::Get().CaptureFrames(5, "Frame Capture", "profile/Profile-Frames.json"); break;
     }
 }
 

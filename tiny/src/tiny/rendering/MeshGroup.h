@@ -317,17 +317,31 @@ public:
 	inline void CopyVertices(unsigned int frameIndex, std::vector<T>&& newVertices) noexcept
 	{
 		TINY_CORE_ASSERT(newVertices.size() == m_vertices.size(), "The new set of vertices must have the same total number as the original set");
-		TINY_CORE_ASSERT(frameIndex < gNumFrameResources, "Frame index is larger than expected");
 		m_vertices = std::move(newVertices);
-		memcpy(&m_mappedVertexData[frameIndex * m_vertexBufferView.SizeInBytes], m_vertices.data(), m_vertexBufferView.SizeInBytes);
+
+		UploadVertices(frameIndex);
 	}
 	inline void CopyIndices(unsigned int frameIndex, std::vector<std::uint16_t>&& newIndices) noexcept
 	{
 		TINY_CORE_ASSERT(newIndices.size() == m_indices.size(), "The new set of indices must have the same total number as the original set");
-		TINY_CORE_ASSERT(frameIndex < gNumFrameResources, "Frame index is larger than expected"); 
 		m_indices = std::move(newIndices);
+
+		UploadIndices(frameIndex);
+	}
+
+	inline void UploadVertices(unsigned int frameIndex) noexcept
+	{
+		TINY_CORE_ASSERT(frameIndex < gNumFrameResources, "Frame index is larger than expected");
+		memcpy(&m_mappedVertexData[frameIndex * m_vertexBufferView.SizeInBytes], m_vertices.data(), m_vertexBufferView.SizeInBytes);
+	}
+	inline void UploadIndices(unsigned int frameIndex) noexcept
+	{
+		TINY_CORE_ASSERT(frameIndex < gNumFrameResources, "Frame index is larger than expected");
 		memcpy(&m_mappedIndexData[frameIndex * m_indexBufferView.SizeInBytes], m_indices.data(), m_indexBufferView.SizeInBytes);
 	}
+
+	ND inline std::vector<T>& GetVertices() noexcept { return m_vertices; }
+	ND inline std::vector<std::uint16_t>& GetIndices() noexcept { return m_indices; }
 
 private:
 	// There is too much state to worry about copying, so just delete copy operations until we find a good use case
