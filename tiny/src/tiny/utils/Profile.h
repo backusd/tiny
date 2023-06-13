@@ -6,7 +6,7 @@
 // View results using chrome://tracing
 //
 
-#define PROFILE 1
+//#define PROFILE 1
 
 #ifdef PROFILE
 
@@ -35,6 +35,8 @@
 
 namespace tiny
 {
+#ifdef PROFILE
+
 struct ProfileResult
 {
 	std::string name = "";
@@ -122,5 +124,5 @@ private:
 	std::string m_name;
 };
 
-
+#endif
 }

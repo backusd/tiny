@@ -52,6 +52,8 @@ void Engine::UpdateImpl(const Timer& timer)
 			GFX_THROW_INFO(
 				m_deviceResources->GetFence()->SetEventOnCompletion(currentFence, eventHandle)
 			);
+
+			TINY_CORE_ASSERT(eventHandle != NULL, "Handle should not be null");
 			WaitForSingleObject(eventHandle, INFINITE);
 			CloseHandle(eventHandle);
 		}
@@ -73,7 +75,7 @@ void Engine::RenderImpl()
 
 	// Reuse the memory associated with command recording.
 	// We can only reset when the associated command lists have finished execution on the GPU.
-	auto commandAllocator = m_allocators[m_currentFrameIndex];
+	Microsoft::WRL::ComPtr<ID3D12CommandAllocator> commandAllocator = m_allocators[m_currentFrameIndex];
 	{
 		PROFILE_SCOPE("commandAllocator->Reset()");
 		GFX_THROW_INFO(commandAllocator->Reset());

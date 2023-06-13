@@ -29,7 +29,7 @@ public:
 
 	ND inline D3D12_GPU_VIRTUAL_ADDRESS GetGPUVirtualAddress(unsigned int frameIndex) noexcept
 	{
-		return m_uploadBuffer->GetGPUVirtualAddress() + frameIndex * m_elementByteSize;
+		return m_uploadBuffer->GetGPUVirtualAddress() + static_cast<UINT64>(frameIndex) * m_elementByteSize;
 	}
 
 
@@ -70,7 +70,7 @@ public:
 		auto props = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
 
 		// Create a buffer that will hold one element for each frame resource
-		auto desc = CD3DX12_RESOURCE_DESC::Buffer(m_elementByteSize * gNumFrameResources);		
+		auto desc = CD3DX12_RESOURCE_DESC::Buffer(static_cast<UINT64>(m_elementByteSize) * gNumFrameResources);		
 
 		GFX_THROW_INFO(
 			m_deviceResources->GetDevice()->CreateCommittedResource(

@@ -83,7 +83,7 @@ private:
 	int m_currentFrameIndex = 0;
 	D3D12_VIEWPORT m_viewport = { 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f }; // Dummy values
 	D3D12_RECT m_scissorRect = { 0, 0, 1, 1 }; // Dummy values
-	std::array<UINT64, gNumFrameResources> m_fences;
+	std::array<UINT64, gNumFrameResources> m_fences = {};
 
 	// Resources that can be deleted once they are no longer referenced by the GPU
 	std::vector<std::tuple<UINT64, Microsoft::WRL::ComPtr<ID3D12Resource>>> m_resourcesToDelete;

@@ -201,8 +201,8 @@ public:
 		// For dynamic meshes, we keep gNumFrameResources copies of the vertex/index buffer in a single, continuous buffer
 		// All we need to do every time Update() is called, is to update the vertex/index buffer views to point at the correct
 		// starting location for the next buffer we want to use
-		m_vertexBufferView.BufferLocation = m_vertexBufferGPU->GetGPUVirtualAddress() + frameIndex * m_vertexBufferView.SizeInBytes;
-		m_indexBufferView.BufferLocation = m_indexBufferGPU->GetGPUVirtualAddress() + frameIndex * m_indexBufferView.SizeInBytes;
+		m_vertexBufferView.BufferLocation = m_vertexBufferGPU->GetGPUVirtualAddress() + static_cast<UINT64>(frameIndex) * m_vertexBufferView.SizeInBytes;
+		m_indexBufferView.BufferLocation = m_indexBufferGPU->GetGPUVirtualAddress() + static_cast<UINT64>(frameIndex) * m_indexBufferView.SizeInBytes;
 	}
 
 protected:

@@ -169,7 +169,9 @@ void Sandbox::OnKeyReleased(tiny::KeyReleasedEvent& e)
     case tiny::KEY_CODE::S: m_app->OnSKeyUpDown(false); break;
     case tiny::KEY_CODE::D: m_app->OnDKeyUpDown(false); break;
 
+#ifdef PROFILE
     case tiny::KEY_CODE::P: tiny::Instrumentor::Get().CaptureFrames(5, "Frame Capture", "profile/Profile-Frames.json"); break;
+#endif
     }
 }
 

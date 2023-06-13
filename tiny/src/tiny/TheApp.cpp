@@ -38,7 +38,7 @@ void TheApp::OnResize(int height, int width)
 }
 void TheApp::SetViewport(float top, float left, float height, float width) noexcept
 {
-	D3D12_VIEWPORT vp;
+	D3D12_VIEWPORT vp{};
 	vp.TopLeftX = left;
 	vp.TopLeftY = top;
 	vp.Height = height;
@@ -419,31 +419,29 @@ void TheApp::BuildMainRenderPass()
 		for (int j = 0; j < n - 1; ++j)
 		{
 			waveIndices[k] = i * n + j;
-			waveIndices[k + 1] = i * n + j + 1;
-			waveIndices[k + 2] = (i + 1) * n + j;
+			waveIndices[static_cast<size_t>(k) + 1] = i * n + j + 1;
+			waveIndices[static_cast<size_t>(k) + 2] = (i + 1) * n + j;
 
-			waveIndices[k + 3] = (i + 1) * n + j;
-			waveIndices[k + 4] = i * n + j + 1;
-			waveIndices[k + 5] = (i + 1) * n + j + 1;
+			waveIndices[static_cast<size_t>(k) + 3] = (i + 1) * n + j;
+			waveIndices[static_cast<size_t>(k) + 4] = i * n + j + 1;
+			waveIndices[static_cast<size_t>(k) + 5] = (i + 1) * n + j + 1;
 
 			k += 6; // next quad
 		}
 	}
 
 	std::vector<Vertex> waveVertices(m_waves->VertexCount());
+	float wavesWidth = m_waves->Width();
+	float wavesDepth = m_waves->Depth();
 	for (int i = 0; i < m_waves->VertexCount(); ++i)
 	{
-		Vertex v;
-
-		v.Pos = m_waves->Position(i);
-		v.Normal = m_waves->Normal(i);
+		waveVertices[i].Pos = m_waves->Position(i);
+		waveVertices[i].Normal = m_waves->Normal(i);
 
 		// Derive tex-coords from position by 
 		// mapping [-w/2,w/2] --> [0,1]
-		v.TexC.x = 0.5f + v.Pos.x / m_waves->Width();
-		v.TexC.y = 0.5f - v.Pos.z / m_waves->Depth();
-
-		waveVertices[i] = v;
+		waveVertices[i].TexC.x = 0.5f + waveVertices[i].Pos.x / wavesWidth;
+		waveVertices[i].TexC.y = 0.5f - waveVertices[i].Pos.z / wavesDepth;
 	}
 
 	transparentLayer.Meshes = std::make_unique<DynamicMeshGroupT<Vertex>>(m_deviceResources, std::move(waveVertices), std::move(waveIndices));

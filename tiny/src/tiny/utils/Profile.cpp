@@ -3,6 +3,8 @@
 
 namespace tiny
 {
+#ifdef PROFILE
+
 std::string Instrumentor::SessionName() const noexcept
 {
 	if (m_currentSession != nullptr)
@@ -169,4 +171,6 @@ void InstrumentationTimer::Stop() noexcept
 	//double    ms = duration * 0.001;
 	//OutputDebugString(std::format("{}us ({:.3f}ms)\n", duration, ms).c_str());
 }
+
+#endif
 }

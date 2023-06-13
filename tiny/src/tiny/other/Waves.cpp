@@ -23,10 +23,10 @@ Waves::Waves(int m, int n, float dx, float dt, float speed, float damping)
 	mK2 = (4.0f - 8.0f * e) / d;
 	mK3 = (2.0f * e) / d;
 
-	mPrevSolution.resize(m * n);
-	mCurrSolution.resize(m * n);
-	mNormals.resize(m * n);
-	mTangentX.resize(m * n);
+	mPrevSolution.resize(static_cast<size_t>(m) * n);
+	mCurrSolution.resize(static_cast<size_t>(m) * n);
+	mNormals.resize(static_cast<size_t>(m) * n);
+	mTangentX.resize(static_cast<size_t>(m) * n);
 
 	// Generate grid vertices in system memory.
 
@@ -39,10 +39,10 @@ Waves::Waves(int m, int n, float dx, float dt, float speed, float damping)
 		{
 			float x = -halfWidth + j * dx;
 
-			mPrevSolution[i * n + j] = XMFLOAT3(x, 0.0f, z);
-			mCurrSolution[i * n + j] = XMFLOAT3(x, 0.0f, z);
-			mNormals[i * n + j] = XMFLOAT3(0.0f, 1.0f, 0.0f);
-			mTangentX[i * n + j] = XMFLOAT3(1.0f, 0.0f, 0.0f);
+			mPrevSolution[static_cast<size_t>(i) * n + j] = XMFLOAT3(x, 0.0f, z);
+			mCurrSolution[static_cast<size_t>(i) * n + j] = XMFLOAT3(x, 0.0f, z);
+			mNormals[static_cast<size_t>(i) * n + j] = XMFLOAT3(0.0f, 1.0f, 0.0f);
+			mTangentX[static_cast<size_t>(i) * n + j] = XMFLOAT3(1.0f, 0.0f, 0.0f);
 		}
 	}
 }
@@ -108,13 +108,13 @@ void Waves::Update(float dt)
 					// Moreover, our +z axis goes "down"; this is just to 
 					// keep consistent with our row indices going down.
 
-					mPrevSolution[i * mNumCols + j].y =
-						mK1 * mPrevSolution[i * mNumCols + j].y +
-						mK2 * mCurrSolution[i * mNumCols + j].y +
-						mK3 * (mCurrSolution[(i + 1) * mNumCols + j].y +
-							mCurrSolution[(i - 1) * mNumCols + j].y +
-							mCurrSolution[i * mNumCols + j + 1].y +
-							mCurrSolution[i * mNumCols + j - 1].y);
+					mPrevSolution[static_cast<size_t>(i) * mNumCols + j].y =
+						mK1 * mPrevSolution[static_cast<size_t>(i) * mNumCols + j].y +
+						mK2 * mCurrSolution[static_cast<size_t>(i) * mNumCols + j].y +
+						mK3 * (mCurrSolution[(static_cast<size_t>(i) + 1) * mNumCols + j].y +
+							mCurrSolution[(static_cast<size_t>(i) - 1) * mNumCols + j].y +
+							mCurrSolution[static_cast<size_t>(i) * mNumCols + j + 1].y +
+							mCurrSolution[static_cast<size_t>(i) * mNumCols + j - 1].y);
 				}
 			});
 
@@ -133,20 +133,20 @@ void Waves::Update(float dt)
 			{
 				for (int j = 1; j < mNumCols - 1; ++j)
 				{
-					float l = mCurrSolution[i * mNumCols + j - 1].y;
-					float r = mCurrSolution[i * mNumCols + j + 1].y;
-					float t = mCurrSolution[(i - 1) * mNumCols + j].y;
-					float b = mCurrSolution[(i + 1) * mNumCols + j].y;
-					mNormals[i * mNumCols + j].x = -r + l;
-					mNormals[i * mNumCols + j].y = 2.0f * mSpatialStep;
-					mNormals[i * mNumCols + j].z = b - t;
+					float l = mCurrSolution[static_cast<size_t>(i) * mNumCols + j - 1].y;
+					float r = mCurrSolution[static_cast<size_t>(i) * mNumCols + j + 1].y;
+					float t = mCurrSolution[(static_cast<size_t>(i) - 1) * mNumCols + j].y;
+					float b = mCurrSolution[(static_cast<size_t>(i) + 1) * mNumCols + j].y;
+					mNormals[static_cast<size_t>(i) * mNumCols + j].x = -r + l;
+					mNormals[static_cast<size_t>(i) * mNumCols + j].y = 2.0f * mSpatialStep;
+					mNormals[static_cast<size_t>(i) * mNumCols + j].z = b - t;
 
-					XMVECTOR n = XMVector3Normalize(XMLoadFloat3(&mNormals[i * mNumCols + j]));
-					XMStoreFloat3(&mNormals[i * mNumCols + j], n);
+					XMVECTOR n = XMVector3Normalize(XMLoadFloat3(&mNormals[static_cast<size_t>(i) * mNumCols + j]));
+					XMStoreFloat3(&mNormals[static_cast<size_t>(i) * mNumCols + j], n);
 
-					mTangentX[i * mNumCols + j] = XMFLOAT3(2.0f * mSpatialStep, r - l, 0.0f);
-					XMVECTOR T = XMVector3Normalize(XMLoadFloat3(&mTangentX[i * mNumCols + j]));
-					XMStoreFloat3(&mTangentX[i * mNumCols + j], T);
+					mTangentX[static_cast<size_t>(i) * mNumCols + j] = XMFLOAT3(2.0f * mSpatialStep, r - l, 0.0f);
+					XMVECTOR T = XMVector3Normalize(XMLoadFloat3(&mTangentX[static_cast<size_t>(i) * mNumCols + j]));
+					XMStoreFloat3(&mTangentX[static_cast<size_t>(i) * mNumCols + j], T);
 				}
 			});
 	}
@@ -161,11 +161,11 @@ void Waves::Disturb(int i, int j, float magnitude)
 	float halfMag = 0.5f * magnitude;
 
 	// Disturb the ijth vertex height and its neighbors.
-	mCurrSolution[i * mNumCols + j].y += magnitude;
-	mCurrSolution[i * mNumCols + j + 1].y += halfMag;
-	mCurrSolution[i * mNumCols + j - 1].y += halfMag;
-	mCurrSolution[(i + 1) * mNumCols + j].y += halfMag;
-	mCurrSolution[(i - 1) * mNumCols + j].y += halfMag;
+	mCurrSolution[static_cast<size_t>(i) * mNumCols + j].y += magnitude;
+	mCurrSolution[static_cast<size_t>(i) * mNumCols + j + 1].y += halfMag;
+	mCurrSolution[static_cast<size_t>(i) * mNumCols + j - 1].y += halfMag;
+	mCurrSolution[(static_cast<size_t>(i) + 1) * mNumCols + j].y += halfMag;
+	mCurrSolution[(static_cast<size_t>(i) - 1) * mNumCols + j].y += halfMag;
 }
 
 }

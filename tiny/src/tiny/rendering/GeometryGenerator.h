@@ -26,7 +26,11 @@ public:
 
 	struct Vertex
 	{
-		Vertex() {}
+		Vertex() :
+			Position(0.0f, 0.0f, 0.0f),
+			Normal(0.0f, 0.0f, 0.0f),
+			TangentU(0.0f, 0.0f, 0.0f),
+			TexC(0.0f, 0.0f) {}
 		Vertex(
 			const DirectX::XMFLOAT3& p,
 			const DirectX::XMFLOAT3& n,
