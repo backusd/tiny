@@ -5,114 +5,23 @@ using namespace DirectX;
 
 namespace tiny
 {
-Camera::Camera()
+Camera::Camera() noexcept
 {
 	SetLens(0.25f * MathHelper::Pi, 1.0f, 1.0f, 1000.0f);
 }
 
-Camera::~Camera()
-{
-}
-
-XMVECTOR Camera::GetPosition()const
-{
-	return XMLoadFloat3(&m_position);
-}
-
-XMFLOAT3 Camera::GetPosition3f()const
-{
-	return m_position;
-}
-
-void Camera::SetPosition(float x, float y, float z)
+void Camera::SetPosition(float x, float y, float z) noexcept
 {
 	m_position = XMFLOAT3(x, y, z);
 	m_viewDirty = true;
 }
-
-void Camera::SetPosition(const XMFLOAT3& v)
+void Camera::SetPosition(const XMFLOAT3& v) noexcept
 {
 	m_position = v;
 	m_viewDirty = true;
 }
 
-XMVECTOR Camera::GetRight()const
-{
-	return XMLoadFloat3(&m_right);
-}
-
-XMFLOAT3 Camera::GetRight3f()const
-{
-	return m_right;
-}
-
-XMVECTOR Camera::GetUp()const
-{
-	return XMLoadFloat3(&m_up);
-}
-
-XMFLOAT3 Camera::GetUp3f()const
-{
-	return m_up;
-}
-
-XMVECTOR Camera::GetLook()const
-{
-	return XMLoadFloat3(&m_look);
-}
-
-XMFLOAT3 Camera::GetLook3f()const
-{
-	return m_look;
-}
-
-float Camera::GetNearZ()const
-{
-	return m_nearZ;
-}
-
-float Camera::GetFarZ()const
-{
-	return m_farZ;
-}
-
-float Camera::GetAspect()const
-{
-	return m_aspect;
-}
-
-float Camera::GetFovY()const
-{
-	return m_fovY;
-}
-
-float Camera::GetFovX()const
-{
-	float halfWidth = 0.5f * GetNearWindowWidth();
-	return 2.0f * atan(halfWidth / m_nearZ);
-}
-
-float Camera::GetNearWindowWidth()const
-{
-	return m_aspect * m_nearWindowHeight;
-}
-
-float Camera::GetNearWindowHeight()const
-{
-	return m_nearWindowHeight;
-}
-
-float Camera::GetFarWindowWidth()const
-{
-	return m_aspect * m_farWindowHeight;
-}
-
-float Camera::GetFarWindowHeight()const
-{
-	return m_farWindowHeight;
-}
-
-void Camera::SetLens(float fovY, float aspect, float zn, float zf)
+void Camera::SetLens(float fovY, float aspect, float zn, float zf) noexcept
 {
 	// cache properties
 	m_fovY = fovY;
@@ -127,7 +36,7 @@ void Camera::SetLens(float fovY, float aspect, float zn, float zf)
 	XMStoreFloat4x4(&m_proj, P);
 }
 
-void Camera::LookAt(FXMVECTOR pos, FXMVECTOR target, FXMVECTOR worldUp)
+void Camera::LookAt(FXMVECTOR pos, FXMVECTOR target, FXMVECTOR worldUp) noexcept
 {
 	XMVECTOR L = XMVector3Normalize(XMVectorSubtract(target, pos));
 	XMVECTOR R = XMVector3Normalize(XMVector3Cross(worldUp, L));
@@ -141,7 +50,7 @@ void Camera::LookAt(FXMVECTOR pos, FXMVECTOR target, FXMVECTOR worldUp)
 	m_viewDirty = true;
 }
 
-void Camera::LookAt(const XMFLOAT3& pos, const XMFLOAT3& target, const XMFLOAT3& up)
+void Camera::LookAt(const XMFLOAT3& pos, const XMFLOAT3& target, const XMFLOAT3& up) noexcept
 {
 	XMVECTOR P = XMLoadFloat3(&pos);
 	XMVECTOR T = XMLoadFloat3(&target);
@@ -152,30 +61,8 @@ void Camera::LookAt(const XMFLOAT3& pos, const XMFLOAT3& target, const XMFLOAT3&
 	m_viewDirty = true;
 }
 
-XMMATRIX Camera::GetView()const
-{
-	assert(!m_viewDirty);
-	return XMLoadFloat4x4(&m_view);
-}
 
-XMMATRIX Camera::GetProj()const
-{
-	return XMLoadFloat4x4(&m_proj);
-}
-
-
-XMFLOAT4X4 Camera::GetView4x4f()const
-{
-	assert(!m_viewDirty);
-	return m_view;
-}
-
-XMFLOAT4X4 Camera::GetProj4x4f()const
-{
-	return m_proj;
-}
-
-void Camera::Strafe(float d)
+void Camera::Strafe(float d) noexcept
 {
 	// m_position += d*m_right
 	XMVECTOR s = XMVectorReplicate(d);
@@ -186,7 +73,7 @@ void Camera::Strafe(float d)
 	m_viewDirty = true;
 }
 
-void Camera::Walk(float d)
+void Camera::Walk(float d) noexcept
 {
 	// m_position += d*m_look
 	XMVECTOR s = XMVectorReplicate(d);
@@ -197,7 +84,7 @@ void Camera::Walk(float d)
 	m_viewDirty = true;
 }
 
-void Camera::Pitch(float angle)
+void Camera::Pitch(float angle) noexcept
 {
 	// Rotate up and look vector about the right vector.
 
@@ -209,7 +96,7 @@ void Camera::Pitch(float angle)
 	m_viewDirty = true;
 }
 
-void Camera::RotateY(float angle)
+void Camera::RotateY(float angle) noexcept
 {
 	// Rotate the basis vectors about the world y-axis.
 
@@ -222,7 +109,7 @@ void Camera::RotateY(float angle)
 	m_viewDirty = true;
 }
 
-void Camera::UpdateViewMatrix()
+void Camera::UpdateViewMatrix() noexcept
 {
 	if (m_viewDirty)
 	{
