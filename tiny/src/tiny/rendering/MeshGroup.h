@@ -332,7 +332,7 @@ public:
 private:
 	// There is too much state to worry about copying, so just delete copy operations until we find a good use case
 	DynamicMeshGroupT(const DynamicMeshGroupT&) = delete;
-	DynamicMeshGroupT& operator=(const DynamicMeshGroupT& rhs) = delete;
+	DynamicMeshGroupT& operator=(const DynamicMeshGroupT&) = delete;
 
 	// System memory copies. 
 	std::vector<T> m_vertices;

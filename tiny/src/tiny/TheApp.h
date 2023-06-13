@@ -55,7 +55,7 @@ struct PassConstants
 	DirectX::XMFLOAT4 FogColor = { 0.7f, 0.7f, 0.7f, 1.0f };
 	float gFogStart = 5.0f;
 	float gFogRange = 150.0f;
-	DirectX::XMFLOAT2 cbPerObjectPad2;
+	DirectX::XMFLOAT2 cbPerObjectPad2 = { 0.0f, 0.0f };
 
 	// Indices [0, NUM_DIR_LIGHTS) are directional lights;
 	// indices [NUM_DIR_LIGHTS, NUM_DIR_LIGHTS+NUM_POINT_LIGHTS) are point lights;
@@ -63,14 +63,6 @@ struct PassConstants
 	// are spot lights for a maximum of MaxLights per object.
 	Light Lights[MaxLights];
 };
-
-//enum class RenderLayer : int
-//{
-//	Opaque = 0,
-//	Transparent,
-//	AlphaTested,
-//	Count
-//};
 
 class TheApp
 {

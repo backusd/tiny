@@ -26,21 +26,20 @@ public:
 	// Because we are storing render items in a vector, it is possible that even when using emplace_back, the vector
 	// may need to grow, and therefore, need to move the contents of all of the render items. So we must implement
 	// move operations. However, moving the object causes the 'this' pointer to change, so we must update the Engine
-	RenderItem(RenderItem&& rhs) noexcept
+	RenderItem(RenderItem&& rhs) noexcept :
+		ConstantBufferViews(std::move(rhs.ConstantBufferViews)),
+		DescriptorTables(std::move(rhs.DescriptorTables)),
+		NumFramesDirty(rhs.NumFramesDirty),
+		World(rhs.World),
+		TexTransform(rhs.TexTransform),
+		material(std::move(rhs.material)),
+		materialNumFramesDirty(rhs.materialNumFramesDirty),
+		submeshIndex(rhs.submeshIndex)
 	{
 		LOG_CORE_WARN("{}", "RenderItem Move Constructor called, but this method has not been tested. Make sure updates to the Engine are correct");
 
 		// I don't think we need to explicitly call RemoveRenderItem on the rhs object because its destructor should do that
 		Engine::AddRenderItem(this);
-
-		ConstantBufferViews = std::move(rhs.ConstantBufferViews);
-		DescriptorTables = std::move(rhs.DescriptorTables);
-		NumFramesDirty = rhs.NumFramesDirty;
-		World = rhs.World;
-		TexTransform = rhs.TexTransform;
-		material = std::move(rhs.material);
-		materialNumFramesDirty = rhs.materialNumFramesDirty;
-		submeshIndex = rhs.submeshIndex;
 	}
 	RenderItem& operator=(RenderItem&& rhs) noexcept
 	{
@@ -108,8 +107,8 @@ public:
 
 
 private:
-	RenderItem(const RenderItem& rhs) = delete;
-	RenderItem& operator=(const RenderItem& rhs) = delete;
+	RenderItem(const RenderItem&) = delete;
+	RenderItem& operator=(const RenderItem&) = delete;
 };
 
 }
