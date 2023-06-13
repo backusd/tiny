@@ -1,6 +1,5 @@
 #include "SandboxApp.h"
 #include "tiny/exception/TinyException.h"
-#include "tiny/utils/Utility.h"
 
 
 static constexpr std::array g_textureFiles{
@@ -24,18 +23,25 @@ namespace sandbox
 Sandbox::Sandbox() :
     m_timer()
 {
-    m_deviceResources = std::make_shared<tiny::DeviceResources>(GetHWND(), GetWindowHeight(), GetWindowWidth());
-    TINY_ASSERT(m_deviceResources != nullptr, "Failed to create device resources");
+    PROFILE_BEGIN_SESSION("Startup", "profile/Profile-Startup.json");
+    {
+        PROFILE_SCOPE("Sandbox Constructor");
 
-    m_app = std::make_unique<tiny::TheApp>(m_deviceResources);
-    m_app->SetViewport(
-        0.0f, 
-        0.0f, 
-        static_cast<float>(GetWindowHeight()), 
-        static_cast<float>(GetWindowWidth())
-    );
+        m_deviceResources = std::make_shared<tiny::DeviceResources>(GetHWND(), GetWindowHeight(), GetWindowWidth());
+        TINY_ASSERT(m_deviceResources != nullptr, "Failed to create device resources");
 
-    m_timer.Reset();
+        m_app = std::make_unique<tiny::TheApp>(m_deviceResources);
+        m_app->SetViewport(
+            0.0f,
+            0.0f,
+            static_cast<float>(GetWindowHeight()),
+            static_cast<float>(GetWindowWidth())
+        );
+
+        m_timer.Reset();
+    }
+
+    PROFILE_END_SESSION();
 }
 bool Sandbox::DoFrame() noexcept
 {

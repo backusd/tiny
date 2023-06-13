@@ -139,6 +139,7 @@
     <ClInclude Include="src\tiny\utils\DDSTextureLoader.h" />
     <ClInclude Include="src\tiny\utils\DxgiInfoManager.h" />
     <ClInclude Include="src\tiny\utils\MathHelper.h" />
+    <ClInclude Include="src\tiny\utils\Profile.h" />
     <ClInclude Include="src\tiny\utils\StringHelper.h" />
     <ClInclude Include="src\tiny\utils\Timer.h" />
   </ItemGroup>
@@ -157,6 +158,7 @@
     <ClCompile Include="src\tiny\utils\DDSTextureLoader.cpp" />
     <ClCompile Include="src\tiny\utils\DxgiInfoManager.cpp" />
     <ClCompile Include="src\tiny\utils\MathHelper.cpp" />
+    <ClCompile Include="src\tiny\utils\Profile.cpp" />
     <ClCompile Include="src\tiny\utils\StringHelper.cpp" />
     <ClCompile Include="src\tiny\utils\Timer.cpp" />
   </ItemGroup>

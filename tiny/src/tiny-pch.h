@@ -1,24 +1,24 @@
 #pragma once
 
-#include <string>
-#include <memory>
-#include <functional>
-#include <vector>
-#include <array>
-#include <format>
-#include <exception>
-#include <optional>
-#include <filesystem>
 #include <algorithm>
+#include <array>
+#include <cstdint>
+#include <exception>
+#include <filesystem>
+#include <format>
+#include <functional>
+#include <map>
+#include <memory>
+#include <optional>
+#include <ppl.h>
+#include <set>
+#include <stdexcept>
+#include <string>
+#include <string_view>
 #include <type_traits>
 #include <unordered_map>
-#include <cstdint>
-#include <ppl.h>
 #include <utility>
-#include <stdexcept>
-#include <map>
-#include <string_view>
-#include <set>
+#include <vector>
 
 #include <dxgidebug.h> // For DxgiInfoManager
 #include <wrl.h>

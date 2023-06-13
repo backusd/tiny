@@ -1,7 +1,7 @@
 #include "tiny-pch.h"
 #include "DeviceResources.h"
 #include "Log.h"
-
+#include "utils/Profile.h"
 
 
 using Microsoft::WRL::ComPtr;
@@ -17,6 +17,8 @@ DeviceResources::DeviceResources() :
 	m_height(720), // Use dummy height width values, because we will quickly resize the swapchain once we have the SwapChainPanel
 	m_width(1080)
 {
+	PROFILE_SCOPE("DeviceResources()");
+
 	CreateDevice();
 	CreateCommandObjects();
 	CreateRtvAndDsvDescriptorHeaps();
@@ -28,6 +30,8 @@ DeviceResources::DeviceResources(HWND hWnd, int height, int width) :
 	m_height(height),
 	m_width(width)
 {
+	PROFILE_SCOPE("DeviceResources(HWND hWnd, int height, int width)");
+
 	CreateDevice();
 	CreateCommandObjects();
 	CreateRtvAndDsvDescriptorHeaps();

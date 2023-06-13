@@ -1,6 +1,7 @@
 #include "tiny-pch.h"
 #include "TheApp.h"
 #include "Engine.h"
+#include "utils/Profile.h"
 
 
 namespace tiny
@@ -9,6 +10,8 @@ TheApp::TheApp(std::shared_ptr<DeviceResources> deviceResources) :
 	m_deviceResources(deviceResources),
 	m_mainRenderPass()
 {
+	PROFILE_SCOPE("TheApp()");
+
 	Engine::Init(m_deviceResources);
 	TextureManager::Init(m_deviceResources);
 
@@ -50,12 +53,16 @@ void TheApp::SetViewport(float top, float left, float height, float width) noexc
 
 void TheApp::LoadTextures()
 {
+	PROFILE_FUNCTION();
+
 	m_textures[0] = TextureManager::GetTexture(0);
 	m_textures[1] = TextureManager::GetTexture(1);
 	m_textures[2] = TextureManager::GetTexture(2);
 }
 void TheApp::BuildMainRenderPass()
 {
+	PROFILE_FUNCTION();
+
 	// Root Signature --------------------------------------------------------------------------------
 	CD3DX12_DESCRIPTOR_RANGE texTable; 
 	texTable.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0); 
