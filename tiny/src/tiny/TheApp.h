@@ -24,6 +24,27 @@
 
 #include "tiny/other/Waves.h"
 
+// These methods are required because they are listed as "extern" in tiny Texture.h
+std::wstring GetTextureFilename(unsigned int index);
+std::size_t GetTotalTextureCount();
+
+// This enum class is not required, but serves as a good helper so that we can easily reference textures by int
+enum class TEXTURE : int
+{
+	GRASS = 0,
+	WATER1,
+	WIRE_FENCE,
+	BRICKS,
+	BRICKS2,
+	BRICKS3,
+	CHECKBOARD,
+	ICE,
+	STONE,
+	TILE,
+	WHITE1X1,
+	Count
+};
+
 namespace tiny
 {
 struct Vertex
@@ -86,18 +107,31 @@ public:
 
 private:
 	void LoadTextures();
-	void BuildMainRenderPass();
-
-	float GetHillsHeight(float x, float z) const;
-	DirectX::XMFLOAT3 GetHillsNormal(float x, float z) const;
-
-	void UpdateWavesVertices(const Timer&);
-	void UpdateWavesMaterials(const Timer& timer);
+	void BuildLandAndWaterScene();
+	void BuildSkullAndMirrorScene();
 
 	std::shared_ptr<DeviceResources> m_deviceResources;
 
-	// Textures: grass, water, fence
-	std::array<std::unique_ptr<Texture>, 3> m_textures;
+	// Camera
+	Camera m_camera;
+	DirectX::XMFLOAT2 m_lastMousePos;
+	bool m_lButtonDown = false;
+	bool m_keyWIsDown = false;
+	bool m_keyAIsDown = false;
+	bool m_keySIsDown = false;
+	bool m_keyDIsDown = false;
+
+	// Textures
+	std::array<std::unique_ptr<Texture>, (int)TEXTURE::Count> m_textures;
+
+	// Land and Water Scene ------------------------------------------------------------------
+	// 
+	float GetHillsHeight(float x, float z) const;
+	DirectX::XMFLOAT3 GetHillsNormal(float x, float z) const;
+	void UpdateWavesVertices(const Timer&);
+	void UpdateWavesMaterials(const Timer& timer);
+
+
 
 	// Render Data
 	RenderPass m_mainRenderPass;
@@ -120,21 +154,18 @@ private:
 	DynamicMeshGroupT<Vertex>* m_dynamicWaveMesh = nullptr;
 	RenderItem* m_wavesRI = nullptr;
 
-
-	Camera m_camera;
-	DirectX::XMFLOAT2 m_lastMousePos;
-	bool m_lButtonDown = false;
-	bool m_keyWIsDown = false;
-	bool m_keyAIsDown = false;
-	bool m_keySIsDown = false;
-	bool m_keyDIsDown = false;
-
-
-
-
 	std::unique_ptr<RasterizerState> m_rasterizerState = nullptr;
 	std::unique_ptr<BlendState> m_blendState = nullptr;
 	std::unique_ptr<DepthStencilState> m_depthStencilState = nullptr;
+
+
+	// Skull and Mirror Scene ------------------------------------------------------------------
+	// 
+	// Render Data
+//	RenderPass m_mainRenderPass;
+
+
+
 
 
 	void UpdateCamera(const Timer& timer);

@@ -4,6 +4,30 @@
 #include "utils/Profile.h"
 
 
+static constexpr std::array g_textureFiles{
+	L"C:/dev/tiny/sandbox/src/textures/grass.dds",	
+	L"C:/dev/tiny/sandbox/src/textures/water1.dds",	
+	L"C:/dev/tiny/sandbox/src/textures/WireFence.dds",
+	L"C:/dev/tiny/sandbox/src/textures/bricks.dds",
+	L"C:/dev/tiny/sandbox/src/textures/bricks2.dds",
+	L"C:/dev/tiny/sandbox/src/textures/bricks3.dds",
+	L"C:/dev/tiny/sandbox/src/textures/checkboard.dds",
+	L"C:/dev/tiny/sandbox/src/textures/ice.dds",
+	L"C:/dev/tiny/sandbox/src/textures/stone.dds",
+	L"C:/dev/tiny/sandbox/src/textures/tile.dds",
+	L"C:/dev/tiny/sandbox/src/textures/white1x1.dds"
+};
+
+std::wstring GetTextureFilename(unsigned int index)
+{
+	return g_textureFiles[index];
+}
+std::size_t GetTotalTextureCount()
+{
+	return static_cast<std::size_t>(TEXTURE::Count);
+}
+
+
 namespace tiny
 {
 TheApp::TheApp(std::shared_ptr<DeviceResources> deviceResources) :
@@ -22,7 +46,7 @@ TheApp::TheApp(std::shared_ptr<DeviceResources> deviceResources) :
 	m_camera.SetLens(0.25f * MathHelper::Pi, m_deviceResources->AspectRatio(), 1.0f, 1000.0f);
 
 	LoadTextures();
-	BuildMainRenderPass();
+	BuildLandAndWaterScene();
 
 	// Execute the initialization commands.
 	GFX_THROW_INFO(m_deviceResources->GetCommandList()->Close());
@@ -55,11 +79,10 @@ void TheApp::LoadTextures()
 {
 	PROFILE_FUNCTION();
 
-	m_textures[0] = TextureManager::GetTexture(0);
-	m_textures[1] = TextureManager::GetTexture(1);
-	m_textures[2] = TextureManager::GetTexture(2);
+	for (int iii = 0; iii < (int)TEXTURE::Count; ++iii)
+		m_textures[iii] = TextureManager::GetTexture(iii);
 }
-void TheApp::BuildMainRenderPass()
+void TheApp::BuildLandAndWaterScene()
 {
 	PROFILE_FUNCTION();
 
@@ -268,8 +291,7 @@ void TheApp::BuildMainRenderPass()
 
 	gridRI.submeshIndex = 0; // Only using a single mesh, so automatically it is at index 0
 	
-	int grassTexture = 0; // grass is texture #0
-	auto& dt = gridRI.DescriptorTables.emplace_back(0, m_textures[grassTexture]->GetGPUHandle());
+	auto& dt = gridRI.DescriptorTables.emplace_back(0, m_textures[(int)TEXTURE::GRASS]->GetGPUHandle());
 	dt.Update = [](const Timer& timer, int frameIndex)
 	{
 		// No update here because the texture is static
@@ -367,8 +389,7 @@ void TheApp::BuildMainRenderPass()
 
 	boxRI.submeshIndex = 0; // Only using a single mesh, so automatically it is at index 0
 
-	int boxTexture = 2; // box is texture #2
-	auto& boxDT = boxRI.DescriptorTables.emplace_back(0, m_textures[boxTexture]->GetGPUHandle());
+	auto& boxDT = boxRI.DescriptorTables.emplace_back(0, m_textures[(int)TEXTURE::WIRE_FENCE]->GetGPUHandle());
 	boxDT.Update = [](const Timer& timer, int frameIndex)
 	{
 		// No update here because the texture is static
@@ -433,16 +454,18 @@ void TheApp::BuildMainRenderPass()
 	std::vector<Vertex> waveVertices(m_waves->VertexCount());
 	float wavesWidth = m_waves->Width();
 	float wavesDepth = m_waves->Depth();
-	for (int i = 0; i < m_waves->VertexCount(); ++i)
-	{
-		waveVertices[i].Pos = m_waves->Position(i);
-		waveVertices[i].Normal = m_waves->Normal(i);
+	// Using a parallel_for loop here speeds this up from 1.5ms to 0.3ms when compared to a raw for-loop
+	concurrency::parallel_for(1, m_waves->VertexCount() - 1, [&, this](int i)
+		{
+			waveVertices[i].Pos = m_waves->Position(i);
+			waveVertices[i].Normal = m_waves->Normal(i);
 
-		// Derive tex-coords from position by 
-		// mapping [-w/2,w/2] --> [0,1]
-		waveVertices[i].TexC.x = 0.5f + waveVertices[i].Pos.x / wavesWidth;
-		waveVertices[i].TexC.y = 0.5f - waveVertices[i].Pos.z / wavesDepth;
-	}
+			// Derive tex-coords from position by 
+			// mapping [-w/2,w/2] --> [0,1]
+			waveVertices[i].TexC.x = 0.5f + waveVertices[i].Pos.x / wavesWidth;
+			waveVertices[i].TexC.y = 0.5f - waveVertices[i].Pos.z / wavesDepth;
+		}
+	);
 
 	transparentLayer.Meshes = std::make_unique<DynamicMeshGroupT<Vertex>>(m_deviceResources, std::move(waveVertices), std::move(waveIndices));
 	m_dynamicWaveMesh = static_cast<DynamicMeshGroupT<Vertex>*>(transparentLayer.Meshes.get());
@@ -501,8 +524,7 @@ void TheApp::BuildMainRenderPass()
 
 	wavesRI.submeshIndex = 0; // Only using a single mesh, so automatically it is at index 0
 
-	int waterTexture = 1; // water is texture #1
-	auto& waveDT = wavesRI.DescriptorTables.emplace_back(0, m_textures[waterTexture]->GetGPUHandle());
+	auto& waveDT = wavesRI.DescriptorTables.emplace_back(0, m_textures[(int)TEXTURE::WATER1]->GetGPUHandle());
 	waveDT.Update = [](const Timer& timer, int frameIndex)
 	{
 		// No update here because the texture is static
@@ -511,7 +533,10 @@ void TheApp::BuildMainRenderPass()
 
 
 }
+void TheApp::BuildSkullAndMirrorScene()
+{
 
+}
 
 
 
@@ -523,6 +548,7 @@ void TheApp::Update(const Timer& timer)
 
 	UpdateCamera(timer);
 
+	// Land And Water Scene Update --------------------------------------------------------------------
 	UpdateWavesVertices(timer);
 	UpdateWavesMaterials(timer);
 
