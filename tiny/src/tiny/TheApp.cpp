@@ -3,19 +3,18 @@
 #include "Engine.h"
 #include "utils/Profile.h"
 
-
 static constexpr std::array g_textureFiles{
-	L"C:/dev/tiny/sandbox/src/textures/grass.dds",	
-	L"C:/dev/tiny/sandbox/src/textures/water1.dds",	
-	L"C:/dev/tiny/sandbox/src/textures/WireFence.dds",
-	L"C:/dev/tiny/sandbox/src/textures/bricks.dds",
-	L"C:/dev/tiny/sandbox/src/textures/bricks2.dds",
-	L"C:/dev/tiny/sandbox/src/textures/bricks3.dds",
-	L"C:/dev/tiny/sandbox/src/textures/checkboard.dds",
-	L"C:/dev/tiny/sandbox/src/textures/ice.dds",
-	L"C:/dev/tiny/sandbox/src/textures/stone.dds",
-	L"C:/dev/tiny/sandbox/src/textures/tile.dds",
-	L"C:/dev/tiny/sandbox/src/textures/white1x1.dds"
+	L"src/textures/grass.dds",
+	L"src/textures/water1.dds",
+	L"src/textures/WireFence.dds",
+	L"src/textures/bricks.dds",
+	L"src/textures/bricks2.dds",
+	L"src/textures/bricks3.dds",
+	L"src/textures/checkboard.dds",
+	L"src/textures/ice.dds",
+	L"src/textures/stone.dds",
+	L"src/textures/tile.dds",
+	L"src/textures/white1x1.dds"
 };
 
 std::wstring GetTextureFilename(unsigned int index)
@@ -178,9 +177,10 @@ void TheApp::BuildLandAndWaterScene()
 	opaqueLayer.Name = "Opaque Layer";
 
 	// PSO
-	m_standardVS = std::make_unique<Shader>(m_deviceResources, "C:/dev/tiny/sandbox/LightingVS.cso"); 
-	m_opaquePS = std::make_unique<Shader>(m_deviceResources, "C:/dev/tiny/sandbox/LightingFogPS.cso"); 
-	m_alphaTestedPS = std::make_unique<Shader>(m_deviceResources, "C:/dev/tiny/sandbox/LightingFogAlphaTestPS.cso"); 
+	m_standardVS = std::make_unique<Shader>(m_deviceResources, "LightingVS.cso");
+	m_opaquePS = std::make_unique<Shader>(m_deviceResources, "LightingFogPS.cso");
+	m_alphaTestedPS = std::make_unique<Shader>(m_deviceResources, "LightingFogAlphaTestPS.cso");
+
 
 	m_inputLayout = std::make_unique<InputLayout>( 
 		std::vector<D3D12_INPUT_ELEMENT_DESC>{ 
@@ -529,9 +529,6 @@ void TheApp::BuildLandAndWaterScene()
 	{
 		// No update here because the texture is static
 	};
-
-
-
 }
 void TheApp::BuildSkullAndMirrorScene()
 {

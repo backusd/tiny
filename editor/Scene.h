@@ -3,19 +3,6 @@
 #include "../tiny/src/tiny.h"
 #include "ISceneUIControl.h"
 
-// These methods are required because they are listed as "extern" in tiny Texture.h
-std::wstring GetTextureFilename(unsigned int index);
-std::size_t GetTotalTextureCount();
-
-// This enum class is not required, but serves as a good helper so that we can easily reference textures by int
-enum class TEXTURE : int
-{
-    GRASS = 0,
-    WATER1 = 1,
-    WIRE_FENCE = 2,
-    Count = 3
-};
-
 class Scene
 {
 public:
@@ -38,6 +25,13 @@ public:
     // Rendering Stuff
     inline void SetViewport(float top, float left, float height, float width) { m_app->SetViewport(top, left, height, width); }
 
+    // Mouse/Keyboard Events
+    void OnMouseMove(float x, float y) { m_app->OnMouseMove(x, y); }
+    void OnLButtonUpDown(bool isDown) { m_app->OnLButtonUpDown(isDown); }
+    void OnWKeyUpDown(bool isDown) noexcept { m_app->OnWKeyUpDown(isDown); }
+    void OnAKeyUpDown(bool isDown) noexcept { m_app->OnAKeyUpDown(isDown); }
+    void OnSKeyUpDown(bool isDown) noexcept { m_app->OnSKeyUpDown(isDown); }
+    void OnDKeyUpDown(bool isDown) noexcept { m_app->OnDKeyUpDown(isDown); }
 
 private:
     bool m_haveFocus;

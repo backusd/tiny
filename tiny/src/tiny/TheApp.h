@@ -97,7 +97,7 @@ public:
 	void OnResize(int height, int width);
 	void SetViewport(float top, float left, float height, float width) noexcept;
 	
-	// Mouse Events
+	// Mouse/Keyboard Events
 	void OnMouseMove(float x, float y);
 	void OnLButtonUpDown(bool isDown) { m_lButtonDown = isDown; }
 	void OnWKeyUpDown(bool isDown) noexcept { m_keyWIsDown = isDown; }

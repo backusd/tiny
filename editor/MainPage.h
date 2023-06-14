@@ -20,6 +20,11 @@ namespace winrt::editor::implementation
         // Core Window
         void OnVisibilityChanged(const Windows::UI::Core::CoreWindow& sender, const Windows::UI::Core::VisibilityChangedEventArgs& args);
         void OnWindowSizeChanged(const Windows::UI::Core::CoreWindow& sender, const Windows::UI::Core::WindowSizeChangedEventArgs& args);
+        void OnWindowPointerMoved(const Windows::UI::Core::CoreWindow& sender, const Windows::UI::Core::PointerEventArgs& args);
+        void OnWindowPointerPressed(const Windows::UI::Core::CoreWindow& sender, const Windows::UI::Core::PointerEventArgs& args);
+        void OnWindowPointerReleased(const Windows::UI::Core::CoreWindow& sender, const Windows::UI::Core::PointerEventArgs& args);
+        void OnWindowKeyUp(const Windows::UI::Core::CoreWindow& sender, const Windows::UI::Core::KeyEventArgs& args);
+        void OnWindowKeyDown(const Windows::UI::Core::CoreWindow& sender, const Windows::UI::Core::KeyEventArgs& args);
 
         // Window
         void OnWindowActivationChanged(const Windows::Foundation::IInspectable& sender, const Windows::UI::Core::WindowActivatedEventArgs& args);
@@ -42,11 +47,14 @@ namespace winrt::editor::implementation
         // Viewport Grid
         void ViewportGrid_SizeChanged(winrt::Windows::Foundation::IInspectable const& sender, winrt::Windows::UI::Xaml::SizeChangedEventArgs const& e);
 
+
     private:
         bool m_windowVisible;
 
         std::shared_ptr<tiny::DeviceResources> m_deviceResources;
         std::unique_ptr<Scene> m_scene;
+
+
     };
 }
 

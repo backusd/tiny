@@ -8,11 +8,13 @@
 using namespace winrt::Windows::ApplicationModel;
 using namespace winrt::Windows::Graphics::Display;
 using namespace winrt::Windows::Foundation;
+using namespace winrt::Windows::System;
 using namespace winrt::Windows::UI::Core;
 using namespace winrt::Windows::UI::Input;
 using namespace winrt::Windows::UI::Xaml::Controls;
 using namespace winrt::Windows::UI::Xaml;
 using namespace winrt::Windows::UI::Xaml::Interop;
+using namespace winrt::Windows::UI::Xaml::Input;
 
 
 
@@ -27,6 +29,11 @@ namespace winrt::editor::implementation
         CoreWindow coreWindow = Window::Current().CoreWindow();
         coreWindow.VisibilityChanged({ this, &MainPage::OnVisibilityChanged });
         coreWindow.SizeChanged({ this, &MainPage::OnWindowSizeChanged });
+        coreWindow.PointerMoved({ this, &MainPage::OnWindowPointerMoved });
+        coreWindow.PointerPressed({ this, &MainPage::OnWindowPointerPressed });
+        coreWindow.PointerReleased({ this, &MainPage::OnWindowPointerReleased });
+        coreWindow.KeyUp({ this, &MainPage::OnWindowKeyUp });
+        coreWindow.KeyDown({ this, &MainPage::OnWindowKeyDown });
 
         Window window = Window::Current();
         window.Activated({ this, &MainPage::OnWindowActivationChanged });
@@ -102,6 +109,44 @@ namespace winrt::editor::implementation
     {
         // This would be for updates for UI elements other than the SwapChainPanel because we handle DXSwapChainPanel_SizeChanged elsewhere
     }
+    void MainPage::OnWindowPointerMoved(const CoreWindow& sender, const PointerEventArgs& args)
+    {
+        concurrency::critical_section::scoped_lock lock(m_scene->GetCriticalSection());
+        Point p = args.CurrentPoint().Position();
+        m_scene->OnMouseMove(p.X, p.Y);
+    }
+    void MainPage::OnWindowPointerPressed(const CoreWindow& sender, const PointerEventArgs& args)
+    {
+        concurrency::critical_section::scoped_lock lock(m_scene->GetCriticalSection());
+        m_scene->OnLButtonUpDown(true);
+    }
+    void MainPage::OnWindowPointerReleased(const CoreWindow& sender, const PointerEventArgs& args)
+    {
+        concurrency::critical_section::scoped_lock lock(m_scene->GetCriticalSection());
+        m_scene->OnLButtonUpDown(false);
+    }
+    void MainPage::OnWindowKeyUp(const CoreWindow& sender, const KeyEventArgs& args)
+    {
+        concurrency::critical_section::scoped_lock lock(m_scene->GetCriticalSection());
+        switch (args.VirtualKey())
+        {
+        case VirtualKey::W: m_scene->OnWKeyUpDown(false); break;
+        case VirtualKey::A: m_scene->OnAKeyUpDown(false); break;
+        case VirtualKey::S: m_scene->OnSKeyUpDown(false); break;
+        case VirtualKey::D: m_scene->OnDKeyUpDown(false); break;
+        }
+    }
+    void MainPage::OnWindowKeyDown(const CoreWindow& sender, const KeyEventArgs& args)
+    {
+        concurrency::critical_section::scoped_lock lock(m_scene->GetCriticalSection());
+        switch (args.VirtualKey())
+        {
+        case VirtualKey::W: m_scene->OnWKeyUpDown(true); break;
+        case VirtualKey::A: m_scene->OnAKeyUpDown(true); break;
+        case VirtualKey::S: m_scene->OnSKeyUpDown(true); break;
+        case VirtualKey::D: m_scene->OnDKeyUpDown(true); break;
+        }
+    }
 
     // Window
     void MainPage::OnWindowActivationChanged(const IInspectable&, const WindowActivatedEventArgs& args)
@@ -159,7 +204,11 @@ namespace winrt::editor::implementation
         
         m_scene->SetViewport(top, left, height, width);
     }
+
 }
+
+
+
 
 
 
