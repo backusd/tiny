@@ -345,7 +345,7 @@ void HTTPSession::OnRead(beast::error_code ec, std::size_t)
     }
 
     // Handle request
-    auto docRoot = "."; // Could put this in some state variable if we think it is ever worth changing, but right not it will always be "."
+    auto docRoot = "facade"; // Could put this in some state variable if we think it is ever worth changing, but right not it will always be "."
     http::message_generator msg = handle_request(docRoot, m_parser->release());
 
     // Determine if we should close the connection
@@ -456,8 +456,6 @@ void WebSocketSession::Send(const std::string& msg)
 
 void WebSocketSession::OnSend(const std::string& msg)
 {
-    std::cout << "Incoming: " << msg << std::endl;
-
     // Always add to queue
     //m_queue.push_back(ss);
     //m_queue.push_back(_s);

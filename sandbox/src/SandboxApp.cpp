@@ -3,6 +3,20 @@
 
 namespace sandbox
 {
+enum class MSG_TYPE : int
+{
+    TEST = 0,
+    TEXT = 1
+};
+struct TEXT_MSG
+{
+    MSG_TYPE type = MSG_TYPE::TEXT;
+    std::string message = "";
+};
+NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(TEXT_MSG, type, message);
+
+
+
 Sandbox::Sandbox() :
     m_timer()
 {
@@ -152,6 +166,13 @@ void Sandbox::OnKeyPressed(tiny::KeyPressedEvent& e)
     case tiny::KEY_CODE::A: m_scene->OnAKeyUpDown(true); break;
     case tiny::KEY_CODE::S: m_scene->OnSKeyUpDown(true); break;
     case tiny::KEY_CODE::D: m_scene->OnDKeyUpDown(true); break;
+    case tiny::KEY_CODE::Z:
+    {
+        TEXT_MSG msg;
+        msg.message = "Suck me";
+        facade::UI::SendMsg(msg);
+        break;
+    }
     }
 }
 void Sandbox::OnKeyReleased(tiny::KeyReleasedEvent& e) 
