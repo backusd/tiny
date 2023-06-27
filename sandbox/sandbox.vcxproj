@@ -162,6 +162,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="facade\index.html" />
+    <None Include="facade\page2.html" />
     <None Include="facade\scripts\main.js" />
     <None Include="src\shaders\Lighting.hlsli" />
     <None Include="facade\styles\style.css" />

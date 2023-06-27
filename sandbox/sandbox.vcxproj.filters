@@ -52,6 +52,7 @@
     <None Include="facade\index.html" />
     <None Include="facade\scripts\main.js" />
     <None Include="facade\styles\style.css" />
+    <None Include="facade\page2.html" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="src\textures\bricks.dds" />
