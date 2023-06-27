@@ -77,102 +77,105 @@ UI::UI()
     // It will run persistantly in the background
     //std::thread uiThread(&UI::StartUIThread, this); <-- NOTE: do NOT use this, it does not work for some reason. Seems to not actually create a new thread.
 
-//    std::thread uiThread([this]() { StartUIThread(); });
-//    uiThread.detach();
+    std::thread uiThread([this]() { StartUIThread(); });
+    uiThread.detach();
 }
 
 void UI::StartUIThread()
 {
-    //    std::cout << "UI running on thread: " << std::this_thread::get_id() << std::endl;
-    //
-    //    // Whenever we make changes, we need to control the critical section
-    //    concurrency::critical_section::scoped_lock lock(m_criticalSection);
-    //
-    //    auto address = net::ip::make_address("0.0.0.0");
-    //    unsigned short port = 8080;
-    //
-    //    // Create and launch a listening port
-    //    boost::make_shared<_Listener>(this, m_ioc, tcp::endpoint{ address, port })->Run();
-    //
-    //    // Create threads for the io_context
-    //    Run();
-}
+    // Create a scope for the scoped lock
+    {
+        // Hold the critical section until we call ioc.run()
+        concurrency::critical_section::scoped_lock lock(m_criticalSection);
 
-void UI::Run()
-{
-    //    // Capture SIGINT and SIGTERM to perform a clean shutdown
-    //    net::signal_set signals(m_ioc, SIGINT, SIGTERM);
-    //    signals.async_wait(
-    //        [this](boost::system::error_code const&, int)
-    //        {
-    //            // Stop the io_context. This will cause run()
-    //            // to return immediately, eventually destroying the
-    //            // io_context and any remaining handlers in it.
-    //            m_ioc.stop();
-    //        });
-    //
-    //    // Run the I/O service on the requested number of threads
-    //    auto const threads = 2;
-    //    std::vector<std::thread> v;
-    //    v.reserve(threads - 1);
-    //    for (auto i = threads - 1; i > 0; --i)
-    //        v.emplace_back(
-    //            [this]
-    //            {
-    //                m_ioc.run();
-    //            });
-    //    m_ioc.run();
-    //
-    //    // (If we get here, it means we got a SIGINT or SIGTERM)
-    //
-    //    // Block until all the threads exit
-    //    for (auto& t : v)
-    //        t.join();
-}
+        const char* ip = "0.0.0.0";
+        auto address = net::ip::make_address(ip);
+        unsigned short port = 8080;
 
+        // Create and launch a listening port
+        boost::make_shared<Listener>(this, m_ioc, tcp::endpoint{ address, port })->Run();       
+    }
+
+    // NOTE: do NOT call signals.async_await() in an enclosing scope such that it goes out of scope before
+    //       calling ioc.run(). If you do this, I'm not sure if SIGINT/SIGTERM is sent, but either way, the lambda
+    //       is called which calls ioc.stop(). This results in the ioc threads immediately finishing
+    // 
+    // Capture SIGINT and SIGTERM to perform a clean shutdown
+    net::signal_set signals(m_ioc, SIGINT, SIGTERM);
+    signals.async_wait(
+        [this](boost::system::error_code const&, int)
+        {
+            // Stop the io_context. This will cause run()
+            // to return immediately, eventually destroying the
+            // io_context and any remaining handlers in it.
+            m_ioc.stop();
+        }
+    );
+
+    // Run the I/O service on the requested number of threads
+    auto const threads = 2;
+    LOG_INFO("FACADE - Calling ioc.run() on {} threads", threads); 
+
+    std::vector<std::thread> v;
+    v.reserve(threads - 1);
+    for (auto i = threads - 1; i > 0; --i)
+        v.emplace_back(
+            [this]
+            {
+                m_ioc.run();
+            });
+    m_ioc.run();
+
+    // (If we get here, it means we got a SIGINT or SIGTERM)
+    //
+    // Block until all the threads exit
+    for (auto& t : v)
+        t.join();
+
+    LOG_INFO("{}", "FACADE - All ioc threads have finished executing");
+}
 
 // Specialize the string template because this is the template that will do the actual sending of data
 template<>
 void UI::SendMsgImpl<std::string>(const std::string& data)
 {
-    //    if (m_webSocketSession != nullptr)
-    //    {
-    //        m_webSocketSession->Send(data);
-    //    }
+    if (m_webSocketSession != nullptr)
+    {
+        m_webSocketSession->Send(data);
+    }
 }
 
 void UI::HandleMessageImpl(const std::string& message)
 {
-    //    try
-    //    {
-    //        json data = json::parse(message);
-    //        std::cout << "json: " << data.dump(4) << std::endl;
-    //
-    //        if (!data.contains("type"))
-    //            throw std::exception::exception("JSON data does not contain 'type' key");
-    //
-    //        std::string type = data["type"].get<std::string>();
-    //
-    //        if (m_handlers.find(type) == m_handlers.end())
-    //            std::cout << std::format("WARNING: No handler with type = {}", type) << std::endl;
-    //        else
-    //        {
-    //            // Get control of the critical section before executing the handler
-    //            concurrency::critical_section::scoped_lock lock(m_criticalSection);
-    //            m_handlers[type](data);
-    //        }
-    //    }
-    //    catch (json::parse_error& e)
-    //    {
-    //        std::cout << "Caught json::parse_error: " << e.what() << std::endl;
-    //    }
+    try
+    {
+        json data = json::parse(message);
+        std::cout << "json: " << data.dump(4) << std::endl;
+
+        if (!data.contains("type"))
+            throw std::exception::exception("JSON data does not contain 'type' key");
+
+        std::string type = data["type"].get<std::string>();
+
+        if (m_handlers.find(type) == m_handlers.end())
+            std::cout << std::format("WARNING: No handler with type = {}", type) << std::endl;
+        else
+        {
+            // Get control of the critical section before executing the handler
+            concurrency::critical_section::scoped_lock lock(m_criticalSection);
+            m_handlers[type](data);
+        }
+    }
+    catch (json::parse_error& e)
+    {
+        std::cout << "Caught json::parse_error: " << e.what() << std::endl;
+    }
 }
 void UI::HandleMessageImpl(std::string&& message)
 {
     std::string s = std::move(message);
     HandleMessageImpl(s);
 }
-
 
 void UI::SetMsgHandlerImpl(const std::string& key, std::function<void(const json&)> func)
 {
@@ -224,6 +227,8 @@ Listener::Listener(UI* ui, net::io_context& ioc, tcp::endpoint endpoint) :
         Fail(ec, "listen");
         return;
     }
+
+    LOG_INFO("FACADE - Listening on {}:{}", endpoint.address().to_string(), endpoint.port());
 }
 
 void Listener::Run()
@@ -250,24 +255,24 @@ void Listener::Fail(beast::error_code ec, char const* what)
 // Handle a connection
 void Listener::OnAccept(beast::error_code ec, tcp::socket socket)
 {
-    //    if (ec)
-    //        return Fail(ec, "accept");
-    //    else
-    //    {
-    //        // Launch a new session for this connection
-    //        boost::shared_ptr<HTTPSession> session = boost::make_shared<HTTPSession>(m_ui, std::move(socket));
-    //        UI::SetHTTPSession(session);
-    //        session->Run();
-    //    }
-    //
-    //    // The new connection gets its own strand
-    //    m_acceptor.async_accept(
-    //        net::make_strand(m_ioc),
-    //        beast::bind_front_handler(
-    //            &Listener::OnAccept,
-    //            shared_from_this()
-    //        )
-    //    );
+    if (ec)
+        return Fail(ec, "accept");
+    else
+    {
+        // Launch a new session for this connection
+        boost::shared_ptr<HTTPSession> session = boost::make_shared<HTTPSession>(m_ui, std::move(socket));
+        UI::SetHTTPSession(session);
+        session->Run();
+    }
+
+    // The new connection gets its own strand
+    m_acceptor.async_accept(
+        net::make_strand(m_ioc),
+        beast::bind_front_handler(
+            &Listener::OnAccept,
+            shared_from_this()
+        )
+    );
 }
 
 // ====================================================================================================
@@ -317,44 +322,44 @@ void HTTPSession::DoRead()
 
 void HTTPSession::OnRead(beast::error_code ec, std::size_t)
 {
-//    // This means they closed the connection
-//    if (ec == http::error::end_of_stream)
-//    {
-//        m_stream.socket().shutdown(tcp::socket::shutdown_send, ec);
-//        return;
-//    }
-//
-//    // Handle the error, if any
-//    if (ec)
-//        return Fail(ec, "read");
-//
-//    // See if it is a WebSocket Upgrade
-//    if (websocket::is_upgrade(m_parser->get()))
-//    {
-//        // Create a websocket session, transferring ownership
-//        // of both the socket and the HTTP request.
-//        boost::shared_ptr<WebSocketSession> session = boost::make_shared<WebSocketSession>(m_ui, m_stream.release_socket());
-//        UI::SetWebSocketSession(session);
-//        session->Run(m_parser->release());
-//        return;
-//    }
-//
-//    // Handle request
-//    auto docRoot = "."; // Could put this in some state variable if we think it is ever worth changing, but right not it will always be "."
-//    http::message_generator msg = handle_request(docRoot, m_parser->release());
-//
-//    // Determine if we should close the connection
-//    bool keep_alive = msg.keep_alive();
-//
-//    auto self = shared_from_this();
-//
-//    // Send the response
-//    beast::async_write(
-//        m_stream, std::move(msg),
-//        [self, keep_alive](beast::error_code ec, std::size_t bytes)
-//        {
-//            self->OnWrite(ec, bytes, keep_alive);
-//        });
+    // This means they closed the connection
+    if (ec == http::error::end_of_stream)
+    {
+        m_stream.socket().shutdown(tcp::socket::shutdown_send, ec);
+        return;
+    }
+
+    // Handle the error, if any
+    if (ec)
+        return Fail(ec, "read");
+
+    // See if it is a WebSocket Upgrade
+    if (websocket::is_upgrade(m_parser->get()))
+    {
+        // Create a websocket session, transferring ownership
+        // of both the socket and the HTTP request.
+        boost::shared_ptr<WebSocketSession> session = boost::make_shared<WebSocketSession>(m_ui, m_stream.release_socket());
+        UI::SetWebSocketSession(session);
+        session->Run(m_parser->release());
+        return;
+    }
+
+    // Handle request
+    auto docRoot = "."; // Could put this in some state variable if we think it is ever worth changing, but right not it will always be "."
+    http::message_generator msg = handle_request(docRoot, m_parser->release());
+
+    // Determine if we should close the connection
+    bool keep_alive = msg.keep_alive();
+
+    auto self = shared_from_this();
+
+    // Send the response
+    beast::async_write(
+        m_stream, std::move(msg),
+        [self, keep_alive](beast::error_code ec, std::size_t bytes)
+        {
+            self->OnWrite(ec, bytes, keep_alive);
+        });
 }
 
 void HTTPSession::OnWrite(beast::error_code ec, std::size_t, bool keep_alive)
@@ -415,22 +420,22 @@ void WebSocketSession::OnAccept(beast::error_code ec)
 
 void WebSocketSession::OnRead(beast::error_code ec, std::size_t)
 {
-//    // Handle the error, if any
-//    if (ec)
-//        return Fail(ec, "read");
-//
-//    // Send the message to the UI so it can be handled
-//    m_ui->HandleMessage(beast::buffers_to_string(m_buffer.data()));
-//
-//    // Clear the buffer
-//    m_buffer.consume(m_buffer.size());
-//
-//    // Read another message
-//    m_ws.async_read(
-//        m_buffer,
-//        beast::bind_front_handler(
-//            &WebSocketSession::OnRead,
-//            shared_from_this()));
+    // Handle the error, if any
+    if (ec)
+        return Fail(ec, "read");
+
+    // Send the message to the UI so it can be handled
+    m_ui->HandleMessage(beast::buffers_to_string(m_buffer.data()));
+
+    // Clear the buffer
+    m_buffer.consume(m_buffer.size());
+
+    // Read another message
+    m_ws.async_read(
+        m_buffer,
+        beast::bind_front_handler(
+            &WebSocketSession::OnRead,
+            shared_from_this()));
 }
 
 void WebSocketSession::Send(const std::string& msg)
@@ -453,16 +458,9 @@ void WebSocketSession::OnSend(const std::string& msg)
 {
     std::cout << "Incoming: " << msg << std::endl;
 
-    //    TEST_MSG_INT data{};
-    //
-    //    json j_data = data;
-    //    std::string s_data = j_data.dump(4);
-    //
-    //    auto const _s = boost::make_shared<std::string const>(std::move(s_data));
-
-        // Always add to queue
-        //m_queue.push_back(ss);
-        //m_queue.push_back(_s);
+    // Always add to queue
+    //m_queue.push_back(ss);
+    //m_queue.push_back(_s);
     m_queue.push_back(msg);
 
     // Are we already writing?
@@ -475,27 +473,6 @@ void WebSocketSession::OnSend(const std::string& msg)
         beast::bind_front_handler(
             &WebSocketSession::OnWrite,
             shared_from_this()));
-
-    //m_ws.async_write(
-    //    net::buffer(s_data),
-    //    beast::bind_front_handler(
-    //        &WebSocketSession::on_write,
-    //        shared_from_this()
-    //    )
-    //);
-
-//    char binaryData[sizeof(TEST_MSG_INT)];
-//    memcpy(binaryData, &data, sizeof(TEST_MSG_INT));
-//
-//    m_ws.binary(true);
-//
-//    m_ws.async_write(
-//        net::buffer(binaryData, sizeof(binaryData)),
-//        beast::bind_front_handler(
-//            &WebSocketSession::on_write,
-//            shared_from_this()
-//        )
-//    );
 }
 
 void WebSocketSession::OnWrite(beast::error_code ec, std::size_t)
@@ -517,31 +494,6 @@ void WebSocketSession::OnWrite(beast::error_code ec, std::size_t)
                 shared_from_this()
             )
         );
-
-        //TEST_MSG_INT data{};
-        //
-        //json j_data = data; 
-        //std::string s_data = j_data.dump(4); 
-        //m_ws.async_write( 
-        //    net::buffer(s_data), 
-        //    beast::bind_front_handler( 
-        //        &WebSocketSession::on_write, 
-        //        shared_from_this() 
-        //    )
-        //);
-
-//        char binaryData[sizeof(TEST_MSG_INT)];
-//        memcpy(binaryData, &data, sizeof(TEST_MSG_INT));
-//
-//        m_ws.binary(true);
-//
-//        m_ws.async_write( 
-//            net::buffer(binaryData, sizeof(binaryData)), 
-//            beast::bind_front_handler( 
-//                &WebSocketSession::on_write, 
-//                shared_from_this() 
-//            )
-//        );
     }
 }
 }
