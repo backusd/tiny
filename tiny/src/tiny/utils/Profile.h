@@ -6,7 +6,7 @@
 // View results using chrome://tracing
 //
 
-//#define PROFILE 1
+#define PROFILE 1
 
 #ifdef PROFILE
 

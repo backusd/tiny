@@ -55,12 +55,12 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_SILENCE_ALL_CXX23_DEPRECATION_WARNINGS;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <FloatingPointModel>Fast</FloatingPointModel>
-      <AdditionalIncludeDirectories>$(SolutionDir)tiny\src;$(SolutionDir)tiny-app\src;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)tiny\src;$(SolutionDir)tiny-app\src;$(SolutionDir)vendor\json\include;$(SolutionDir)vendor\boost\libs\beast\include;$(SolutionDir)vendor\boost\libs\asio\include;$(SolutionDir)vendor\boost\libs\core\include;$(SolutionDir)vendor\boost\libs\detail\include;$(SolutionDir)vendor\boost\libs\assert\include;$(SolutionDir)vendor\boost\libs\bind\include;$(SolutionDir)vendor\boost\libs\config\include;$(SolutionDir)vendor\boost\libs\container\include;$(SolutionDir)vendor\boost\libs\endian\include;$(SolutionDir)vendor\boost\libs\intrusive\include;$(SolutionDir)vendor\boost\libs\logic\include;$(SolutionDir)vendor\boost\libs\mp11\include;$(SolutionDir)vendor\boost\libs\optional\include;$(SolutionDir)vendor\boost\libs\smart_ptr\include;$(SolutionDir)vendor\boost\libs\static_assert\include;$(SolutionDir)vendor\boost\libs\static_string\include;$(SolutionDir)vendor\boost\libs\system\include;$(SolutionDir)vendor\boost\libs\throw_exception\include;$(SolutionDir)vendor\boost\libs\type_traits\include;$(SolutionDir)vendor\boost\libs\utility\include;$(SolutionDir)vendor\boost\libs\winapi\include;$(SolutionDir)vendor\boost\libs\date_time\include;$(SolutionDir)vendor\boost\libs\preprocessor\include;$(SolutionDir)vendor\boost\libs\move\include;$(SolutionDir)vendor\boost\libs\container_hash\include;$(SolutionDir)vendor\boost\libs\io\include;$(SolutionDir)vendor\boost\libs\predef\include;$(SolutionDir)vendor\boost\libs\numeric\conversion\include;$(SolutionDir)vendor\boost\libs\describe\include;$(SolutionDir)vendor\boost\libs\mpl\include;$(SolutionDir)vendor\boost\libs\regex\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -74,12 +74,12 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_SILENCE_ALL_CXX23_DEPRECATION_WARNINGS;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpplatest</LanguageStandard>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <FloatingPointModel>Fast</FloatingPointModel>
-      <AdditionalIncludeDirectories>$(SolutionDir)tiny\src;$(SolutionDir)tiny-app\src;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)tiny\src;$(SolutionDir)tiny-app\src;$(SolutionDir)vendor\json\include;$(SolutionDir)vendor\boost\libs\beast\include;$(SolutionDir)vendor\boost\libs\asio\include;$(SolutionDir)vendor\boost\libs\core\include;$(SolutionDir)vendor\boost\libs\detail\include;$(SolutionDir)vendor\boost\libs\assert\include;$(SolutionDir)vendor\boost\libs\bind\include;$(SolutionDir)vendor\boost\libs\config\include;$(SolutionDir)vendor\boost\libs\container\include;$(SolutionDir)vendor\boost\libs\endian\include;$(SolutionDir)vendor\boost\libs\intrusive\include;$(SolutionDir)vendor\boost\libs\logic\include;$(SolutionDir)vendor\boost\libs\mp11\include;$(SolutionDir)vendor\boost\libs\optional\include;$(SolutionDir)vendor\boost\libs\smart_ptr\include;$(SolutionDir)vendor\boost\libs\static_assert\include;$(SolutionDir)vendor\boost\libs\static_string\include;$(SolutionDir)vendor\boost\libs\system\include;$(SolutionDir)vendor\boost\libs\throw_exception\include;$(SolutionDir)vendor\boost\libs\type_traits\include;$(SolutionDir)vendor\boost\libs\utility\include;$(SolutionDir)vendor\boost\libs\winapi\include;$(SolutionDir)vendor\boost\libs\date_time\include;$(SolutionDir)vendor\boost\libs\preprocessor\include;$(SolutionDir)vendor\boost\libs\move\include;$(SolutionDir)vendor\boost\libs\container_hash\include;$(SolutionDir)vendor\boost\libs\io\include;$(SolutionDir)vendor\boost\libs\predef\include;$(SolutionDir)vendor\boost\libs\numeric\conversion\include;$(SolutionDir)vendor\boost\libs\describe\include;$(SolutionDir)vendor\boost\libs\mpl\include;$(SolutionDir)vendor\boost\libs\regex\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -91,6 +91,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="EntryPoint.cpp" />
+    <ClCompile Include="src\facade\facade.cpp" />
     <ClCompile Include="src\SandboxApp.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -102,6 +103,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\facade\facade.h" />
     <ClInclude Include="src\SandboxApp.h" />
   </ItemGroup>
   <ItemGroup>

@@ -25,6 +25,13 @@ Sandbox::Sandbox() :
     }
 
     PROFILE_END_SESSION();
+
+    facade::UI::SetMsgHandler("sliderMoved",
+        [](const json& data)
+        {
+            std::cout << "Slider Moved!" << std::endl;
+        }
+    );
 }
 bool Sandbox::DoFrame() noexcept
 {

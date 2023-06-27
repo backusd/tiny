@@ -368,3 +368,9 @@ FodyWeavers.xsd
 *.recipe
 *.idb
 *.cso
+
+*.ifc
+*.d.json
+*.module.json
+*.ifcast
+*.json.command
