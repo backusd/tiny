@@ -1,7 +1,6 @@
-#include "tiny-pch.h"
-#include "TheApp.h"
-#include "Engine.h"
-#include "utils/Profile.h"
+#include "LandAndWavesScene.h"
+
+using namespace tiny;
 
 static constexpr std::array g_textureFiles{
 	L"src/textures/grass.dds",
@@ -26,14 +25,13 @@ std::size_t GetTotalTextureCount()
 	return static_cast<std::size_t>(TEXTURE::Count);
 }
 
-
-namespace tiny
+namespace sandbox
 {
-TheApp::TheApp(std::shared_ptr<DeviceResources> deviceResources) :
+LandAndWavesScene::LandAndWavesScene(std::shared_ptr<DeviceResources> deviceResources) :
 	m_deviceResources(deviceResources),
 	m_mainRenderPass()
 {
-	PROFILE_SCOPE("TheApp()");
+	PROFILE_SCOPE("LandAndWavesScene()");
 
 	Engine::Init(m_deviceResources);
 	TextureManager::Init(m_deviceResources);
@@ -55,11 +53,11 @@ TheApp::TheApp(std::shared_ptr<DeviceResources> deviceResources) :
 	// Wait until initialization is complete.
 	m_deviceResources->FlushCommandQueue();
 }
-void TheApp::OnResize(int height, int width)
+void LandAndWavesScene::OnResize(int height, int width)
 {
 	m_camera.SetLens(0.25f * MathHelper::Pi, m_deviceResources->AspectRatio(), 1.0f, 1000.0f);
 }
-void TheApp::SetViewport(float top, float left, float height, float width) noexcept
+void LandAndWavesScene::SetViewport(float top, float left, float height, float width) noexcept
 {
 	D3D12_VIEWPORT vp{};
 	vp.TopLeftX = left;
@@ -74,14 +72,14 @@ void TheApp::SetViewport(float top, float left, float height, float width) noexc
 	Engine::SetScissorRect(scissorRect);
 }
 
-void TheApp::LoadTextures()
+void LandAndWavesScene::LoadTextures()
 {
 	PROFILE_FUNCTION();
 
 	for (int iii = 0; iii < (int)TEXTURE::Count; ++iii)
 		m_textures[iii] = TextureManager::GetTexture(iii);
 }
-void TheApp::BuildLandAndWaterScene()
+void LandAndWavesScene::BuildLandAndWaterScene()
 {
 	PROFILE_FUNCTION();
 
@@ -90,28 +88,28 @@ void TheApp::BuildLandAndWaterScene()
 	m_mainRenderPass.RenderPassLayers.reserve(3);
 
 	// Root Signature --------------------------------------------------------------------------------
-	CD3DX12_DESCRIPTOR_RANGE texTable; 
-	texTable.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0); 
+	CD3DX12_DESCRIPTOR_RANGE texTable;
+	texTable.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
 
 	// Root parameter can be a table, root descriptor or root constants.
-	CD3DX12_ROOT_PARAMETER slotRootParameter[4]; 
+	CD3DX12_ROOT_PARAMETER slotRootParameter[4];
 
 	// Perfomance TIP: Order from most frequent to least frequent.
-	slotRootParameter[0].InitAsDescriptorTable(1, &texTable, D3D12_SHADER_VISIBILITY_PIXEL); 
+	slotRootParameter[0].InitAsDescriptorTable(1, &texTable, D3D12_SHADER_VISIBILITY_PIXEL);
 	slotRootParameter[1].InitAsConstantBufferView(0); // ObjectCB
 	slotRootParameter[2].InitAsConstantBufferView(1); // PassConstants
 	slotRootParameter[3].InitAsConstantBufferView(2); // MaterialCB
 
-	auto staticSamplers = GetStaticSamplers(); 
+	auto staticSamplers = GetStaticSamplers();
 
 	// A root signature is an array of root parameters.
-	CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(4, slotRootParameter, 
-		(UINT)staticSamplers.size(), staticSamplers.data(), 
-		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT); 
+	CD3DX12_ROOT_SIGNATURE_DESC rootSigDesc(4, slotRootParameter,
+		(UINT)staticSamplers.size(), staticSamplers.data(),
+		D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
 	m_mainRenderPass.RootSignature = std::make_shared<RootSignature>(m_deviceResources, rootSigDesc);
 
-		
+
 	// Per-pass constants -----------------------------------------------------------------------------
 	m_mainRenderPassConstantsCB = std::make_unique<ConstantBufferT<PassConstants>>(m_deviceResources);
 
@@ -122,16 +120,16 @@ void TheApp::BuildLandAndWaterScene()
 		DirectX::XMMATRIX view = m_camera.GetView();
 		DirectX::XMMATRIX proj = m_camera.GetProj();
 
-		DirectX::XMMATRIX viewProj = DirectX::XMMatrixMultiply(view, proj); 
+		DirectX::XMMATRIX viewProj = DirectX::XMMatrixMultiply(view, proj);
 
-		DirectX::XMVECTOR _det = DirectX::XMMatrixDeterminant(view); 
-		DirectX::XMMATRIX invView = DirectX::XMMatrixInverse(&_det, view); 
+		DirectX::XMVECTOR _det = DirectX::XMMatrixDeterminant(view);
+		DirectX::XMMATRIX invView = DirectX::XMMatrixInverse(&_det, view);
 
-		_det = DirectX::XMMatrixDeterminant(proj); 
-		DirectX::XMMATRIX invProj = DirectX::XMMatrixInverse(&_det, proj); 
+		_det = DirectX::XMMatrixDeterminant(proj);
+		DirectX::XMMATRIX invProj = DirectX::XMMatrixInverse(&_det, proj);
 
-		_det = DirectX::XMMatrixDeterminant(viewProj); 
-		DirectX::XMMATRIX invViewProj = DirectX::XMMatrixInverse(&_det, viewProj); 
+		_det = DirectX::XMMatrixDeterminant(viewProj);
+		DirectX::XMMATRIX invViewProj = DirectX::XMMatrixInverse(&_det, viewProj);
 
 		PassConstants passConstants;
 
@@ -141,7 +139,7 @@ void TheApp::BuildLandAndWaterScene()
 		DirectX::XMStoreFloat4x4(&passConstants.InvProj, DirectX::XMMatrixTranspose(invProj));
 		DirectX::XMStoreFloat4x4(&passConstants.ViewProj, DirectX::XMMatrixTranspose(viewProj));
 		DirectX::XMStoreFloat4x4(&passConstants.InvViewProj, DirectX::XMMatrixTranspose(invViewProj));
-		
+
 		passConstants.EyePosW = m_camera.GetPosition3f();
 
 		float height = static_cast<float>(m_deviceResources->GetHeight());
@@ -182,12 +180,12 @@ void TheApp::BuildLandAndWaterScene()
 	m_alphaTestedPS = std::make_unique<Shader>(m_deviceResources, "LightingFogAlphaTestPS.cso");
 
 
-	m_inputLayout = std::make_unique<InputLayout>( 
-		std::vector<D3D12_INPUT_ELEMENT_DESC>{ 
-			{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }, 
-			{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }, 
-			{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 }, 
-		}
+	m_inputLayout = std::make_unique<InputLayout>(
+		std::vector<D3D12_INPUT_ELEMENT_DESC>{
+			{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+			{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+			{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+	}
 	);
 
 	m_rasterizerState = std::make_unique<RasterizerState>();
@@ -196,10 +194,10 @@ void TheApp::BuildLandAndWaterScene()
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC opaqueDesc;
 	ZeroMemory(&opaqueDesc, sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC));
-	opaqueDesc.InputLayout = m_inputLayout->GetInputLayoutDesc(); 
+	opaqueDesc.InputLayout = m_inputLayout->GetInputLayoutDesc();
 	opaqueDesc.pRootSignature = m_mainRenderPass.RootSignature->Get();
-	opaqueDesc.VS = m_standardVS->GetShaderByteCode(); 
-	opaqueDesc.PS = m_opaquePS->GetShaderByteCode(); 
+	opaqueDesc.VS = m_standardVS->GetShaderByteCode();
+	opaqueDesc.PS = m_opaquePS->GetShaderByteCode();
 	opaqueDesc.RasterizerState = m_rasterizerState->GetRasterizerDesc();
 	opaqueDesc.BlendState = m_blendState->GetBlendDesc();
 	opaqueDesc.DepthStencilState = m_depthStencilState->GetDepthStencilDesc();
@@ -217,12 +215,12 @@ void TheApp::BuildLandAndWaterScene()
 	opaqueLayer.Topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
 
 	// MeshGroup
-	GeometryGenerator geoGen; 
-	GeometryGenerator::MeshData grid = geoGen.CreateGrid(160.0f, 160.0f, 50, 50);  
+	GeometryGenerator geoGen;
+	GeometryGenerator::MeshData grid = geoGen.CreateGrid(160.0f, 160.0f, 50, 50);
 
-	std::vector<std::uint16_t> indices = grid.GetIndices16(); 
-	std::vector<Vertex> vertices(grid.Vertices.size()); 
-	for (size_t i = 0; i < grid.Vertices.size(); ++i) 
+	std::vector<std::uint16_t> indices = grid.GetIndices16();
+	std::vector<Vertex> vertices(grid.Vertices.size());
+	for (size_t i = 0; i < grid.Vertices.size(); ++i)
 	{
 		auto& p = grid.Vertices[i].Position;			// Extract the vertex elements we are interested and apply the height function to
 		vertices[i].Pos = p;							// each vertex. In addition, color the vertices based on their height so we have
@@ -279,8 +277,8 @@ void TheApp::BuildLandAndWaterScene()
 			// Must transpose the transform before loading it into the constant buffer
 			DirectX::XMMATRIX transform = DirectX::XMLoadFloat4x4(&ri->material->MatTransform);
 
-			Material mat = *ri->material.get(); 
-			DirectX::XMStoreFloat4x4(&mat.MatTransform, DirectX::XMMatrixTranspose(transform)); 
+			Material mat = *ri->material.get();
+			DirectX::XMStoreFloat4x4(&mat.MatTransform, DirectX::XMMatrixTranspose(transform));
 
 			m_gridMaterialCB->CopyData(frameIndex, mat);
 
@@ -290,7 +288,7 @@ void TheApp::BuildLandAndWaterScene()
 	};
 
 	gridRI.submeshIndex = 0; // Only using a single mesh, so automatically it is at index 0
-	
+
 	auto& dt = gridRI.DescriptorTables.emplace_back(0, m_textures[(int)TEXTURE::GRASS]->GetGPUHandle());
 	dt.Update = [](const Timer& timer, int frameIndex)
 	{
@@ -418,8 +416,8 @@ void TheApp::BuildLandAndWaterScene()
 	transparentBlendState->SetRenderTargetLogicOp(D3D12_LOGIC_OP_NOOP);
 	transparentBlendState->SetRenderTargetWriteMask(D3D12_COLOR_WRITE_ENABLE_ALL);
 
-	D3D12_GRAPHICS_PIPELINE_STATE_DESC transparentDesc = opaqueDesc; 
-	transparentDesc.BlendState = transparentBlendState->GetBlendDesc(); 
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC transparentDesc = opaqueDesc;
+	transparentDesc.BlendState = transparentBlendState->GetBlendDesc();
 
 	transparentLayer.SetPSO(transparentDesc);
 
@@ -482,7 +480,7 @@ void TheApp::BuildLandAndWaterScene()
 	wavesRI.material->DiffuseAlbedo = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 0.5f);
 	wavesRI.material->FresnelR0 = DirectX::XMFLOAT3(0.1f, 0.1f, 0.1f);
 	wavesRI.material->Roughness = 0.0f;
-		
+
 	m_wavesRI = &wavesRI;
 
 	auto& wavesConstantsCBV = wavesRI.ConstantBufferViews.emplace_back(1, m_wavesObjectConstantsCB.get());
@@ -530,14 +528,14 @@ void TheApp::BuildLandAndWaterScene()
 		// No update here because the texture is static
 	};
 }
-void TheApp::BuildSkullAndMirrorScene()
+void LandAndWavesScene::BuildSkullAndMirrorScene()
 {
 
 }
 
 
 
-void TheApp::Update(const Timer& timer)
+void LandAndWavesScene::Update(const Timer& timer)
 {
 	PROFILE_FUNCTION();
 
@@ -554,7 +552,7 @@ void TheApp::Update(const Timer& timer)
 	Engine::Update(timer);
 }
 
-void TheApp::UpdateCamera(const Timer& timer)
+void LandAndWavesScene::UpdateCamera(const Timer& timer)
 {
 	PROFILE_FUNCTION();
 
@@ -574,7 +572,7 @@ void TheApp::UpdateCamera(const Timer& timer)
 
 	m_camera.UpdateViewMatrix();
 }
-void TheApp::UpdateWavesVertices(const Timer& timer)
+void LandAndWavesScene::UpdateWavesVertices(const Timer& timer)
 {
 	PROFILE_FUNCTION();
 
@@ -609,9 +607,9 @@ void TheApp::UpdateWavesVertices(const Timer& timer)
 
 			float width = m_waves->Width();
 			float depth = m_waves->Depth();
-			
+
 			// Using a parallel_for loop here speeds this up from 1.5ms to 0.3ms when compared to a raw for-loop
-			concurrency::parallel_for(1, m_waves->VertexCount() - 1, [&,this](int i)
+			concurrency::parallel_for(1, m_waves->VertexCount() - 1, [&, this](int i)
 				{
 					vertices[i].Pos = m_waves->Position(i);
 					vertices[i].Normal = m_waves->Normal(i);
@@ -630,7 +628,7 @@ void TheApp::UpdateWavesVertices(const Timer& timer)
 		}
 	}
 }
-void TheApp::UpdateWavesMaterials(const Timer& timer)
+void LandAndWavesScene::UpdateWavesMaterials(const Timer& timer)
 {
 	PROFILE_FUNCTION();
 
@@ -658,7 +656,7 @@ void TheApp::UpdateWavesMaterials(const Timer& timer)
 }
 
 
-std::array<const CD3DX12_STATIC_SAMPLER_DESC, 6> TheApp::GetStaticSamplers()
+std::array<const CD3DX12_STATIC_SAMPLER_DESC, 6> LandAndWavesScene::GetStaticSamplers()
 {
 	// Applications usually only need a handful of samplers.  So just define them all up front
 	// and keep them available as part of the root signature.  
@@ -716,11 +714,11 @@ std::array<const CD3DX12_STATIC_SAMPLER_DESC, 6> TheApp::GetStaticSamplers()
 }
 
 
-float TheApp::GetHillsHeight(float x, float z)const
+float LandAndWavesScene::GetHillsHeight(float x, float z)const
 {
 	return 0.3f * (z * sinf(0.1f * x) + x * cosf(0.1f * z));
 }
-DirectX::XMFLOAT3 TheApp::GetHillsNormal(float x, float z)const
+DirectX::XMFLOAT3 LandAndWavesScene::GetHillsNormal(float x, float z)const
 {
 	// n = (-df/dx, 1, -df/dz)
 	DirectX::XMFLOAT3 n(
@@ -740,7 +738,7 @@ DirectX::XMFLOAT3 TheApp::GetHillsNormal(float x, float z)const
 
 
 
-void TheApp::OnMouseMove(float x, float y)
+void LandAndWavesScene::OnMouseMove(float x, float y)
 {
 	if (m_lButtonDown)
 	{
@@ -757,5 +755,173 @@ void TheApp::OnMouseMove(float x, float y)
 }
 
 
+// ======================================================================================================
+// Waves
+// ======================================================================================================
+Waves::Waves(int m, int n, float dx, float dt, float speed, float damping)
+{
+	using namespace DirectX;
+
+	mNumRows = m;
+	mNumCols = n;
+
+	mVertexCount = m * n;
+	mTriangleCount = (m - 1) * (n - 1) * 2;
+
+	mTimeStep = dt;
+	mSpatialStep = dx;
+
+	float d = damping * dt + 2.0f;
+	float e = (speed * speed) * (dt * dt) / (dx * dx);
+	mK1 = (damping * dt - 2.0f) / d;
+	mK2 = (4.0f - 8.0f * e) / d;
+	mK3 = (2.0f * e) / d;
+
+	mPrevSolution.resize(static_cast<size_t>(m) * n);
+	mCurrSolution.resize(static_cast<size_t>(m) * n);
+	mNormals.resize(static_cast<size_t>(m) * n);
+	mTangentX.resize(static_cast<size_t>(m) * n);
+
+	// Generate grid vertices in system memory.
+
+	float halfWidth = (n - 1) * dx * 0.5f;
+	float halfDepth = (m - 1) * dx * 0.5f;
+	for (int i = 0; i < m; ++i)
+	{
+		float z = halfDepth - i * dx;
+		for (int j = 0; j < n; ++j)
+		{
+			float x = -halfWidth + j * dx;
+
+			mPrevSolution[static_cast<size_t>(i) * n + j] = XMFLOAT3(x, 0.0f, z);
+			mCurrSolution[static_cast<size_t>(i) * n + j] = XMFLOAT3(x, 0.0f, z);
+			mNormals[static_cast<size_t>(i) * n + j] = XMFLOAT3(0.0f, 1.0f, 0.0f);
+			mTangentX[static_cast<size_t>(i) * n + j] = XMFLOAT3(1.0f, 0.0f, 0.0f);
+		}
+	}
+}
+
+Waves::~Waves()
+{
+}
+
+int Waves::RowCount()const
+{
+	return mNumRows;
+}
+
+int Waves::ColumnCount()const
+{
+	return mNumCols;
+}
+
+int Waves::VertexCount()const
+{
+	return mVertexCount;
+}
+
+int Waves::TriangleCount()const
+{
+	return mTriangleCount;
+}
+
+float Waves::Width()const
+{
+	return mNumCols * mSpatialStep;
+}
+
+float Waves::Depth()const
+{
+	return mNumRows * mSpatialStep;
+}
+
+void Waves::Update(float dt)
+{
+	using namespace DirectX;
+
+	PROFILE_FUNCTION();
+
+	static float t = 0;
+
+	// Accumulate time.
+	t += dt;
+
+	// Only update the simulation at the specified time step.
+	if (t >= mTimeStep)
+	{
+		// Only update interior points; we use zero boundary conditions.
+		concurrency::parallel_for(1, mNumRows - 1, [this](int i)
+			//for(int i = 1; i < mNumRows-1; ++i)
+			{
+				for (int j = 1; j < mNumCols - 1; ++j)
+				{
+					// After this update we will be discarding the old previous
+					// buffer, so overwrite that buffer with the new update.
+					// Note how we can do this inplace (read/write to same element) 
+					// because we won't need prev_ij again and the assignment happens last.
+
+					// Note j indexes x and i indexes z: h(x_j, z_i, t_k)
+					// Moreover, our +z axis goes "down"; this is just to 
+					// keep consistent with our row indices going down.
+
+					mPrevSolution[static_cast<size_t>(i) * mNumCols + j].y =
+						mK1 * mPrevSolution[static_cast<size_t>(i) * mNumCols + j].y +
+						mK2 * mCurrSolution[static_cast<size_t>(i) * mNumCols + j].y +
+						mK3 * (mCurrSolution[(static_cast<size_t>(i) + 1) * mNumCols + j].y +
+							mCurrSolution[(static_cast<size_t>(i) - 1) * mNumCols + j].y +
+							mCurrSolution[static_cast<size_t>(i) * mNumCols + j + 1].y +
+							mCurrSolution[static_cast<size_t>(i) * mNumCols + j - 1].y);
+				}
+			});
+
+		// We just overwrote the previous buffer with the new data, so
+		// this data needs to become the current solution and the old
+		// current solution becomes the new previous solution.
+		std::swap(mPrevSolution, mCurrSolution);
+
+		t = 0.0f; // reset time
+
+		//
+		// Compute normals using finite difference scheme.
+		//
+		concurrency::parallel_for(1, mNumRows - 1, [this](int i)
+			//for(int i = 1; i < mNumRows - 1; ++i)
+			{
+				for (int j = 1; j < mNumCols - 1; ++j)
+				{
+					float l = mCurrSolution[static_cast<size_t>(i) * mNumCols + j - 1].y;
+					float r = mCurrSolution[static_cast<size_t>(i) * mNumCols + j + 1].y;
+					float t = mCurrSolution[(static_cast<size_t>(i) - 1) * mNumCols + j].y;
+					float b = mCurrSolution[(static_cast<size_t>(i) + 1) * mNumCols + j].y;
+					mNormals[static_cast<size_t>(i) * mNumCols + j].x = -r + l;
+					mNormals[static_cast<size_t>(i) * mNumCols + j].y = 2.0f * mSpatialStep;
+					mNormals[static_cast<size_t>(i) * mNumCols + j].z = b - t;
+
+					XMVECTOR n = XMVector3Normalize(XMLoadFloat3(&mNormals[static_cast<size_t>(i) * mNumCols + j]));
+					XMStoreFloat3(&mNormals[static_cast<size_t>(i) * mNumCols + j], n);
+
+					mTangentX[static_cast<size_t>(i) * mNumCols + j] = XMFLOAT3(2.0f * mSpatialStep, r - l, 0.0f);
+					XMVECTOR T = XMVector3Normalize(XMLoadFloat3(&mTangentX[static_cast<size_t>(i) * mNumCols + j]));
+					XMStoreFloat3(&mTangentX[static_cast<size_t>(i) * mNumCols + j], T);
+				}
+			});
+	}
+}
+
+void Waves::Disturb(int i, int j, float magnitude)
+{
+	// Don't disturb boundaries.
+	assert(i > 1 && i < mNumRows - 2);
+	assert(j > 1 && j < mNumCols - 2);
+
+	float halfMag = 0.5f * magnitude;
+
+	// Disturb the ijth vertex height and its neighbors.
+	mCurrSolution[static_cast<size_t>(i) * mNumCols + j].y += magnitude;
+	mCurrSolution[static_cast<size_t>(i) * mNumCols + j + 1].y += halfMag;
+	mCurrSolution[static_cast<size_t>(i) * mNumCols + j - 1].y += halfMag;
+	mCurrSolution[(static_cast<size_t>(i) + 1) * mNumCols + j].y += halfMag;
+	mCurrSolution[(static_cast<size_t>(i) - 1) * mNumCols + j].y += halfMag;
+}
 
 }

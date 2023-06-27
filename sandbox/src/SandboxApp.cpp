@@ -13,8 +13,8 @@ Sandbox::Sandbox() :
         m_deviceResources = std::make_shared<tiny::DeviceResources>(GetHWND(), GetWindowHeight(), GetWindowWidth());
         TINY_ASSERT(m_deviceResources != nullptr, "Failed to create device resources");
 
-        m_app = std::make_unique<tiny::TheApp>(m_deviceResources);
-        m_app->SetViewport(
+        m_scene = std::make_unique<LandAndWavesScene>(m_deviceResources);
+        m_scene->SetViewport(
             0.0f,
             0.0f,
             static_cast<float>(GetWindowHeight()),
@@ -44,8 +44,12 @@ bool Sandbox::DoFrame() noexcept
         m_timer.Tick();
         CalculateFrameStats();
 
-		Update(m_timer);
-		Render();
+        // Claim the critical section so the UI does not attempt to modify data during Update & Render
+        {
+            concurrency::critical_section::scoped_lock lock(facade::UI::GetCriticalSection());
+            Update(m_timer);
+            Render();
+        }
 		Present();        
 	}
     catch (const tiny::TinyException& e)
@@ -75,15 +79,15 @@ bool Sandbox::DoFrame() noexcept
 
 void Sandbox::Update(const tiny::Timer& timer) 
 {
-    m_app->Update(timer);
+    m_scene->Update(timer);
 }
 void Sandbox::Render() 
 {
-    m_app->Render();
+    m_scene->Render();
 }
 void Sandbox::Present() 
 {
-    m_app->Present();
+    m_scene->Present();
 }
 
 void Sandbox::CalculateFrameStats()
@@ -124,8 +128,8 @@ void Sandbox::CalculateFrameStats()
 void Sandbox::OnWindowResize(tiny::WindowResizeEvent& e) 
 {
     m_deviceResources->OnResize(e.GetHeight(), e.GetWidth());
-    m_app->OnResize(e.GetHeight(), e.GetWidth());
-    m_app->SetViewport(
+    m_scene->OnResize(e.GetHeight(), e.GetWidth());
+    m_scene->SetViewport(
         0.0f,
         0.0f,
         static_cast<float>(e.GetHeight()),
@@ -144,20 +148,20 @@ void Sandbox::OnKeyPressed(tiny::KeyPressedEvent& e)
 {
     switch (e.GetKeyCode())
     {
-    case tiny::KEY_CODE::W: m_app->OnWKeyUpDown(true); break;
-    case tiny::KEY_CODE::A: m_app->OnAKeyUpDown(true); break;
-    case tiny::KEY_CODE::S: m_app->OnSKeyUpDown(true); break;
-    case tiny::KEY_CODE::D: m_app->OnDKeyUpDown(true); break;
+    case tiny::KEY_CODE::W: m_scene->OnWKeyUpDown(true); break;
+    case tiny::KEY_CODE::A: m_scene->OnAKeyUpDown(true); break;
+    case tiny::KEY_CODE::S: m_scene->OnSKeyUpDown(true); break;
+    case tiny::KEY_CODE::D: m_scene->OnDKeyUpDown(true); break;
     }
 }
 void Sandbox::OnKeyReleased(tiny::KeyReleasedEvent& e) 
 {
     switch (e.GetKeyCode())
     {
-    case tiny::KEY_CODE::W: m_app->OnWKeyUpDown(false); break;
-    case tiny::KEY_CODE::A: m_app->OnAKeyUpDown(false); break;
-    case tiny::KEY_CODE::S: m_app->OnSKeyUpDown(false); break;
-    case tiny::KEY_CODE::D: m_app->OnDKeyUpDown(false); break;
+    case tiny::KEY_CODE::W: m_scene->OnWKeyUpDown(false); break;
+    case tiny::KEY_CODE::A: m_scene->OnAKeyUpDown(false); break;
+    case tiny::KEY_CODE::S: m_scene->OnSKeyUpDown(false); break;
+    case tiny::KEY_CODE::D: m_scene->OnDKeyUpDown(false); break;
 
 #ifdef PROFILE
     case tiny::KEY_CODE::P: tiny::Instrumentor::Get().CaptureFrames(5, "Frame Capture", "profile/Profile-Frames.json"); break;
@@ -168,7 +172,7 @@ void Sandbox::OnKeyReleased(tiny::KeyReleasedEvent& e)
 // REQUIRED FOR CRTP - Mouse Events
 void Sandbox::OnMouseMove(tiny::MouseMoveEvent& e) 
 {
-    m_app->OnMouseMove(e.GetX(), e.GetY());
+    m_scene->OnMouseMove(e.GetX(), e.GetY());
 }
 void Sandbox::OnMouseEnter(tiny::MouseEnterEvent& e) {}
 void Sandbox::OnMouseLeave(tiny::MouseLeaveEvent& e) {}
@@ -178,14 +182,14 @@ void Sandbox::OnMouseButtonPressed(tiny::MouseButtonPressedEvent& e)
 {
     if (e.GetMouseButton() == tiny::MOUSE_BUTTON::LBUTTON)
     {
-        m_app->OnLButtonUpDown(true);
+        m_scene->OnLButtonUpDown(true);
     }
 }
 void Sandbox::OnMouseButtonReleased(tiny::MouseButtonReleasedEvent& e) 
 {
     if (e.GetMouseButton() == tiny::MOUSE_BUTTON::LBUTTON)
     {
-        m_app->OnLButtonUpDown(false);
+        m_scene->OnLButtonUpDown(false);
     }
 }
 void Sandbox::OnMouseButtonDoubleClick(tiny::MouseButtonDoubleClickEvent& e) {}

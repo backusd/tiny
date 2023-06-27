@@ -57,9 +57,6 @@
     <ClInclude Include="src\tiny\rendering\Shader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\tiny\TheApp.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\tiny\rendering\InputLayout.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -76,9 +73,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\tiny\rendering\RenderItem.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\tiny\other\Waves.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\tiny\rendering\Material.h">
@@ -155,13 +149,7 @@
     <ClCompile Include="src\tiny\utils\StringHelper.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\tiny\TheApp.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\tiny\rendering\GeometryGenerator.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\tiny\other\Waves.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\tiny\rendering\DescriptorVector.cpp">
