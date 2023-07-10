@@ -175,9 +175,9 @@ void LandAndWavesScene::BuildLandAndWaterScene()
 	opaqueLayer.Name = "Opaque Layer";
 
 	// PSO
-	m_standardVS = std::make_unique<Shader>(m_deviceResources, "LightingVS.cso");
-	m_opaquePS = std::make_unique<Shader>(m_deviceResources, "LightingFogPS.cso");
-	m_alphaTestedPS = std::make_unique<Shader>(m_deviceResources, "LightingFogAlphaTestPS.cso");
+	m_standardVS = std::make_unique<Shader>(m_deviceResources, "src/shaders/output/LightingVS.cso");
+	m_opaquePS = std::make_unique<Shader>(m_deviceResources, "src/shaders/output/LightingFogPS.cso");
+	m_alphaTestedPS = std::make_unique<Shader>(m_deviceResources, "src/shaders/output/LightingFogAlphaTestPS.cso");
 
 
 	m_inputLayout = std::make_unique<InputLayout>(
