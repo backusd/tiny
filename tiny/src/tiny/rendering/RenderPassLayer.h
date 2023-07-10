@@ -46,6 +46,21 @@ public:
 		);
 	}
 
+	void RemoveRenderItem(RenderItem* ri)
+	{
+		if (ri != nullptr) LIKELY
+		{
+			for (unsigned int iii = 0; iii < RenderItems.size(); ++iii)
+			{
+				if (&RenderItems[iii] == ri) UNLIKELY
+				{
+					RenderItems.erase(RenderItems.begin() + iii);
+					break;
+				}
+			}
+		}
+	}
+
 	std::vector<RenderItem> RenderItems;
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> PipelineState;
 	D3D12_PRIMITIVE_TOPOLOGY Topology;

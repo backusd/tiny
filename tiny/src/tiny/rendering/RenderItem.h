@@ -1,7 +1,6 @@
 #pragma once
 #include "tiny-pch.h"
 #include "tiny/Core.h"
-#include "Material.h"
 #include "ConstantBuffer.h"
 #include "RootConstantBufferView.h"
 #include "RootDescriptorTable.h"
@@ -9,12 +8,6 @@
 
 namespace tiny
 {
-struct ObjectConstants
-{
-	DirectX::XMFLOAT4X4 World = MathHelper::Identity4x4();
-	DirectX::XMFLOAT4X4 TexTransform = MathHelper::Identity4x4();
-};
-
 class RenderItem
 {
 public:
@@ -29,11 +22,6 @@ public:
 	RenderItem(RenderItem&& rhs) noexcept :
 		ConstantBufferViews(std::move(rhs.ConstantBufferViews)),
 		DescriptorTables(std::move(rhs.DescriptorTables)),
-		NumFramesDirty(rhs.NumFramesDirty),
-		World(rhs.World),
-		TexTransform(rhs.TexTransform),
-		material(std::move(rhs.material)),
-		materialNumFramesDirty(rhs.materialNumFramesDirty),
 		submeshIndex(rhs.submeshIndex)
 	{
 		LOG_CORE_WARN("{}", "RenderItem Move Constructor called, but this method has not been tested. Make sure updates to the Engine are correct");
@@ -50,11 +38,6 @@ public:
 
 		ConstantBufferViews = std::move(rhs.ConstantBufferViews);
 		DescriptorTables = std::move(rhs.DescriptorTables);
-		NumFramesDirty = rhs.NumFramesDirty;
-		World = rhs.World;
-		TexTransform = rhs.TexTransform;
-		material = std::move(rhs.material);
-		materialNumFramesDirty = rhs.materialNumFramesDirty;
 		submeshIndex = rhs.submeshIndex;
 
 		return *this;
@@ -80,26 +63,6 @@ public:
 
 	// 0+ descriptor tables for per-item resources
 	std::vector<RootDescriptorTable> DescriptorTables;
-
-	// Dirty flag indicating the object data has changed and we need to update the constant buffer.
-	// Because we have an object cbuffer for each frame in flight, we have to apply the
-	// update to each frame in flight. Thus, when we modify obect data we should set 
-	// NumFramesDirty = gNumFrameResources so that each frame resource gets the update.
-	int NumFramesDirty = gNumFrameResources;
-
-	// World matrix of the shape that describes the object's local space
-	// relative to the world space, which defines the position, orientation,
-	// and scale of the object in the world.
-	DirectX::XMFLOAT4X4 World = MathHelper::Identity4x4();
-	DirectX::XMFLOAT4X4 TexTransform = MathHelper::Identity4x4();
-
-	// Hold a unique_ptr to the material for this render item. In theory, multiple render items
-	// could definitely share materials. However, adding the ability to share significantly increases
-	// code complexity and maintenance. And in reality, the majority of objects will be unique and not
-	// share materials.
-	std::unique_ptr<Material> material = nullptr;
-	int materialNumFramesDirty = gNumFrameResources; // <-- Set this as dirty so the constant buffer gets updated immediately
-
 
 	// The PSO will hold and bind the mesh-group for all of the render items it will render.
 	// Here, we just need to keep track of which submesh index the render item references

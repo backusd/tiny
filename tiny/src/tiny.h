@@ -13,7 +13,6 @@
 #include "tiny/rendering/DescriptorVector.h"
 #include "tiny/rendering/GeometryGenerator.h"
 #include "tiny/rendering/InputLayout.h"
-#include "tiny/rendering/Material.h"
 #include "tiny/rendering/MeshGroup.h"
 #include "tiny/rendering/RasterizerState.h"
 #include "tiny/rendering/RenderItem.h"
@@ -25,8 +24,10 @@
 #include "tiny/rendering/Shader.h"
 #include "tiny/rendering/Texture.h"
 
+#include "tiny/utils/Constants.h"
 #include "tiny/utils/Timer.h"
 #include "tiny/utils/Profile.h"
+#include "tiny/utils/MathHelper.h"
 
 // TEMPORARY: We use TheApp class to implement app-specific stuff in the library itself.
 //            Eventually this should be removed, but it serves as an easy way to run the code on Win32 and UWP right now

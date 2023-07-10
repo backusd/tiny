@@ -1,29 +1,7 @@
 #include "LandAndWavesScene.h"
 
 using namespace tiny;
-
-static constexpr std::array g_textureFiles{
-	L"src/textures/grass.dds",
-	L"src/textures/water1.dds",
-	L"src/textures/WireFence.dds",
-	L"src/textures/bricks.dds",
-	L"src/textures/bricks2.dds",
-	L"src/textures/bricks3.dds",
-	L"src/textures/checkboard.dds",
-	L"src/textures/ice.dds",
-	L"src/textures/stone.dds",
-	L"src/textures/tile.dds",
-	L"src/textures/white1x1.dds"
-};
-
-std::wstring GetTextureFilename(unsigned int index)
-{
-	return g_textureFiles[index];
-}
-std::size_t GetTotalTextureCount()
-{
-	return static_cast<std::size_t>(TEXTURE::Count);
-}
+using namespace sandbox::landandwaves;
 
 namespace sandbox
 {
@@ -185,7 +163,7 @@ void LandAndWavesScene::BuildLandAndWaterScene()
 			{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
 			{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
 			{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-	}
+		}
 	);
 
 	m_rasterizerState = std::make_unique<RasterizerState>();
@@ -237,65 +215,20 @@ void LandAndWavesScene::BuildLandAndWaterScene()
 	opaqueLayer.Meshes = std::make_unique<MeshGroupT<Vertex>>(m_deviceResources, allVertices, allIndices);
 
 	// Render Items
-	m_gridObjectConstantsCB = std::make_unique<ConstantBufferT<ObjectConstants>>(m_deviceResources);
-	m_gridMaterialCB = std::make_unique<ConstantBufferT<Material>>(m_deviceResources);
+	m_gridObject = std::make_unique<GameObject>(m_deviceResources); // Create the grid (NOTE: This does NOT create a RenderItem)
+	m_gridObject->SetMaterialDiffuseAlbedo(DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
+	m_gridObject->SetMaterialFresnelR0(DirectX::XMFLOAT3(0.01f, 0.01f, 0.01f));
+	m_gridObject->SetMaterialRoughness(0.125f);
+	m_gridObject->SetTextureTransform(DirectX::XMMatrixScaling(5.0f, 5.0f, 1.0f));
+	RenderItem* gridRI = m_gridObject->CreateRenderItem(&opaqueLayer);
 
-	RenderItem& gridRI = opaqueLayer.RenderItems.emplace_back();
+	gridRI->submeshIndex = 0; // Only using a single mesh, so automatically it is at index 0
 
-	gridRI.World = MathHelper::Identity4x4();
-	DirectX::XMStoreFloat4x4(&gridRI.TexTransform, DirectX::XMMatrixScaling(5.0f, 5.0f, 1.0f));
-
-	gridRI.material = std::make_unique<Material>();
-	gridRI.material->DiffuseAlbedo = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-	gridRI.material->FresnelR0 = DirectX::XMFLOAT3(0.01f, 0.01f, 0.01f);
-	gridRI.material->Roughness = 0.125f;
-
-	auto& gridConstantsCBV = gridRI.ConstantBufferViews.emplace_back(1, m_gridObjectConstantsCB.get());
-	gridConstantsCBV.Update = [this](const Timer& timer, RenderItem* ri, int frameIndex)
-	{
-		// Only update the cbuffer data if the constants have changed.
-		if (ri->NumFramesDirty > 0)
-		{
-			DirectX::XMMATRIX world = DirectX::XMLoadFloat4x4(&ri->World);
-			DirectX::XMMATRIX texTransform = DirectX::XMLoadFloat4x4(&ri->TexTransform);
-
-			ObjectConstants objConstants;
-			DirectX::XMStoreFloat4x4(&objConstants.World, DirectX::XMMatrixTranspose(world));
-			DirectX::XMStoreFloat4x4(&objConstants.TexTransform, DirectX::XMMatrixTranspose(texTransform));
-
-			m_gridObjectConstantsCB->CopyData(frameIndex, objConstants);
-
-			--ri->NumFramesDirty;
-		}
-	};
-
-	auto& gridMaterialCBV = gridRI.ConstantBufferViews.emplace_back(3, m_gridMaterialCB.get());
-	gridMaterialCBV.Update = [this](const Timer& timer, RenderItem* ri, int frameIndex)
-	{
-		if (ri->materialNumFramesDirty > 0)
-		{
-			// Must transpose the transform before loading it into the constant buffer
-			DirectX::XMMATRIX transform = DirectX::XMLoadFloat4x4(&ri->material->MatTransform);
-
-			Material mat = *ri->material.get();
-			DirectX::XMStoreFloat4x4(&mat.MatTransform, DirectX::XMMatrixTranspose(transform));
-
-			m_gridMaterialCB->CopyData(frameIndex, mat);
-
-			// Next FrameResource need to be updated too.
-			--ri->materialNumFramesDirty;
-		}
-	};
-
-	gridRI.submeshIndex = 0; // Only using a single mesh, so automatically it is at index 0
-
-	auto& dt = gridRI.DescriptorTables.emplace_back(0, m_textures[(int)TEXTURE::GRASS]->GetGPUHandle());
-	dt.Update = [](const Timer& timer, int frameIndex)
+	auto& gridDT = gridRI->DescriptorTables.emplace_back(0, m_textures[(int)TEXTURE::GRASS]->GetGPUHandle());
+	gridDT.Update = [](const Timer& timer, int frameIndex)
 	{
 		// No update here because the texture is static
 	};
-
-
 
 
 
@@ -336,65 +269,20 @@ void LandAndWavesScene::BuildLandAndWaterScene()
 	alphaTestLayer.Meshes = std::make_unique<MeshGroupT<Vertex>>(m_deviceResources, allBoxVertices, allBoxIndices);
 
 	// Render Items
-	m_boxObjectConstantsCB = std::make_unique<ConstantBufferT<ObjectConstants>>(m_deviceResources);
-	m_boxMaterialCB = std::make_unique<ConstantBufferT<Material>>(m_deviceResources);
+	m_boxObject = std::make_unique<GameObject>(m_deviceResources); // Create the box (NOTE: This does NOT create a RenderItem)
+	m_boxObject->SetMaterialDiffuseAlbedo(DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
+	m_boxObject->SetMaterialFresnelR0(DirectX::XMFLOAT3(0.1f, 0.1f, 0.1f));
+	m_boxObject->SetMaterialRoughness(0.25f);
+	m_boxObject->SetWorldTransform(DirectX::XMMatrixTranslation(3.0f, 2.0f, -9.0f));
+	RenderItem* boxRI = m_boxObject->CreateRenderItem(&alphaTestLayer);
 
-	RenderItem& boxRI = alphaTestLayer.RenderItems.emplace_back();
+	boxRI->submeshIndex = 0; // Only using a single mesh, so automatically it is at index 0
 
-	DirectX::XMStoreFloat4x4(&boxRI.World, DirectX::XMMatrixTranslation(3.0f, 2.0f, -9.0f));
-
-	boxRI.material = std::make_unique<Material>();
-	boxRI.material->DiffuseAlbedo = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
-	boxRI.material->FresnelR0 = DirectX::XMFLOAT3(0.1f, 0.1f, 0.1f);
-	boxRI.material->Roughness = 0.25f;
-
-	auto& boxConstantsCBV = boxRI.ConstantBufferViews.emplace_back(1, m_boxObjectConstantsCB.get());
-	boxConstantsCBV.Update = [this](const Timer& timer, RenderItem* ri, int frameIndex)
-	{
-		// Only update the cbuffer data if the constants have changed.
-		if (ri->NumFramesDirty > 0)
-		{
-			DirectX::XMMATRIX world = DirectX::XMLoadFloat4x4(&ri->World);
-			DirectX::XMMATRIX texTransform = DirectX::XMLoadFloat4x4(&ri->TexTransform);
-
-			ObjectConstants objConstants;
-			DirectX::XMStoreFloat4x4(&objConstants.World, DirectX::XMMatrixTranspose(world));
-			DirectX::XMStoreFloat4x4(&objConstants.TexTransform, DirectX::XMMatrixTranspose(texTransform));
-
-			m_boxObjectConstantsCB->CopyData(frameIndex, objConstants);
-
-			--ri->NumFramesDirty;
-		}
-	};
-
-	auto& boxMaterialCBV = boxRI.ConstantBufferViews.emplace_back(3, m_boxMaterialCB.get());
-	boxMaterialCBV.Update = [this](const Timer& timer, RenderItem* ri, int frameIndex)
-	{
-		if (ri->materialNumFramesDirty > 0)
-		{
-			// Must transpose the transform before loading it into the constant buffer
-			DirectX::XMMATRIX transform = DirectX::XMLoadFloat4x4(&ri->material->MatTransform);
-
-			Material mat = *ri->material.get();
-			DirectX::XMStoreFloat4x4(&mat.MatTransform, DirectX::XMMatrixTranspose(transform));
-
-			m_boxMaterialCB->CopyData(frameIndex, mat);
-
-			// Next FrameResource need to be updated too.
-			--ri->materialNumFramesDirty;
-		}
-	};
-
-	boxRI.submeshIndex = 0; // Only using a single mesh, so automatically it is at index 0
-
-	auto& boxDT = boxRI.DescriptorTables.emplace_back(0, m_textures[(int)TEXTURE::WIRE_FENCE]->GetGPUHandle());
+	auto& boxDT = boxRI->DescriptorTables.emplace_back(0, m_textures[(int)TEXTURE::WIRE_FENCE]->GetGPUHandle());
 	boxDT.Update = [](const Timer& timer, int frameIndex)
 	{
 		// No update here because the texture is static
 	};
-
-
-
 
 
 
@@ -469,68 +357,81 @@ void LandAndWavesScene::BuildLandAndWaterScene()
 	m_dynamicWaveMesh = static_cast<DynamicMeshGroupT<Vertex>*>(transparentLayer.Meshes.get());
 
 	// Render Items
-	m_wavesObjectConstantsCB = std::make_unique<ConstantBufferT<ObjectConstants>>(m_deviceResources);
-	m_wavesMaterialCB = std::make_unique<ConstantBufferT<Material>>(m_deviceResources);
+	m_wavesObject = std::make_unique<GameObject>(m_deviceResources); // Create the waves (NOTE: This does NOT create a RenderItem)
+	m_wavesObject->SetMaterialDiffuseAlbedo(DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 0.5f));
+	m_wavesObject->SetMaterialFresnelR0(DirectX::XMFLOAT3(0.1f, 0.1f, 0.1f));
+	m_wavesObject->SetMaterialRoughness(0.0f);
+	m_wavesObject->SetTextureTransform(DirectX::XMMatrixScaling(5.0f, 5.0f, 1.0f));
+	RenderItem* wavesRI = m_wavesObject->CreateRenderItem(&transparentLayer);
 
-	RenderItem& wavesRI = transparentLayer.RenderItems.emplace_back();
+	wavesRI->submeshIndex = 0; // Only using a single mesh, so automatically it is at index 0
 
-	wavesRI.World = MathHelper::Identity4x4();
-	DirectX::XMStoreFloat4x4(&wavesRI.TexTransform, DirectX::XMMatrixScaling(5.0f, 5.0f, 1.0f));
-	wavesRI.material = std::make_unique<Material>();
-	wavesRI.material->DiffuseAlbedo = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 0.5f);
-	wavesRI.material->FresnelR0 = DirectX::XMFLOAT3(0.1f, 0.1f, 0.1f);
-	wavesRI.material->Roughness = 0.0f;
-
-	m_wavesRI = &wavesRI;
-
-	auto& wavesConstantsCBV = wavesRI.ConstantBufferViews.emplace_back(1, m_wavesObjectConstantsCB.get());
-	wavesConstantsCBV.Update = [this](const Timer& timer, RenderItem* ri, int frameIndex)
-	{
-		// Only update the cbuffer data if the constants have changed.  
-		if (ri->NumFramesDirty > 0)
-		{
-			DirectX::XMMATRIX world = DirectX::XMLoadFloat4x4(&ri->World);
-			DirectX::XMMATRIX texTransform = DirectX::XMLoadFloat4x4(&ri->TexTransform);
-
-			ObjectConstants objConstants;
-			DirectX::XMStoreFloat4x4(&objConstants.World, DirectX::XMMatrixTranspose(world));
-			DirectX::XMStoreFloat4x4(&objConstants.TexTransform, DirectX::XMMatrixTranspose(texTransform));
-
-			m_wavesObjectConstantsCB->CopyData(frameIndex, objConstants);
-
-			--ri->NumFramesDirty;
-		}
-	};
-
-	auto& wavesMaterialCBV = wavesRI.ConstantBufferViews.emplace_back(3, m_wavesMaterialCB.get());
-	wavesMaterialCBV.Update = [this](const Timer& timer, RenderItem* ri, int frameIndex)
-	{
-		if (ri->materialNumFramesDirty > 0)
-		{
-			// Must transpose the transform before loading it into the constant buffer
-			DirectX::XMMATRIX transform = DirectX::XMLoadFloat4x4(&ri->material->MatTransform);
-
-			Material mat = *ri->material.get();
-			DirectX::XMStoreFloat4x4(&mat.MatTransform, DirectX::XMMatrixTranspose(transform));
-
-			m_wavesMaterialCB->CopyData(frameIndex, mat);
-
-			// Next FrameResource need to be updated too.
-			--ri->materialNumFramesDirty;
-		}
-	};
-
-	wavesRI.submeshIndex = 0; // Only using a single mesh, so automatically it is at index 0
-
-	auto& waveDT = wavesRI.DescriptorTables.emplace_back(0, m_textures[(int)TEXTURE::WATER1]->GetGPUHandle());
-	waveDT.Update = [](const Timer& timer, int frameIndex)
+	auto& wavesDT = wavesRI->DescriptorTables.emplace_back(0, m_textures[(int)TEXTURE::WATER1]->GetGPUHandle());
+	wavesDT.Update = [](const Timer& timer, int frameIndex)
 	{
 		// No update here because the texture is static
 	};
-}
-void LandAndWavesScene::BuildSkullAndMirrorScene()
-{
 
+
+
+//	m_wavesObjectConstantsCB = std::make_unique<ConstantBufferT<ObjectConstants>>(m_deviceResources);
+//	m_wavesMaterialCB = std::make_unique<ConstantBufferT<Material>>(m_deviceResources);
+//
+//	RenderItem& wavesRI = transparentLayer.RenderItems.emplace_back();
+//
+//	wavesRI.World = MathHelper::Identity4x4();
+//	DirectX::XMStoreFloat4x4(&wavesRI.TexTransform, DirectX::XMMatrixScaling(5.0f, 5.0f, 1.0f));
+//	wavesRI.material = std::make_unique<Material>();
+//	wavesRI.material->DiffuseAlbedo = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 0.5f);
+//	wavesRI.material->FresnelR0 = DirectX::XMFLOAT3(0.1f, 0.1f, 0.1f);
+//	wavesRI.material->Roughness = 0.0f;
+//
+//	m_wavesRI = &wavesRI;
+//
+//	auto& wavesConstantsCBV = wavesRI.ConstantBufferViews.emplace_back(1, m_wavesObjectConstantsCB.get());
+//	wavesConstantsCBV.Update = [this](const Timer& timer, RenderItem* ri, int frameIndex)
+//	{
+//		// Only update the cbuffer data if the constants have changed.  
+//		if (ri->NumFramesDirty > 0)
+//		{
+//			DirectX::XMMATRIX world = DirectX::XMLoadFloat4x4(&ri->World);
+//			DirectX::XMMATRIX texTransform = DirectX::XMLoadFloat4x4(&ri->TexTransform);
+//
+//			ObjectConstants objConstants;
+//			DirectX::XMStoreFloat4x4(&objConstants.World, DirectX::XMMatrixTranspose(world));
+//			DirectX::XMStoreFloat4x4(&objConstants.TexTransform, DirectX::XMMatrixTranspose(texTransform));
+//
+//			m_wavesObjectConstantsCB->CopyData(frameIndex, objConstants);
+//
+//			--ri->NumFramesDirty;
+//		}
+//	};
+//
+//	auto& wavesMaterialCBV = wavesRI.ConstantBufferViews.emplace_back(3, m_wavesMaterialCB.get());
+//	wavesMaterialCBV.Update = [this](const Timer& timer, RenderItem* ri, int frameIndex)
+//	{
+//		if (ri->materialNumFramesDirty > 0)
+//		{
+//			// Must transpose the transform before loading it into the constant buffer
+//			DirectX::XMMATRIX transform = DirectX::XMLoadFloat4x4(&ri->material->MatTransform);
+//
+//			Material mat = *ri->material.get();
+//			DirectX::XMStoreFloat4x4(&mat.MatTransform, DirectX::XMMatrixTranspose(transform));
+//
+//			m_wavesMaterialCB->CopyData(frameIndex, mat);
+//
+//			// Next FrameResource need to be updated too.
+//			--ri->materialNumFramesDirty;
+//		}
+//	};
+//
+//	wavesRI.submeshIndex = 0; // Only using a single mesh, so automatically it is at index 0
+//
+//	auto& waveDT = wavesRI.DescriptorTables.emplace_back(0, m_textures[(int)TEXTURE::WATER1]->GetGPUHandle());
+//	waveDT.Update = [](const Timer& timer, int frameIndex)
+//	{
+//		// No update here because the texture is static
+//	};
 }
 
 
@@ -633,11 +534,10 @@ void LandAndWavesScene::UpdateWavesMaterials(const Timer& timer)
 	PROFILE_FUNCTION();
 
 	// Scroll the water material texture coordinates.
+	DirectX::XMFLOAT4X4& matTransform = m_wavesObject->GetMaterialTransform();
 
-	Material* waveMaterial = m_wavesRI->material.get();
-
-	float& tu = waveMaterial->MatTransform(3, 0);
-	float& tv = waveMaterial->MatTransform(3, 1);
+	float& tu = matTransform(3, 0);
+	float& tv = matTransform(3, 1);
 
 	tu += 0.1f * timer.DeltaTime();
 	tv += 0.02f * timer.DeltaTime();
@@ -648,11 +548,8 @@ void LandAndWavesScene::UpdateWavesMaterials(const Timer& timer)
 	if (tv >= 1.0f)
 		tv -= 1.0f;
 
-	waveMaterial->MatTransform(3, 0) = tu;
-	waveMaterial->MatTransform(3, 1) = tv;
-
-	// Material has changed, so need to update cbuffer.
-	m_wavesRI->materialNumFramesDirty = gNumFrameResources;
+	matTransform(3, 0) = tu;
+	matTransform(3, 1) = tv;
 }
 
 

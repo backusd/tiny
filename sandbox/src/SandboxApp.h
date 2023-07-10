@@ -3,7 +3,7 @@
 #include <tiny.h>
 
 #include "facade/facade.h"
-#include "LandAndWavesScene.h"
+#include "LandAndWaves/LandAndWavesScene.h"
 
 
 namespace sandbox

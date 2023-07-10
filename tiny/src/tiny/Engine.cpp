@@ -4,6 +4,7 @@
 #include "rendering/RenderPassLayer.h"
 #include "rendering/RenderItem.h"
 #include "rendering/MeshGroup.h"
+#include "rendering/Texture.h"
 #include "tiny/utils/Profile.h"
 
 

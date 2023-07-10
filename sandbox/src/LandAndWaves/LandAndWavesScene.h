@@ -1,81 +1,62 @@
 #pragma once
-#include "facade/facade.h" // NOTE: When including facade, it MUST be included first because of include conflicts between boost and Windows.h
+#include "../facade/facade.h" // NOTE: When including facade, it MUST be included first because of include conflicts between boost and Windows.h
 #include <tiny.h>
-
-
-// These methods are required because they are listed as "extern" in tiny Texture.h
-std::wstring GetTextureFilename(unsigned int index);
-std::size_t GetTotalTextureCount();
-
-// This enum class is not required, but serves as a good helper so that we can easily reference textures by int
-enum class TEXTURE : int
-{
-	GRASS = 0,
-	WATER1,
-	WIRE_FENCE,
-	BRICKS,
-	BRICKS2,
-	BRICKS3,
-	CHECKBOARD,
-	ICE,
-	STONE,
-	TILE,
-	WHITE1X1,
-	Count
-};
+#include "../SharedStuff.h"
 
 namespace sandbox
 {
-struct Vertex
-{
-	DirectX::XMFLOAT3 Pos;
-	DirectX::XMFLOAT3 Normal;
-	DirectX::XMFLOAT2 TexC;
-};
+	namespace landandwaves
+	{
+		struct Vertex
+		{
+			DirectX::XMFLOAT3 Pos;
+			DirectX::XMFLOAT3 Normal;
+			DirectX::XMFLOAT2 TexC;
+		};
 
-#define MaxLights 16
+		static constexpr int MaxLights = 16;
 
-struct Light
-{
-	DirectX::XMFLOAT3   Strength = { 0.5f, 0.5f, 0.5f };
-	float               FalloffStart = 1.0f;                // point/spot light only
-	DirectX::XMFLOAT3   Direction = { 0.0f, -1.0f, 0.0f };  // directional/spot light only
-	float               FalloffEnd = 10.0f;                 // point/spot light only
-	DirectX::XMFLOAT3   Position = { 0.0f, 0.0f, 0.0f };    // point/spot light only
-	float               SpotPower = 64.0f;                  // spot light only
-};
+		struct Light
+		{
+			DirectX::XMFLOAT3   Strength = { 0.5f, 0.5f, 0.5f };
+			float               FalloffStart = 1.0f;                // point/spot light only
+			DirectX::XMFLOAT3   Direction = { 0.0f, -1.0f, 0.0f };  // directional/spot light only
+			float               FalloffEnd = 10.0f;                 // point/spot light only
+			DirectX::XMFLOAT3   Position = { 0.0f, 0.0f, 0.0f };    // point/spot light only
+			float               SpotPower = 64.0f;                  // spot light only
+		};
 
-struct PassConstants
-{
-	DirectX::XMFLOAT4X4 View = tiny::MathHelper::Identity4x4();
-	DirectX::XMFLOAT4X4 InvView = tiny::MathHelper::Identity4x4();
-	DirectX::XMFLOAT4X4 Proj = tiny::MathHelper::Identity4x4();
-	DirectX::XMFLOAT4X4 InvProj = tiny::MathHelper::Identity4x4();
-	DirectX::XMFLOAT4X4 ViewProj = tiny::MathHelper::Identity4x4();
-	DirectX::XMFLOAT4X4 InvViewProj = tiny::MathHelper::Identity4x4();
-	DirectX::XMFLOAT3 EyePosW = { 0.0f, 0.0f, 0.0f };
-	float cbPerObjectPad1 = 0.0f;
-	DirectX::XMFLOAT2 RenderTargetSize = { 0.0f, 0.0f };
-	DirectX::XMFLOAT2 InvRenderTargetSize = { 0.0f, 0.0f };
-	float NearZ = 0.0f;
-	float FarZ = 0.0f;
-	float TotalTime = 0.0f;
-	float DeltaTime = 0.0f;
+		struct PassConstants
+		{
+			DirectX::XMFLOAT4X4 View = tiny::MathHelper::Identity4x4();
+			DirectX::XMFLOAT4X4 InvView = tiny::MathHelper::Identity4x4();
+			DirectX::XMFLOAT4X4 Proj = tiny::MathHelper::Identity4x4();
+			DirectX::XMFLOAT4X4 InvProj = tiny::MathHelper::Identity4x4();
+			DirectX::XMFLOAT4X4 ViewProj = tiny::MathHelper::Identity4x4();
+			DirectX::XMFLOAT4X4 InvViewProj = tiny::MathHelper::Identity4x4();
+			DirectX::XMFLOAT3 EyePosW = { 0.0f, 0.0f, 0.0f };
+			float cbPerObjectPad1 = 0.0f;
+			DirectX::XMFLOAT2 RenderTargetSize = { 0.0f, 0.0f };
+			DirectX::XMFLOAT2 InvRenderTargetSize = { 0.0f, 0.0f };
+			float NearZ = 0.0f;
+			float FarZ = 0.0f;
+			float TotalTime = 0.0f;
+			float DeltaTime = 0.0f;
 
-	DirectX::XMFLOAT4 AmbientLight = { 0.0f, 0.0f, 0.0f, 1.0f };
+			DirectX::XMFLOAT4 AmbientLight = { 0.0f, 0.0f, 0.0f, 1.0f };
 
-	DirectX::XMFLOAT4 FogColor = { 0.7f, 0.7f, 0.7f, 1.0f };
-	float gFogStart = 5.0f;
-	float gFogRange = 150.0f;
-	DirectX::XMFLOAT2 cbPerObjectPad2 = { 0.0f, 0.0f };
+			DirectX::XMFLOAT4 FogColor = { 0.7f, 0.7f, 0.7f, 1.0f };
+			float gFogStart = 5.0f;
+			float gFogRange = 150.0f;
+			DirectX::XMFLOAT2 cbPerObjectPad2 = { 0.0f, 0.0f };
 
-	// Indices [0, NUM_DIR_LIGHTS) are directional lights;
-	// indices [NUM_DIR_LIGHTS, NUM_DIR_LIGHTS+NUM_POINT_LIGHTS) are point lights;
-	// indices [NUM_DIR_LIGHTS+NUM_POINT_LIGHTS, NUM_DIR_LIGHTS+NUM_POINT_LIGHT+NUM_SPOT_LIGHTS)
-	// are spot lights for a maximum of MaxLights per object.
-	Light Lights[MaxLights];
-};
-
+			// Indices [0, NUM_DIR_LIGHTS) are directional lights;
+			// indices [NUM_DIR_LIGHTS, NUM_DIR_LIGHTS+NUM_POINT_LIGHTS) are point lights;
+			// indices [NUM_DIR_LIGHTS+NUM_POINT_LIGHTS, NUM_DIR_LIGHTS+NUM_POINT_LIGHT+NUM_SPOT_LIGHTS)
+			// are spot lights for a maximum of MaxLights per object.
+			Light Lights[MaxLights];
+		};
+	}
 class Waves;
 
 class LandAndWavesScene
@@ -101,7 +82,6 @@ public:
 private:
 	void LoadTextures();
 	void BuildLandAndWaterScene();
-	void BuildSkullAndMirrorScene();
 
 	std::shared_ptr<tiny::DeviceResources> m_deviceResources;
 
@@ -128,24 +108,22 @@ private:
 
 	// Render Data
 	tiny::RenderPass m_mainRenderPass;
-	std::unique_ptr<tiny::ConstantBufferT<PassConstants>> m_mainRenderPassConstantsCB = nullptr;
+	std::unique_ptr<tiny::ConstantBufferT<landandwaves::PassConstants>> m_mainRenderPassConstantsCB = nullptr;
 	std::unique_ptr<tiny::Shader> m_standardVS = nullptr;
 	std::unique_ptr<tiny::Shader> m_opaquePS = nullptr;
 	std::unique_ptr<tiny::Shader> m_alphaTestedPS = nullptr;
 	std::unique_ptr<tiny::InputLayout> m_inputLayout = nullptr;
 
 	// Grid
-	std::unique_ptr<tiny::ConstantBufferT<tiny::ObjectConstants>> m_gridObjectConstantsCB = nullptr;
-	std::unique_ptr<tiny::ConstantBufferT<tiny::Material>> m_gridMaterialCB = nullptr;
+	std::unique_ptr<GameObject> m_gridObject = nullptr;
+
 	// Box
-	std::unique_ptr<tiny::ConstantBufferT<tiny::ObjectConstants>> m_boxObjectConstantsCB = nullptr;
-	std::unique_ptr<tiny::ConstantBufferT<tiny::Material>> m_boxMaterialCB = nullptr;
+	std::unique_ptr<GameObject> m_boxObject = nullptr;
+
 	// Waves
+	std::unique_ptr<GameObject> m_wavesObject = nullptr;
 	std::unique_ptr<Waves> m_waves;
-	std::unique_ptr<tiny::ConstantBufferT<tiny::ObjectConstants>> m_wavesObjectConstantsCB = nullptr;
-	std::unique_ptr<tiny::ConstantBufferT<tiny::Material>> m_wavesMaterialCB = nullptr;
-	tiny::DynamicMeshGroupT<Vertex>* m_dynamicWaveMesh = nullptr;
-	tiny::RenderItem* m_wavesRI = nullptr;
+	tiny::DynamicMeshGroupT<landandwaves::Vertex>* m_dynamicWaveMesh = nullptr;
 
 	std::unique_ptr<tiny::RasterizerState> m_rasterizerState = nullptr;
 	std::unique_ptr<tiny::BlendState> m_blendState = nullptr;

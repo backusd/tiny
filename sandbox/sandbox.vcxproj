@@ -94,8 +94,9 @@
   <ItemGroup>
     <ClCompile Include="EntryPoint.cpp" />
     <ClCompile Include="src\facade\facade.cpp" />
-    <ClCompile Include="src\LandAndWavesScene.cpp" />
+    <ClCompile Include="src\LandAndWaves\LandAndWavesScene.cpp" />
     <ClCompile Include="src\SandboxApp.cpp" />
+    <ClCompile Include="src\SharedStuff.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\tiny-app\tiny-app.vcxproj">
@@ -107,8 +108,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\facade\facade.h" />
-    <ClInclude Include="src\LandAndWavesScene.h" />
+    <ClInclude Include="src\LandAndWaves\LandAndWavesScene.h" />
     <ClInclude Include="src\SandboxApp.h" />
+    <ClInclude Include="src\SharedStuff.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="src\shaders\color_ps.hlsl">
