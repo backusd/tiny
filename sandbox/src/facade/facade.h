@@ -30,21 +30,19 @@ namespace facade
 // Utility functions
 // ====================================================================================================
 // Return a reasonable mime type based on the extension of a file.
-beast::string_view mime_type(beast::string_view path);
+constexpr std::string_view mime_type(std::string_view path) noexcept;
 
 // Append an HTTP rel-path to a local filesystem path.
 // The returned path is normalized for the platform.
-std::string path_cat(beast::string_view base, beast::string_view path);
+constexpr std::string path_cat(std::string_view base, std::string_view path) noexcept;
 
 // Return a response for the given request.
-//
 // The concrete type of the response message (which depends on the request), is type-erased in message_generator.
 template <class Body, class Allocator>
-http::message_generator handle_request(beast::string_view doc_root, http::request<Body, http::basic_fields<Allocator>>&& req)
+http::message_generator handle_request(std::string_view doc_root, http::request<Body, http::basic_fields<Allocator>>&& req) noexcept
 {
     // Returns a bad request response
-    auto const bad_request =
-        [&req](beast::string_view why)
+    auto const bad_request = [&req](std::string_view why)
     {
         http::response<http::string_body> res{http::status::bad_request, req.version()};
         res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
@@ -56,40 +54,35 @@ http::message_generator handle_request(beast::string_view doc_root, http::reques
     };
 
     // Returns a not found response
-    auto const not_found =
-        [&req](beast::string_view target)
+    auto const not_found = [&req](std::string_view target)
     {
         http::response<http::string_body> res{http::status::not_found, req.version()};
         res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
         res.set(http::field::content_type, "text/html");
         res.keep_alive(req.keep_alive());
-        res.body() = "The resource '" + std::string(target) + "' was not found.";
+        res.body() = std::format("The resource '{}' was not found", target);
         res.prepare_payload();
         return res;
     };
 
     // Returns a server error response
-    auto const server_error =
-        [&req](beast::string_view what)
+    auto const server_error = [&req](std::string_view what)
     {
         http::response<http::string_body> res{http::status::internal_server_error, req.version()};
         res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
         res.set(http::field::content_type, "text/html");
         res.keep_alive(req.keep_alive());
-        res.body() = "An error occurred: '" + std::string(what) + "'";
+        res.body() = std::format("An error occurred: '{}'", what);
         res.prepare_payload();
         return res;
     };
 
     // Make sure we can handle the method
-    if (req.method() != http::verb::get &&
-        req.method() != http::verb::head)
+    if (req.method() != http::verb::get && req.method() != http::verb::head)
         return bad_request("Unknown HTTP-method");
 
     // Request path must be absolute and not contain "..".
-    if (req.target().empty() ||
-        req.target()[0] != '/' ||
-        req.target().find("..") != beast::string_view::npos)
+    if (req.target().empty() || req.target()[0] != '/' || req.target().find("..") != beast::string_view::npos)
         return bad_request("Illegal request-target");
 
     // Build the path to the requested file
@@ -125,10 +118,7 @@ http::message_generator handle_request(beast::string_view doc_root, http::reques
     }
 
     // Respond to GET request
-    http::response<http::file_body> res{
-        std::piecewise_construct,
-            std::make_tuple(std::move(body)),
-            std::make_tuple(http::status::ok, req.version())};
+    http::response<http::file_body> res{std::piecewise_construct, std::make_tuple(std::move(body)), std::make_tuple(http::status::ok, req.version())};
     res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
     res.set(http::field::content_type, mime_type(path));
     res.content_length(size);
@@ -156,17 +146,17 @@ public:
 	static concurrency::critical_section& GetCriticalSection() { return Get().GetCriticalSectionImpl(); }
 
 private:
-	UI();
+	UI() noexcept;
 	UI(UI&&) = delete;
 	UI& operator=(UI&&) = delete;
 	UI(const UI&) = delete;
 	UI& operator=(const UI&) = delete;
-	~UI() {}
+	~UI() noexcept {}
 
-	static UI& Get() { static UI ui; return ui; }
+	static UI& Get() noexcept { static UI ui; return ui; }
 
-	void StartUIThread();
-	void SetMsgHandlerImpl(const std::string& key, std::function<void(const json&)> func);
+	void StartUIThread() noexcept;
+	void SetMsgHandlerImpl(const std::string& key, std::function<void(const json&)> func) noexcept;
 
 	// This template method is really just a helper method that does a struct -> json conversion
 	// and then sends the json string representation to the WebSocketSession (Note: the string template
@@ -186,20 +176,19 @@ private:
 	void HandleMessageImpl(const std::string& message);
 	void HandleMessageImpl(std::string&& message);
 
-	static void SetHTTPSession(boost::shared_ptr<HTTPSession> session) { Get().SetHTTPSessionImpl(session); }
-	void SetHTTPSessionImpl(boost::shared_ptr<HTTPSession> session) { m_httpSession = session; }
-	static void SetWebSocketSession(boost::shared_ptr<WebSocketSession> session) { Get().SetWebSocketSessionImpl(session); }
-	void SetWebSocketSessionImpl(boost::shared_ptr<WebSocketSession> session) { m_webSocketSession = session; }
+	static void SetHTTPSession(std::shared_ptr<HTTPSession> session) { Get().SetHTTPSessionImpl(session); }
+	void SetHTTPSessionImpl(std::shared_ptr<HTTPSession> session) { m_httpSession = session; }
+	static void SetWebSocketSession(std::shared_ptr<WebSocketSession> session) { Get().SetWebSocketSessionImpl(session); }
+	void SetWebSocketSessionImpl(std::shared_ptr<WebSocketSession> session) { m_webSocketSession = session; }
 	
 	// The io_context is required for all I/O
 	net::io_context m_ioc;
-	boost::shared_ptr<HTTPSession> m_httpSession;
-	boost::shared_ptr<WebSocketSession> m_webSocketSession;
+	std::shared_ptr<HTTPSession> m_httpSession;
+	std::shared_ptr<WebSocketSession> m_webSocketSession;
 
 	concurrency::critical_section m_criticalSection;
 
 	std::unordered_map<std::string, std::function<void(const json&)>> m_handlers;
-
 
 	friend Listener;
 	friend HTTPSession;
@@ -216,35 +205,43 @@ void UI::SendMsgImpl<std::string>(const std::string& data);
 // ====================================================================================================
 // Listener
 // ====================================================================================================
-class Listener : public boost::enable_shared_from_this<Listener>
+class Listener : public std::enable_shared_from_this<Listener>
 {
 public:
-	Listener(UI* ui, net::io_context& ioc, tcp::endpoint endpoint);
+	Listener(UI* ui, net::io_context& ioc, tcp::endpoint endpoint) noexcept;
 
 	// Start accepting incoming connections
-	void Run();
+    void Run() noexcept; // Just mark this noexcept for now because I can't figure out if/what async_accept will throw
 
 private:
 	net::io_context& m_ioc;
 	tcp::acceptor m_acceptor;
 	UI* m_ui;
 
-	void Fail(beast::error_code ec, char const* what);
+	void Fail(beast::error_code ec, char const* what) const noexcept;
 	void OnAccept(beast::error_code ec, tcp::socket socket);
 };
 
 // ====================================================================================================
 // HTTPSession
 // ====================================================================================================
-class HTTPSession : public boost::enable_shared_from_this<HTTPSession>
+class HTTPSession : public std::enable_shared_from_this<HTTPSession>
 {
 public:
-    HTTPSession(UI* ui, tcp::socket&& socket);
+    HTTPSession(UI* ui, tcp::socket&& socket) noexcept;
+    ~HTTPSession() noexcept {}
 
     void Run();
 
 private:
-    void Fail(beast::error_code ec, char const* what);
+    HTTPSession(const HTTPSession&) = delete;
+    HTTPSession& operator=(const HTTPSession&) = delete;
+    HTTPSession(HTTPSession&&) = delete;
+    HTTPSession& operator=(HTTPSession&&) = delete;
+    
+
+
+    void Fail(beast::error_code ec, char const* what) const noexcept;
     void DoRead();
     void OnRead(beast::error_code ec, std::size_t);
     void OnWrite(beast::error_code ec, std::size_t, bool close);
@@ -255,17 +252,17 @@ private:
 
     // The parser is stored in an optional container so we can
     // construct it from scratch it at the beginning of each new message.
-    boost::optional<http::request_parser<http::string_body>> m_parser;
+    std::optional<http::request_parser<http::string_body>> m_parser;
 };
 
 // ====================================================================================================
 // WebSocketSession
 // ====================================================================================================
-class WebSocketSession : public boost::enable_shared_from_this<WebSocketSession>
+class WebSocketSession : public std::enable_shared_from_this<WebSocketSession>
 {
 public:
-    WebSocketSession(UI* ui, tcp::socket&& socket);
-    ~WebSocketSession();
+    WebSocketSession(UI* ui, tcp::socket&& socket) noexcept;
+    ~WebSocketSession() noexcept {}
 
     template<class Body, class Allocator>
     void Run(http::request<Body, http::basic_fields<Allocator>> req);
@@ -274,9 +271,15 @@ public:
     void Send(const std::string& msg);
 
 private:
+    WebSocketSession(const WebSocketSession&) = delete;
+    WebSocketSession& operator=(const WebSocketSession&) = delete;
+    WebSocketSession(WebSocketSession&&) = delete;
+    WebSocketSession& operator=(WebSocketSession&&) = delete;
+    
+
     void OnSend(const std::string& msg);
 
-    void Fail(beast::error_code ec, char const* what);
+    void Fail(beast::error_code ec, char const* what) const noexcept;
     void OnAccept(beast::error_code ec);
     void OnRead(beast::error_code ec, std::size_t bytes_transferred);
     void OnWrite(beast::error_code ec, std::size_t bytes_transferred);

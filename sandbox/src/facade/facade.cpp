@@ -9,44 +9,44 @@ namespace facade
 // ====================================================================================================
 // Utility functions
 // ====================================================================================================
- // Return a reasonable mime type based on the extension of a file.
-beast::string_view mime_type(beast::string_view path)
+// Return a reasonable mime type based on the extension of a file.
+constexpr std::string_view mime_type(std::string_view path) noexcept
 {
-    using beast::iequals;
-    auto const ext = [&path]
+    auto const pos = path.rfind("."); 
+    if (pos == std::string_view::npos)
     {
-        auto const pos = path.rfind(".");
-        if (pos == beast::string_view::npos)
-            return beast::string_view{};
-        return path.substr(pos);
-    }();
-    if (iequals(ext, ".htm"))  return "text/html";
-    if (iequals(ext, ".html")) return "text/html";
-    if (iequals(ext, ".php"))  return "text/html";
-    if (iequals(ext, ".css"))  return "text/css";
-    if (iequals(ext, ".txt"))  return "text/plain";
-    if (iequals(ext, ".js"))   return "application/javascript";
-    if (iequals(ext, ".json")) return "application/json";
-    if (iequals(ext, ".xml"))  return "application/xml";
-    if (iequals(ext, ".swf"))  return "application/x-shockwave-flash";
-    if (iequals(ext, ".flv"))  return "video/x-flv";
-    if (iequals(ext, ".png"))  return "image/png";
-    if (iequals(ext, ".jpe"))  return "image/jpeg";
-    if (iequals(ext, ".jpeg")) return "image/jpeg";
-    if (iequals(ext, ".jpg"))  return "image/jpeg";
-    if (iequals(ext, ".gif"))  return "image/gif";
-    if (iequals(ext, ".bmp"))  return "image/bmp";
-    if (iequals(ext, ".ico"))  return "image/vnd.microsoft.icon";
-    if (iequals(ext, ".tiff")) return "image/tiff";
-    if (iequals(ext, ".tif"))  return "image/tiff";
-    if (iequals(ext, ".svg"))  return "image/svg+xml";
-    if (iequals(ext, ".svgz")) return "image/svg+xml";
+        // If there is no '.', then return early with "application/text"
+        return "application/text";
+    }
+    const auto ext = path.substr(pos);
+
+    if (ext == ".htm")  return "text/html";
+    if (ext == ".html") return "text/html";
+    if (ext == ".php")  return "text/html";
+    if (ext == ".css")  return "text/css";
+    if (ext == ".txt")  return "text/plain";
+    if (ext == ".js")   return "application/javascript";
+    if (ext == ".json") return "application/json";
+    if (ext == ".xml")  return "application/xml";
+    if (ext == ".swf")  return "application/x-shockwave-flash";
+    if (ext == ".flv")  return "video/x-flv";
+    if (ext == ".png")  return "image/png";
+    if (ext == ".jpe")  return "image/jpeg";
+    if (ext == ".jpeg") return "image/jpeg";
+    if (ext == ".jpg")  return "image/jpeg";
+    if (ext == ".gif")  return "image/gif";
+    if (ext == ".bmp")  return "image/bmp";
+    if (ext == ".ico")  return "image/vnd.microsoft.icon";
+    if (ext == ".tiff") return "image/tiff";
+    if (ext == ".tif")  return "image/tiff";
+    if (ext == ".svg")  return "image/svg+xml";
+    if (ext == ".svgz") return "image/svg+xml";
     return "application/text";
 }
 
 // Append an HTTP rel-path to a local filesystem path.
 // The returned path is normalized for the platform.
-std::string path_cat(beast::string_view base, beast::string_view path)
+constexpr std::string path_cat(std::string_view base, std::string_view path) noexcept
 {
     if (base.empty())
         return std::string(path);
@@ -71,77 +71,125 @@ std::string path_cat(beast::string_view base, beast::string_view path)
 // ====================================================================================================
 // UI
 // ====================================================================================================
-UI::UI()
+UI::UI() noexcept
 {
     // Kick off the UI thread and detach it so we don't have to wait on it
     // It will run persistantly in the background
     //std::thread uiThread(&UI::StartUIThread, this); <-- NOTE: do NOT use this, it does not work for some reason. Seems to not actually create a new thread.
 
-    std::thread uiThread([this]() { StartUIThread(); });
-    uiThread.detach();
+    try
+    {
+        std::thread uiThread([this]() { StartUIThread(); });
+        uiThread.detach();
+    }
+    catch (std::system_error& e)
+    {
+        LOG_ERROR("Trying to detach the UI thread threw std::system_error. Details: {}", e.what());
+    }
+    catch (std::exception& e)
+    {
+        LOG_ERROR("Trying to launch the UI thread threw a std::exception. Details: {}", e.what());
+    }
+    catch (...)
+    {
+        LOG_ERROR("{}", "Trying to launch the UI thread threw an unknown exception. No details.");
+    }
 }
 
-void UI::StartUIThread()
+void UI::StartUIThread() noexcept
 {
-    // Create a scope for the scoped lock
+    try
     {
-        // Hold the critical section until we call ioc.run()
-        concurrency::critical_section::scoped_lock lock(m_criticalSection);
-
-        const char* ip = "0.0.0.0";
-        auto address = net::ip::make_address(ip);
-        unsigned short port = 8080;
-
-        // Create and launch a listening port
-        boost::make_shared<Listener>(this, m_ioc, tcp::endpoint{ address, port })->Run();       
-    }
-
-    // NOTE: do NOT call signals.async_await() in an enclosing scope such that it goes out of scope before
-    //       calling ioc.run(). If you do this, I'm not sure if SIGINT/SIGTERM is sent, but either way, the lambda
-    //       is called which calls ioc.stop(). This results in the ioc threads immediately finishing
-    // 
-    // Capture SIGINT and SIGTERM to perform a clean shutdown
-    net::signal_set signals(m_ioc, SIGINT, SIGTERM);
-    signals.async_wait(
-        [this](boost::system::error_code const&, int)
+        // Create a scope for the scoped lock
         {
-            // Stop the io_context. This will cause run()
-            // to return immediately, eventually destroying the
-            // io_context and any remaining handlers in it.
-            m_ioc.stop();
+            // Hold the critical section until we call ioc.run()
+            concurrency::critical_section::scoped_lock lock(m_criticalSection);
+
+            const char* ip = "0.0.0.0";
+            auto address = net::ip::make_address(ip);
+            unsigned short port = 8080;
+
+            // Create and launch a listening port
+            std::make_shared<Listener>(this, m_ioc, tcp::endpoint{ address, port })->Run();
         }
-    );
 
-    // Run the I/O service on the requested number of threads
-    auto const threads = 2;
-    LOG_INFO("FACADE - Calling ioc.run() on {} threads", threads); 
-
-    std::vector<std::thread> v;
-    v.reserve(threads - 1);
-    for (auto i = threads - 1; i > 0; --i)
-        v.emplace_back(
-            [this]
+        // NOTE: do NOT call signals.async_await() in an enclosing scope such that it goes out of scope before
+        //       calling ioc.run(). If you do this, I'm not sure if SIGINT/SIGTERM is sent, but either way, the lambda
+        //       is called which calls ioc.stop(). This results in the ioc threads immediately finishing
+        // 
+        // Capture SIGINT and SIGTERM to perform a clean shutdown
+        net::signal_set signals(m_ioc, SIGINT, SIGTERM);
+        signals.async_wait(
+            [this](boost::system::error_code const&, int)
             {
-                m_ioc.run();
-            });
-    m_ioc.run();
+                // Stop the io_context. This will cause run()
+                // to return immediately, eventually destroying the
+                // io_context and any remaining handlers in it.
+                m_ioc.stop();
+            }
+        );
 
-    // (If we get here, it means we got a SIGINT or SIGTERM)
-    //
-    // Block until all the threads exit
-    for (auto& t : v)
-        t.join();
+        // Run the I/O service on the requested number of threads
+        auto const threads = 2;
+        LOG_INFO("FACADE - Calling ioc.run() on {} threads", threads);
 
-    LOG_INFO("{}", "FACADE - All ioc threads have finished executing");
+        std::vector<std::thread> v;
+        v.reserve(threads - 1);
+        for (auto i = threads - 1; i > 0; --i)
+            v.emplace_back(
+                [this]
+                {
+                    m_ioc.run();
+                });
+        m_ioc.run();
+
+        // (If we get here, it means we got a SIGINT or SIGTERM)
+        //
+        // Block until all the threads exit
+        for (auto& t : v)
+            t.join();
+
+        LOG_INFO("{}", "FACADE - All ioc threads have finished executing");
+    }
+    catch (const std::exception& e)
+    {
+        LOG_ERROR("{}", "Caught std::exception on the UI thread:");
+        LOG_ERROR("Type: {}", "Standard Exception");
+        LOG_ERROR("Details: {}", e.what());
+    }
+    catch (...)
+    {
+        LOG_ERROR("{}", "Caught exception on the UI thread:");
+        LOG_ERROR("Type: {}", "Unknown");
+        LOG_ERROR("Details: {}", "No details available");
+    }
+}
+
+void UI::SetMsgHandlerImpl(const std::string& key, std::function<void(const json&)> func) noexcept
+{
+    if (key.size() > 0) LIKELY
+    {
+        // Get control of the critical section before adding a handler
+        concurrency::critical_section::scoped_lock lock(m_criticalSection);
+        m_handlers[key] = func;
+    }
+    else UNLIKELY
+    {
+        LOG_ERROR("{}", "It is an error to call UI::SetMsgHandlerImpl with an empty key");
+    }
 }
 
 // Specialize the string template because this is the template that will do the actual sending of data
 template<>
 void UI::SendMsgImpl<std::string>(const std::string& data)
 {
-    if (m_webSocketSession != nullptr)
+    if (m_webSocketSession != nullptr) LIKELY
     {
         m_webSocketSession->Send(data);
+    }
+    else UNLIKELY
+    {
+        LOG_WARN("Attempting to send data over websocket, but there is no websocket session. Data: {}", data);
     }
 }
 
@@ -152,14 +200,14 @@ void UI::HandleMessageImpl(const std::string& message)
         json data = json::parse(message);
         std::cout << "json: " << data.dump(4) << std::endl;
 
-        if (!data.contains("type"))
-            throw std::exception::exception("JSON data does not contain 'type' key");
+        if (!data.contains("type")) UNLIKELY
+            throw std::exception::exception(std::format("{}:{} - Incoming JSON data does not contain 'type' key", __FILE__, __LINE__).c_str());
 
         std::string type = data["type"].get<std::string>();
 
-        if (m_handlers.find(type) == m_handlers.end())
+        if (m_handlers.find(type) == m_handlers.end()) UNLIKELY
             std::cout << std::format("WARNING: No handler with type = {}", type) << std::endl;
-        else
+        else LIKELY
         {
             // Get control of the critical section before executing the handler
             concurrency::critical_section::scoped_lock lock(m_criticalSection);
@@ -177,18 +225,13 @@ void UI::HandleMessageImpl(std::string&& message)
     HandleMessageImpl(s);
 }
 
-void UI::SetMsgHandlerImpl(const std::string& key, std::function<void(const json&)> func)
-{
-    // Get control of the critical section before adding a handler
-    concurrency::critical_section::scoped_lock lock(m_criticalSection);
-    m_handlers[key] = func;
-}
+
 
 
 // ====================================================================================================
 // Listener
 // ====================================================================================================
-Listener::Listener(UI* ui, net::io_context& ioc, tcp::endpoint endpoint) :
+Listener::Listener(UI* ui, net::io_context& ioc, tcp::endpoint endpoint) noexcept :
     m_ui(ui),
     m_ioc(ioc),
     m_acceptor(ioc)
@@ -197,7 +240,7 @@ Listener::Listener(UI* ui, net::io_context& ioc, tcp::endpoint endpoint) :
 
     // Open the acceptor
     m_acceptor.open(endpoint.protocol(), ec);
-    if (ec)
+    if (ec) UNLIKELY
     {
         Fail(ec, "open");
         return;
@@ -205,7 +248,7 @@ Listener::Listener(UI* ui, net::io_context& ioc, tcp::endpoint endpoint) :
 
     // Allow address reuse
     m_acceptor.set_option(net::socket_base::reuse_address(true), ec);
-    if (ec)
+    if (ec) UNLIKELY
     {
         Fail(ec, "set_option");
         return;
@@ -213,16 +256,15 @@ Listener::Listener(UI* ui, net::io_context& ioc, tcp::endpoint endpoint) :
 
     // Bind to the server address
     m_acceptor.bind(endpoint, ec);
-    if (ec)
+    if (ec) UNLIKELY
     {
         Fail(ec, "bind");
         return;
     }
 
     // Start listening for connections
-    m_acceptor.listen(
-        net::socket_base::max_listen_connections, ec);
-    if (ec)
+    m_acceptor.listen(net::socket_base::max_listen_connections, ec);
+    if (ec) UNLIKELY
     {
         Fail(ec, "listen");
         return;
@@ -231,7 +273,7 @@ Listener::Listener(UI* ui, net::io_context& ioc, tcp::endpoint endpoint) :
     LOG_INFO("FACADE - Listening on {}:{}", endpoint.address().to_string(), endpoint.port());
 }
 
-void Listener::Run()
+void Listener::Run() noexcept // Just mark this noexcept for now because I can't figure out if/what async_accept will throw
 {
     // The new connection gets its own strand
     m_acceptor.async_accept(
@@ -244,23 +286,23 @@ void Listener::Run()
 }
 
 // Report a failure
-void Listener::Fail(beast::error_code ec, char const* what)
+void Listener::Fail(beast::error_code ec, char const* what) const noexcept
 {
     // Don't report on canceled operations
-    if (ec == net::error::operation_aborted)
+    if (ec == net::error::operation_aborted) LIKELY
         return;
-    LOG_ERROR("{}: {}", what, ec.message());
+    LOG_ERROR("{}:{} - {}: {}", __FILE__, __LINE__, what, ec.message());
 }
 
 // Handle a connection
 void Listener::OnAccept(beast::error_code ec, tcp::socket socket)
 {
-    if (ec)
+    if (ec) UNLIKELY
         return Fail(ec, "accept");
-    else
+    else LIKELY
     {
         // Launch a new session for this connection
-        boost::shared_ptr<HTTPSession> session = boost::make_shared<HTTPSession>(m_ui, std::move(socket));
+        std::shared_ptr<HTTPSession> session = std::make_shared<HTTPSession>(m_ui, std::move(socket));
         UI::SetHTTPSession(session);
         session->Run();
     }
@@ -278,10 +320,12 @@ void Listener::OnAccept(beast::error_code ec, tcp::socket socket)
 // ====================================================================================================
 // HTTPSession
 // ====================================================================================================
-HTTPSession::HTTPSession(UI* ui, tcp::socket&& socket) :
+HTTPSession::HTTPSession(UI* ui, tcp::socket&& socket) noexcept :
     m_ui(ui),
     m_stream(std::move(socket))
-{}
+{
+    TINY_ASSERT(m_ui != nullptr, "UI should not be nullptr");
+}
 
 void HTTPSession::Run()
 {
@@ -289,10 +333,10 @@ void HTTPSession::Run()
 }
 
 // Report a failure
-void HTTPSession::Fail(beast::error_code ec, char const* what)
+void HTTPSession::Fail(beast::error_code ec, char const* what) const noexcept
 {
     // Don't report on canceled operations
-    if (ec == net::error::operation_aborted)
+    if (ec == net::error::operation_aborted) LIKELY
         return;
 
     std::cerr << what << ": " << ec.message() << "\n";
@@ -317,28 +361,32 @@ void HTTPSession::DoRead()
         m_parser->get(),
         beast::bind_front_handler(
             &HTTPSession::OnRead,
-            shared_from_this()));
+            shared_from_this()
+        )
+    );
 }
 
 void HTTPSession::OnRead(beast::error_code ec, std::size_t)
 {
     // This means they closed the connection
-    if (ec == http::error::end_of_stream)
+    if (ec == http::error::end_of_stream) UNLIKELY
     {
         m_stream.socket().shutdown(tcp::socket::shutdown_send, ec);
         return;
     }
 
     // Handle the error, if any
-    if (ec)
+    if (ec) UNLIKELY
         return Fail(ec, "read");
 
     // See if it is a WebSocket Upgrade
-    if (websocket::is_upgrade(m_parser->get()))
+    if (websocket::is_upgrade(m_parser->get())) UNLIKELY
     {
+        TINY_ASSERT(m_ui != nullptr, "UI should not be nullptr");
+
         // Create a websocket session, transferring ownership
         // of both the socket and the HTTP request.
-        boost::shared_ptr<WebSocketSession> session = boost::make_shared<WebSocketSession>(m_ui, m_stream.release_socket());
+        std::shared_ptr<WebSocketSession> session = std::make_shared<WebSocketSession>(m_ui, m_stream.release_socket());
         UI::SetWebSocketSession(session);
         session->Run(m_parser->release());
         return;
@@ -359,16 +407,17 @@ void HTTPSession::OnRead(beast::error_code ec, std::size_t)
         [self, keep_alive](beast::error_code ec, std::size_t bytes)
         {
             self->OnWrite(ec, bytes, keep_alive);
-        });
+        }
+    );
 }
 
 void HTTPSession::OnWrite(beast::error_code ec, std::size_t, bool keep_alive)
 {
     // Handle the error, if any
-    if (ec)
+    if (ec) UNLIKELY
         return Fail(ec, "write");
 
-    if (!keep_alive)
+    if (!keep_alive) UNLIKELY
     {
         // This means we should close the connection, usually because
         // the response indicated the "Connection: close" semantic.
@@ -384,21 +433,17 @@ void HTTPSession::OnWrite(beast::error_code ec, std::size_t, bool keep_alive)
 // ====================================================================================================
 // WebSocketSession
 // ====================================================================================================
-WebSocketSession::WebSocketSession(UI* ui, tcp::socket&& socket) :
+WebSocketSession::WebSocketSession(UI* ui, tcp::socket&& socket) noexcept :
     m_ui(ui),
     m_ws(std::move(socket))
-{}
-
-WebSocketSession::~WebSocketSession()
 {
-
+    TINY_ASSERT(m_ui != nullptr, "UI should not be nullptr");
 }
 
-void WebSocketSession::Fail(beast::error_code ec, char const* what)
+void WebSocketSession::Fail(beast::error_code ec, char const* what) const noexcept
 {
     // Don't report these
-    if (ec == net::error::operation_aborted ||
-        ec == websocket::error::closed)
+    if (ec == net::error::operation_aborted || ec == websocket::error::closed) LIKELY
         return;
 
     std::cerr << what << ": " << ec.message() << "\n";
@@ -407,7 +452,7 @@ void WebSocketSession::Fail(beast::error_code ec, char const* what)
 void WebSocketSession::OnAccept(beast::error_code ec)
 {
     // Handle the error, if any
-    if (ec)
+    if (ec) LIKELY
         return Fail(ec, "accept");
 
     // Read a message
@@ -415,13 +460,15 @@ void WebSocketSession::OnAccept(beast::error_code ec)
         m_buffer,
         beast::bind_front_handler(
             &WebSocketSession::OnRead,
-            shared_from_this()));
+            shared_from_this()
+        )
+    );
 }
 
 void WebSocketSession::OnRead(beast::error_code ec, std::size_t)
 {
     // Handle the error, if any
-    if (ec)
+    if (ec) UNLIKELY
         return Fail(ec, "read");
 
     // Send the message to the UI so it can be handled
@@ -457,12 +504,10 @@ void WebSocketSession::Send(const std::string& msg)
 void WebSocketSession::OnSend(const std::string& msg)
 {
     // Always add to queue
-    //m_queue.push_back(ss);
-    //m_queue.push_back(_s);
     m_queue.push_back(msg);
 
     // Are we already writing?
-    if (m_queue.size() > 1)
+    if (m_queue.size() > 1) UNLIKELY
         return;
 
     // We are not currently writing, so send this immediately
@@ -476,14 +521,14 @@ void WebSocketSession::OnSend(const std::string& msg)
 void WebSocketSession::OnWrite(beast::error_code ec, std::size_t)
 {
     // Handle the error, if any
-    if (ec)
+    if (ec) UNLIKELY
         return Fail(ec, "write");
 
     // Remove the string from the queue
     m_queue.erase(m_queue.begin());
 
     // Send the next message if any
-    if (!m_queue.empty())
+    if (!m_queue.empty()) LIKELY
     {
         m_ws.async_write(
             net::buffer(m_queue.front()),

@@ -10,19 +10,31 @@
 	<script src="scripts/main.js" defer></script>
 </head>
 <body>
-	<h1>Sandbox UI</h1>
+	<div id="master-container">
+		<div id="upper-container">
+			<button>Suck me</button>
+			<button>Suck me twice</button>
+			<button>Suck me thrice</button>
+		</div>
+		<div id="lower-container">
+			<p>Baby!</p>
+			<p>Baby!</p>
+		</div>
+	</div>
 
-	<input type="range" min="1" max="100" value="50" class="slider" id="sliderControl">
-	<p>Value: <span id="sliderText"></span></p>
-
-	<p>Web Socket State: <span id="wsState"></span></p>
 
 
-	<button id="wsConnect">Connect WebSocket</button>
+	<!--
+		<h1>Sandbox UI</h1>
 
-	<div id="div1"><h2>Nothing loaded</h2></div>
+		<input type="range" min="1" max="100" value="50" class="slider" id="sliderControl">
+		<p>Value: <span id="sliderText"></span></p>
 
-	<button id="loadButton">Get External Content</button>
+		<p>Web Socket State: <span id="wsState"></span></p>
 
+		<div id="div1"><h2>Nothing loaded</h2></div>
+
+		<button id="loadButton">Get External Content</button>
+	-->
 </body>
 </html>
