@@ -124,6 +124,7 @@ private:
 
 	// Main Render Pass
 	tiny::RenderPass m_mainRenderPass;
+	stencilexample::PassConstants m_passConstants;
 	std::unique_ptr<tiny::ConstantBufferT<stencilexample::PassConstants>> m_mainRenderPassConstantsCB = nullptr;
 	
 	std::unique_ptr<tiny::RasterizerState> m_opaqueRasterizerState = nullptr;
@@ -135,10 +136,14 @@ private:
 	std::unique_ptr<tiny::DepthStencilState> m_mirrorDepthStencilState = nullptr;
 
 	// Reflected Render Pass
-//	tiny::RenderPass m_reflectedRenderPass;
-//	std::unique_ptr<tiny::ConstantBufferT<stencilexample::PassConstants>> m_reflectedRenderPassConstantsCB = nullptr;
-//
-//	// Draw Mirror and Shadows Pass (Note: this pass will re-use the mainRenderPassConstantsCB)
+	tiny::RenderPass m_reflectedRenderPass;
+	std::unique_ptr<tiny::ConstantBufferT<stencilexample::PassConstants>> m_reflectedRenderPassConstantsCB = nullptr;
+
+	std::unique_ptr<tiny::RasterizerState> m_reflectedRasterizerState = nullptr;
+	std::unique_ptr<tiny::BlendState> m_reflectedBlendState = nullptr;
+	std::unique_ptr<tiny::DepthStencilState> m_reflectedDepthStencilState = nullptr;
+
+	// Draw Mirror and Shadows Pass (Note: this pass will re-use the mainRenderPassConstantsCB)
 //	tiny::RenderPass m_mirrorAndShadowsRenderPass;
 
 
@@ -147,6 +152,7 @@ private:
 	std::unique_ptr<GameObject> m_floorObject = nullptr;
 	std::unique_ptr<GameObject> m_wallObject = nullptr;
 	std::unique_ptr<GameObject> m_skullObject = nullptr;
+	std::unique_ptr<GameObject> m_reflectedSkullObject = nullptr;
 
 	std::unique_ptr<GameObject> m_mirrorObject = nullptr;
 

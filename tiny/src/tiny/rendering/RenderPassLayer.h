@@ -66,7 +66,7 @@ public:
 	std::vector<RenderItem> RenderItems;
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> PipelineState;
 	D3D12_PRIMITIVE_TOPOLOGY Topology;
-	std::unique_ptr<MeshGroup> Meshes;
+	std::shared_ptr<MeshGroup> Meshes; // shared_ptr because it is possible (if not likely) that different layers will want to reference the same mesh
 
 	// Name (for debug/profiling purposes)
 	std::string Name = "Unnamed RenderPassLayer";

@@ -212,7 +212,7 @@ void LandAndWavesScene::BuildLandAndWaterScene()
 	std::vector<std::vector<std::uint16_t>> allIndices;
 	allIndices.push_back(std::move(indices));
 
-	opaqueLayer.Meshes = std::make_unique<MeshGroupT<Vertex>>(m_deviceResources, allVertices, allIndices);
+	opaqueLayer.Meshes = std::make_shared<MeshGroupT<Vertex>>(m_deviceResources, allVertices, allIndices);
 
 	// Render Items
 	m_gridObject = std::make_unique<GameObject>(m_deviceResources); // Create the grid (NOTE: This does NOT create a RenderItem)
@@ -266,7 +266,7 @@ void LandAndWavesScene::BuildLandAndWaterScene()
 	std::vector<std::vector<std::uint16_t>> allBoxIndices;
 	allBoxIndices.push_back(std::move(boxIndices));
 
-	alphaTestLayer.Meshes = std::make_unique<MeshGroupT<Vertex>>(m_deviceResources, allBoxVertices, allBoxIndices);
+	alphaTestLayer.Meshes = std::make_shared<MeshGroupT<Vertex>>(m_deviceResources, allBoxVertices, allBoxIndices);
 
 	// Render Items
 	m_boxObject = std::make_unique<GameObject>(m_deviceResources); // Create the box (NOTE: This does NOT create a RenderItem)
@@ -353,7 +353,7 @@ void LandAndWavesScene::BuildLandAndWaterScene()
 		}
 	);
 
-	transparentLayer.Meshes = std::make_unique<DynamicMeshGroupT<Vertex>>(m_deviceResources, std::move(waveVertices), std::move(waveIndices));
+	transparentLayer.Meshes = std::make_shared<DynamicMeshGroupT<Vertex>>(m_deviceResources, std::move(waveVertices), std::move(waveIndices));
 	m_dynamicWaveMesh = static_cast<DynamicMeshGroupT<Vertex>*>(transparentLayer.Meshes.get());
 
 	// Render Items

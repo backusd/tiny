@@ -12,8 +12,8 @@ namespace sandbox
 {
 StencilExample::StencilExample(std::shared_ptr<DeviceResources> deviceResources) :
 	m_deviceResources(deviceResources),
-	m_mainRenderPass()
-//	m_reflectedRenderPass(),
+	m_mainRenderPass(),
+	m_reflectedRenderPass()
 //	m_mirrorAndShadowsRenderPass()
 {
 	PROFILE_SCOPE("StencilExample()");
@@ -103,7 +103,7 @@ void StencilExample::BuildMainRenderPass()
 
 	// Add name for debug/profiling purposes
 	m_mainRenderPass.Name = "Main Render Pass";
-	m_mainRenderPass.RenderPassLayers.reserve(3);
+	m_mainRenderPass.RenderPassLayers.reserve(2);
 
 	// Root Signature --------------------------------------------------------------------------------
 	CD3DX12_DESCRIPTOR_RANGE texTable;
@@ -148,48 +148,46 @@ void StencilExample::BuildMainRenderPass()
 		_det = DirectX::XMMatrixDeterminant(viewProj);
 		DirectX::XMMATRIX invViewProj = DirectX::XMMatrixInverse(&_det, viewProj);
 
-		PassConstants passConstants;
+		DirectX::XMStoreFloat4x4(&m_passConstants.View, DirectX::XMMatrixTranspose(view));
+		DirectX::XMStoreFloat4x4(&m_passConstants.InvView, DirectX::XMMatrixTranspose(invView));
+		DirectX::XMStoreFloat4x4(&m_passConstants.Proj, DirectX::XMMatrixTranspose(proj));
+		DirectX::XMStoreFloat4x4(&m_passConstants.InvProj, DirectX::XMMatrixTranspose(invProj));
+		DirectX::XMStoreFloat4x4(&m_passConstants.ViewProj, DirectX::XMMatrixTranspose(viewProj));
+		DirectX::XMStoreFloat4x4(&m_passConstants.InvViewProj, DirectX::XMMatrixTranspose(invViewProj));
 
-		DirectX::XMStoreFloat4x4(&passConstants.View, DirectX::XMMatrixTranspose(view));
-		DirectX::XMStoreFloat4x4(&passConstants.InvView, DirectX::XMMatrixTranspose(invView));
-		DirectX::XMStoreFloat4x4(&passConstants.Proj, DirectX::XMMatrixTranspose(proj));
-		DirectX::XMStoreFloat4x4(&passConstants.InvProj, DirectX::XMMatrixTranspose(invProj));
-		DirectX::XMStoreFloat4x4(&passConstants.ViewProj, DirectX::XMMatrixTranspose(viewProj));
-		DirectX::XMStoreFloat4x4(&passConstants.InvViewProj, DirectX::XMMatrixTranspose(invViewProj));
-
-		passConstants.EyePosW = m_camera.GetPosition3f();
+		m_passConstants.EyePosW = m_camera.GetPosition3f();
 
 		float height = static_cast<float>(m_deviceResources->GetHeight());
 		float width = static_cast<float>(m_deviceResources->GetWidth());
 
-		passConstants.RenderTargetSize = DirectX::XMFLOAT2(width, height);
-		passConstants.InvRenderTargetSize = DirectX::XMFLOAT2(1.0f / width, 1.0f / height);
-		passConstants.NearZ = 1.0f;
-		passConstants.FarZ = 1000.0f;
-		passConstants.TotalTime = timer.TotalTime();
-		passConstants.DeltaTime = timer.DeltaTime();
+		m_passConstants.RenderTargetSize = DirectX::XMFLOAT2(width, height);
+		m_passConstants.InvRenderTargetSize = DirectX::XMFLOAT2(1.0f / width, 1.0f / height);
+		m_passConstants.NearZ = 1.0f;
+		m_passConstants.FarZ = 1000.0f;
+		m_passConstants.TotalTime = timer.TotalTime();
+		m_passConstants.DeltaTime = timer.DeltaTime();
 
-		passConstants.AmbientLight = { 0.25f, 0.25f, 0.35f, 1.0f };
+		m_passConstants.AmbientLight = { 0.25f, 0.25f, 0.35f, 1.0f };
 
-		passConstants.FogColor = { 0.7f, 0.7f, 0.7f, 1.0f };
-		passConstants.gFogStart = 5.0f;
-		passConstants.gFogRange = 150.0f;
+		m_passConstants.FogColor = { 0.7f, 0.7f, 0.7f, 1.0f };
+		m_passConstants.gFogStart = 5.0f;
+		m_passConstants.gFogRange = 150.0f;
 
-		//passConstants.Lights[0].Direction = { 0.57735f, -0.57735f, 0.57735f };
-		//passConstants.Lights[0].Strength = { 0.9f, 0.9f, 0.9f };
-		//passConstants.Lights[1].Direction = { -0.57735f, -0.57735f, 0.57735f };
-		//passConstants.Lights[1].Strength = { 0.5f, 0.5f, 0.5f };
-		//passConstants.Lights[2].Direction = { 0.0f, -0.707f, -0.707f };
-		//passConstants.Lights[2].Strength = { 0.2f, 0.2f, 0.2f };
+		//m_passConstants.Lights[0].Direction = { 0.57735f, -0.57735f, 0.57735f };
+		//m_passConstants.Lights[0].Strength = { 0.9f, 0.9f, 0.9f };
+		//m_passConstants.Lights[1].Direction = { -0.57735f, -0.57735f, 0.57735f };
+		//m_passConstants.Lights[1].Strength = { 0.5f, 0.5f, 0.5f };
+		//m_passConstants.Lights[2].Direction = { 0.0f, -0.707f, -0.707f };
+		//m_passConstants.Lights[2].Strength = { 0.2f, 0.2f, 0.2f };
 
-		passConstants.Lights[0].Direction = { 0.57735f, -0.57735f, 0.57735f };
-		passConstants.Lights[0].Strength = { 0.6f, 0.6f, 0.6f };
-		passConstants.Lights[1].Direction = { -0.57735f, -0.57735f, 0.57735f };
-		passConstants.Lights[1].Strength = { 0.3f, 0.3f, 0.3f };
-		passConstants.Lights[2].Direction = { 0.0f, -0.707f, -0.707f };
-		passConstants.Lights[2].Strength = { 0.15f, 0.15f, 0.15f };
+		m_passConstants.Lights[0].Direction = { 0.57735f, -0.57735f, 0.57735f };
+		m_passConstants.Lights[0].Strength = { 0.6f, 0.6f, 0.6f };
+		m_passConstants.Lights[1].Direction = { -0.57735f, -0.57735f, 0.57735f };
+		m_passConstants.Lights[1].Strength = { 0.3f, 0.3f, 0.3f };
+		m_passConstants.Lights[2].Direction = { 0.0f, -0.707f, -0.707f };
+		m_passConstants.Lights[2].Strength = { 0.15f, 0.15f, 0.15f };
 
-		m_mainRenderPassConstantsCB->CopyData(frameIndex, passConstants);
+		m_mainRenderPassConstantsCB->CopyData(frameIndex, m_passConstants);
 	};
 
 	// Render Pass Layer: Opaque ----------------------------------------------------------------------
@@ -298,31 +296,13 @@ void StencilExample::BuildMainRenderPass()
 	allOpaqueVertices.push_back(std::move(wallVertices));
 	allOpaqueIndices.push_back(std::move(wallIndices));
 
-//	std::vector<Vertex> mirrorVertices =
-//	{
-//		// Mirror
-//		Vertex(-2.5f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 1.0f),
-//		Vertex(-2.5f, 4.0f, 0.0f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f),
-//		Vertex(2.5f, 4.0f, 0.0f, 0.0f, 0.0f, -1.0f, 1.0f, 0.0f),
-//		Vertex(2.5f, 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, 1.0f, 1.0f)
-//	};
-//	std::vector<std::uint16_t> mirrorIndices =
-//	{
-//		// Mirror
-//		0, 1, 2,
-//		0, 2, 3
-//	};
-//
-//	allVertices.push_back(std::move(mirrorVertices));
-//	allIndices.push_back(std::move(mirrorIndices));
-
 	std::vector<Vertex> skullVertices;
 	std::vector<uint16_t> skullIndices;
 	LoadSkullGeometry(skullVertices, skullIndices);
 	allOpaqueVertices.push_back(std::move(skullVertices));
 	allOpaqueIndices.push_back(std::move(skullIndices));
 
-	opaqueLayer.Meshes = std::make_unique<MeshGroupT<Vertex>>(m_deviceResources, allOpaqueVertices, allOpaqueIndices);
+	opaqueLayer.Meshes = std::make_shared<MeshGroupT<Vertex>>(m_deviceResources, allOpaqueVertices, allOpaqueIndices);
 
 
 	// Render Items ---------------------
@@ -362,9 +342,9 @@ void StencilExample::BuildMainRenderPass()
 	skullDT.Update = [](const Timer& timer, int frameIndex) {}; // No update here because the texture is static
 
 
-	// Render Pass Layer: Mirror ----------------------------------------------------------------------
+	// Render Pass Layer: Mirror (Stencil) ----------------------------------------------------------------------
 	RenderPassLayer& mirrorLayer = m_mainRenderPass.RenderPassLayers.emplace_back(m_deviceResources);
-	mirrorLayer.Name = "Mirror Layer";
+	mirrorLayer.Name = "Mirror (Stencil) Layer";
 	
 	// For this layer, we set the stencil value = 1
 	mirrorLayer.PreWork = [](const RenderPassLayer& layer, ID3D12GraphicsCommandList* commandList)
@@ -440,7 +420,7 @@ void StencilExample::BuildMainRenderPass()
 	allMirrorVertices.push_back(std::move(mirrorVertices));
 	allMirrorIndices.push_back(std::move(mirrorIndices));
 
-	mirrorLayer.Meshes = std::make_unique<MeshGroupT<Vertex>>(m_deviceResources, allMirrorVertices, allMirrorIndices);
+	mirrorLayer.Meshes = std::make_shared<MeshGroupT<Vertex>>(m_deviceResources, allMirrorVertices, allMirrorIndices);
 
 	// Render Items ---------------------
 	// 
@@ -458,6 +438,112 @@ void StencilExample::BuildMainRenderPass()
 }
 void StencilExample::BuildReflectedRenderPass()
 {
+	PROFILE_FUNCTION();
+
+	// Add name for debug/profiling purposes
+	m_reflectedRenderPass.Name = "Reflected Render Pass";
+	m_reflectedRenderPass.RenderPassLayers.reserve(1);
+
+	// Root Signature --------------------------------------------------------------------------------
+	// Use the same one as the main render pass
+	m_reflectedRenderPass.RootSignature = m_mainRenderPass.RootSignature;
+
+	// Per-pass constants -----------------------------------------------------------------------------
+	m_reflectedRenderPassConstantsCB = std::make_unique<ConstantBufferT<PassConstants>>(m_deviceResources);
+
+	// Currently using root parameter index #2 for the per-pass constants
+	auto& renderPassCBV = m_reflectedRenderPass.ConstantBufferViews.emplace_back(2, m_reflectedRenderPassConstantsCB.get());
+	renderPassCBV.Update = [this](const Timer& timer, RenderItem* ri, int frameIndex) 
+	{
+		// Reflect the lighting but keep all other constants the same
+
+		PassConstants reflectedPassConstants = m_passConstants;
+
+		DirectX::XMVECTOR mirrorPlane = DirectX::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f); // xy plane
+		DirectX::XMMATRIX R = DirectX::XMMatrixReflect(mirrorPlane);
+
+		// Reflect the lighting.
+		for (int i = 0; i < 3; ++i)
+		{
+			DirectX::XMVECTOR lightDir = DirectX::XMLoadFloat3(&m_passConstants.Lights[i].Direction);
+			DirectX::XMVECTOR reflectedLightDir = XMVector3TransformNormal(lightDir, R);
+			DirectX::XMStoreFloat3(&reflectedPassConstants.Lights[i].Direction, reflectedLightDir);
+		}
+
+		m_reflectedRenderPassConstantsCB->CopyData(frameIndex, reflectedPassConstants);
+	};
+
+	// Render Pass Layer: Reflected Layer ----------------------------------------------------------------------
+	RenderPassLayer& reflectedLayer = m_reflectedRenderPass.RenderPassLayers.emplace_back(m_deviceResources);
+	reflectedLayer.Name = "Reflected Layer";
+
+	// PSO
+	m_reflectedRasterizerState = std::make_unique<RasterizerState>();
+	m_reflectedBlendState = std::make_unique<BlendState>();
+
+	m_reflectedDepthStencilState = std::make_unique<DepthStencilState>();
+	m_reflectedDepthStencilState->SetDepthEnabled(true);
+	m_reflectedDepthStencilState->SetDepthWriteMask(D3D12_DEPTH_WRITE_MASK_ALL);
+	m_reflectedDepthStencilState->SetDepthFunc(D3D12_COMPARISON_FUNC_LESS);
+	m_reflectedDepthStencilState->SetStencilEnabled(true);
+	m_reflectedDepthStencilState->SetStencilReadMask(0xff);
+	m_reflectedDepthStencilState->SetStencilWriteMask(0xff);
+
+	m_reflectedDepthStencilState->SetFrontFaceStencilFailOp(D3D12_STENCIL_OP_KEEP);
+	m_reflectedDepthStencilState->SetFrontFaceStencilDepthFailOp(D3D12_STENCIL_OP_KEEP);
+	m_reflectedDepthStencilState->SetFrontFaceStencilPassOp(D3D12_STENCIL_OP_KEEP);
+	m_reflectedDepthStencilState->SetFrontFaceStencilFunc(D3D12_COMPARISON_FUNC_EQUAL);
+	// We are not rendering backfacing polygons, so these settings do not matter.
+	m_reflectedDepthStencilState->SetBackFaceStencilFailOp(D3D12_STENCIL_OP_KEEP);
+	m_reflectedDepthStencilState->SetBackFaceStencilDepthFailOp(D3D12_STENCIL_OP_KEEP);
+	m_reflectedDepthStencilState->SetBackFaceStencilPassOp(D3D12_STENCIL_OP_KEEP);
+	m_reflectedDepthStencilState->SetBackFaceStencilFunc(D3D12_COMPARISON_FUNC_EQUAL);
+
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC reflectedDesc;
+	ZeroMemory(&reflectedDesc, sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC));
+	reflectedDesc.InputLayout = m_inputLayout->GetInputLayoutDesc();
+	reflectedDesc.pRootSignature = m_reflectedRenderPass.RootSignature->Get();
+	reflectedDesc.VS = m_standardVS->GetShaderByteCode();
+	reflectedDesc.PS = m_opaquePS->GetShaderByteCode();
+	reflectedDesc.RasterizerState = m_reflectedRasterizerState->GetRasterizerDesc();
+	reflectedDesc.BlendState = m_reflectedBlendState->GetBlendDesc();
+	reflectedDesc.DepthStencilState = m_reflectedDepthStencilState->GetDepthStencilDesc();
+	reflectedDesc.SampleMask = UINT_MAX;
+	reflectedDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+	reflectedDesc.NumRenderTargets = 1;
+	reflectedDesc.RTVFormats[0] = m_deviceResources->GetBackBufferFormat();
+	reflectedDesc.SampleDesc.Count = m_deviceResources->MsaaEnabled() ? 4 : 1;
+	reflectedDesc.SampleDesc.Quality = m_deviceResources->MsaaEnabled() ? (m_deviceResources->MsaaQuality() - 1) : 0;
+	reflectedDesc.DSVFormat = m_deviceResources->GetDepthStencilFormat();
+
+	reflectedLayer.SetPSO(reflectedDesc);
+
+	// Topology
+	reflectedLayer.Topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+
+	// MeshGroup
+	// Don't reload/recreate the skull mesh. Just have this layer reference the opaque layer's MeshGroup, which contains the skull mesh
+	reflectedLayer.Meshes = m_mainRenderPass.RenderPassLayers[0].Meshes;
+
+	// Render Items ---------------------
+	// 
+	// Skull
+	m_reflectedSkullObject = std::make_unique<GameObject>(m_deviceResources); // Create the skull (NOTE: This does NOT create a RenderItem)
+	m_reflectedSkullObject->SetMaterialDiffuseAlbedo(DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
+	m_reflectedSkullObject->SetMaterialFresnelR0(DirectX::XMFLOAT3(0.05f, 0.05f, 0.05f));
+	m_reflectedSkullObject->SetMaterialRoughness(0.3f);
+	
+	DirectX::XMMATRIX world = DirectX::XMMatrixRotationY(0.5f * MathHelper::Pi) * DirectX::XMMatrixScaling(0.45f, 0.45f, 0.45f) * DirectX::XMMatrixTranslation(0.0f, 1.0f, -5.0f);
+	DirectX::XMVECTOR mirrorPlane = DirectX::XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f); // xy plane
+	DirectX::XMMATRIX R = DirectX::XMMatrixReflect(mirrorPlane);
+	DirectX::XMMATRIX reflectedWorld = world * R;
+	m_reflectedSkullObject->SetWorldTransform(reflectedWorld);
+
+	RenderItem* skullRI = m_reflectedSkullObject->CreateRenderItem(&reflectedLayer);
+	skullRI->submeshIndex = 2;
+
+	auto& skullDT = skullRI->DescriptorTables.emplace_back(0, m_textures[(int)TEXTURE::WHITE1X1]->GetGPUHandle());
+	skullDT.Update = [](const Timer& timer, int frameIndex) {}; // No update here because the texture is static
 
 }
 void StencilExample::BuildMirrorAndShadowRenderPass()
