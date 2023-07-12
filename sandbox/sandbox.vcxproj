@@ -97,6 +97,7 @@
     <ClCompile Include="src\LandAndWaves\LandAndWavesScene.cpp" />
     <ClCompile Include="src\SandboxApp.cpp" />
     <ClCompile Include="src\SharedStuff.cpp" />
+    <ClCompile Include="src\StencilExample\StencilExample.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\tiny-app\tiny-app.vcxproj">
@@ -111,6 +112,7 @@
     <ClInclude Include="src\LandAndWaves\LandAndWavesScene.h" />
     <ClInclude Include="src\SandboxApp.h" />
     <ClInclude Include="src\SharedStuff.h" />
+    <ClInclude Include="src\StencilExample\StencilExample.h" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="src\shaders\color_ps.hlsl">
@@ -207,6 +209,9 @@
     <Image Include="src\textures\WireFence.dds" />
     <Image Include="src\textures\WoodCrate01.dds" />
     <Image Include="src\textures\WoodCrate02.dds" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="src\models\skull.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

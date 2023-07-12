@@ -4,6 +4,7 @@
 
 #include "facade/facade.h"
 #include "LandAndWaves/LandAndWavesScene.h"
+#include "StencilExample/StencilExample.h"
 
 
 namespace sandbox
@@ -54,6 +55,7 @@ private:
 	tiny::Timer m_timer;
 	std::shared_ptr<tiny::DeviceResources> m_deviceResources;
 
-	std::unique_ptr<LandAndWavesScene> m_scene;
+	//std::unique_ptr<LandAndWavesScene> m_scene;
+	std::unique_ptr<StencilExample> m_scene; 
 };
 }

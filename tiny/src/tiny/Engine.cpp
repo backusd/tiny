@@ -161,8 +161,9 @@ void Engine::RenderImpl()
 			TINY_CORE_ASSERT(layer.PipelineState != nullptr, "Layer has no pipeline state");
 			TINY_CORE_ASSERT(layer.Meshes != nullptr, "Layer has no mesh group");
 
-			// PSO / MeshGroup / Primitive Topology
+			// PSO / Pre-Work / MeshGroup / Primitive Topology
 			commandList->SetPipelineState(layer.PipelineState.Get());
+			layer.PreWork(layer, commandList);		// Pre-Work method (example usage: setting stencil value)
 			layer.Meshes->Bind(commandList);
 			commandList->IASetPrimitiveTopology(layer.Topology);
 

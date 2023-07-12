@@ -30,6 +30,9 @@
     <ClCompile Include="src\SharedStuff.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\StencilExample\StencilExample.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\SandboxApp.h">
@@ -42,6 +45,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\SharedStuff.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\StencilExample\StencilExample.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -104,5 +110,8 @@
     <Image Include="src\textures\WireFence.dds" />
     <Image Include="src\textures\WoodCrate01.dds" />
     <Image Include="src\textures\WoodCrate02.dds" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="src\models\skull.txt" />
   </ItemGroup>
 </Project>

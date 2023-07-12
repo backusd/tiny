@@ -61,6 +61,8 @@ public:
 		}
 	}
 
+	std::function<void(const RenderPassLayer&, ID3D12GraphicsCommandList*)> PreWork = [](const RenderPassLayer&, ID3D12GraphicsCommandList*) {};
+
 	std::vector<RenderItem> RenderItems;
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> PipelineState;
 	D3D12_PRIMITIVE_TOPOLOGY Topology;
