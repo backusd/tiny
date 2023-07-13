@@ -131,9 +131,9 @@ private:
 	std::unique_ptr<tiny::BlendState> m_opaqueBlendState = nullptr;
 	std::unique_ptr<tiny::DepthStencilState> m_opaqueDepthStencilState = nullptr;
 
-	std::unique_ptr<tiny::RasterizerState> m_mirrorRasterizerState = nullptr;
-	std::unique_ptr<tiny::BlendState> m_mirrorBlendState = nullptr;
-	std::unique_ptr<tiny::DepthStencilState> m_mirrorDepthStencilState = nullptr;
+	std::unique_ptr<tiny::RasterizerState> m_mirrorStencilRasterizerState = nullptr;
+	std::unique_ptr<tiny::BlendState> m_mirrorStencilBlendState = nullptr;
+	std::unique_ptr<tiny::DepthStencilState> m_mirrorStencilDepthStencilState = nullptr;
 
 	// Reflected Render Pass
 	tiny::RenderPass m_reflectedRenderPass;
@@ -144,7 +144,15 @@ private:
 	std::unique_ptr<tiny::DepthStencilState> m_reflectedDepthStencilState = nullptr;
 
 	// Draw Mirror and Shadows Pass (Note: this pass will re-use the mainRenderPassConstantsCB)
-//	tiny::RenderPass m_mirrorAndShadowsRenderPass;
+	tiny::RenderPass m_mirrorAndShadowsRenderPass;
+
+	std::unique_ptr<tiny::RasterizerState> m_mirrorRasterizerState = nullptr;
+	std::unique_ptr<tiny::BlendState> m_mirrorBlendState = nullptr;
+	std::unique_ptr<tiny::DepthStencilState> m_mirrorDepthStencilState = nullptr;
+
+	std::unique_ptr<tiny::RasterizerState> m_shadowRasterizerState = nullptr;
+	std::unique_ptr<tiny::BlendState> m_shadowBlendState = nullptr;
+	std::unique_ptr<tiny::DepthStencilState> m_shadowDepthStencilState = nullptr;
 
 
 
@@ -153,8 +161,9 @@ private:
 	std::unique_ptr<GameObject> m_wallObject = nullptr;
 	std::unique_ptr<GameObject> m_skullObject = nullptr;
 	std::unique_ptr<GameObject> m_reflectedSkullObject = nullptr;
-
+	std::unique_ptr<GameObject> m_mirrorStencilObject = nullptr;
 	std::unique_ptr<GameObject> m_mirrorObject = nullptr;
+	std::unique_ptr<GameObject> m_shadowObject = nullptr;
 
 	// Box
 //	std::unique_ptr<GameObject> m_boxObject = nullptr;

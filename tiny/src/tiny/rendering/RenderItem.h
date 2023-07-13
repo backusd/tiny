@@ -24,14 +24,12 @@ public:
 		DescriptorTables(std::move(rhs.DescriptorTables)),
 		submeshIndex(rhs.submeshIndex)
 	{
-		LOG_CORE_WARN("{}", "RenderItem Move Constructor called, but this method has not been tested. Make sure updates to the Engine are correct");
-
 		// I don't think we need to explicitly call RemoveRenderItem on the rhs object because its destructor should do that
 		Engine::AddRenderItem(this);
 	}
 	RenderItem& operator=(RenderItem&& rhs) noexcept
 	{
-		LOG_CORE_WARN("{}", "RenderItem Move Assignment operator called, but this method has not been tested. Make sure updates to the Engine are correct");
+		LOG_CORE_WARN("{}", "RenderItem Move Assignment operator called, but this method has not been tested. Make sure updates to the Engine are correct. NOTE: I have tested the Move Constructor, so I believe the Move Assignment operator should be fine...");
 
 		// I don't think we need to explicitly call RemoveRenderItem on the rhs object because its destructor should do that
 		Engine::AddRenderItem(this);
@@ -67,7 +65,6 @@ public:
 	// The PSO will hold and bind the mesh-group for all of the render items it will render.
 	// Here, we just need to keep track of which submesh index the render item references
 	unsigned int submeshIndex = 0;
-
 
 private:
 	RenderItem(const RenderItem&) = delete;

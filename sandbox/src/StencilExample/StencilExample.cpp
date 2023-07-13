@@ -13,8 +13,8 @@ namespace sandbox
 StencilExample::StencilExample(std::shared_ptr<DeviceResources> deviceResources) :
 	m_deviceResources(deviceResources),
 	m_mainRenderPass(),
-	m_reflectedRenderPass()
-//	m_mirrorAndShadowsRenderPass()
+	m_reflectedRenderPass(),
+	m_mirrorAndShadowsRenderPass()
 {
 	PROFILE_SCOPE("StencilExample()");
 
@@ -193,6 +193,7 @@ void StencilExample::BuildMainRenderPass()
 	// Render Pass Layer: Opaque ----------------------------------------------------------------------
 	RenderPassLayer& opaqueLayer = m_mainRenderPass.RenderPassLayers.emplace_back(m_deviceResources);
 	opaqueLayer.Name = "Opaque Layer";
+	opaqueLayer.RenderItems.reserve(3);
 
 	// PSO
 	m_opaqueRasterizerState = std::make_unique<RasterizerState>();
@@ -297,7 +298,9 @@ void StencilExample::BuildMainRenderPass()
 	allOpaqueIndices.push_back(std::move(wallIndices));
 
 	std::vector<Vertex> skullVertices;
+	skullVertices.reserve(31067);
 	std::vector<uint16_t> skullIndices;
+	skullIndices.reserve(181017);
 	LoadSkullGeometry(skullVertices, skullIndices);
 	allOpaqueVertices.push_back(std::move(skullVertices));
 	allOpaqueIndices.push_back(std::move(skullIndices));
@@ -353,28 +356,28 @@ void StencilExample::BuildMainRenderPass()
 	};
 
 	// PSO
-	m_mirrorRasterizerState = std::make_unique<RasterizerState>();
+	m_mirrorStencilRasterizerState = std::make_unique<RasterizerState>();
 
-	m_mirrorBlendState = std::make_unique<BlendState>();
-	m_mirrorBlendState->SetRenderTargetWriteMask(0);
+	m_mirrorStencilBlendState = std::make_unique<BlendState>();
+	m_mirrorStencilBlendState->SetRenderTargetWriteMask(0);
 
-	m_mirrorDepthStencilState = std::make_unique<DepthStencilState>();
-	m_mirrorDepthStencilState->SetDepthEnabled(true);
-	m_mirrorDepthStencilState->SetDepthWriteMask(D3D12_DEPTH_WRITE_MASK_ZERO);
-	m_mirrorDepthStencilState->SetDepthFunc(D3D12_COMPARISON_FUNC_LESS);
-	m_mirrorDepthStencilState->SetStencilEnabled(true);
-	m_mirrorDepthStencilState->SetStencilReadMask(0xff);
-	m_mirrorDepthStencilState->SetStencilWriteMask(0xff);
+	m_mirrorStencilDepthStencilState = std::make_unique<DepthStencilState>();
+	m_mirrorStencilDepthStencilState->SetDepthEnabled(true);
+	m_mirrorStencilDepthStencilState->SetDepthWriteMask(D3D12_DEPTH_WRITE_MASK_ZERO);
+	m_mirrorStencilDepthStencilState->SetDepthFunc(D3D12_COMPARISON_FUNC_LESS);
+	m_mirrorStencilDepthStencilState->SetStencilEnabled(true);
+	m_mirrorStencilDepthStencilState->SetStencilReadMask(0xff);
+	m_mirrorStencilDepthStencilState->SetStencilWriteMask(0xff);
 
-	m_mirrorDepthStencilState->SetFrontFaceStencilFailOp(D3D12_STENCIL_OP_KEEP);
-	m_mirrorDepthStencilState->SetFrontFaceStencilDepthFailOp(D3D12_STENCIL_OP_KEEP);
-	m_mirrorDepthStencilState->SetFrontFaceStencilPassOp(D3D12_STENCIL_OP_REPLACE);
-	m_mirrorDepthStencilState->SetFrontFaceStencilFunc(D3D12_COMPARISON_FUNC_ALWAYS);
+	m_mirrorStencilDepthStencilState->SetFrontFaceStencilFailOp(D3D12_STENCIL_OP_KEEP);
+	m_mirrorStencilDepthStencilState->SetFrontFaceStencilDepthFailOp(D3D12_STENCIL_OP_KEEP);
+	m_mirrorStencilDepthStencilState->SetFrontFaceStencilPassOp(D3D12_STENCIL_OP_REPLACE);
+	m_mirrorStencilDepthStencilState->SetFrontFaceStencilFunc(D3D12_COMPARISON_FUNC_ALWAYS);
 	// We are not rendering backfacing polygons, so these settings do not matter.
-	m_mirrorDepthStencilState->SetBackFaceStencilFailOp(D3D12_STENCIL_OP_KEEP);
-	m_mirrorDepthStencilState->SetBackFaceStencilDepthFailOp(D3D12_STENCIL_OP_KEEP);
-	m_mirrorDepthStencilState->SetBackFaceStencilPassOp(D3D12_STENCIL_OP_REPLACE);
-	m_mirrorDepthStencilState->SetBackFaceStencilFunc(D3D12_COMPARISON_FUNC_ALWAYS);
+	m_mirrorStencilDepthStencilState->SetBackFaceStencilFailOp(D3D12_STENCIL_OP_KEEP);
+	m_mirrorStencilDepthStencilState->SetBackFaceStencilDepthFailOp(D3D12_STENCIL_OP_KEEP);
+	m_mirrorStencilDepthStencilState->SetBackFaceStencilPassOp(D3D12_STENCIL_OP_REPLACE);
+	m_mirrorStencilDepthStencilState->SetBackFaceStencilFunc(D3D12_COMPARISON_FUNC_ALWAYS);
 
 	D3D12_GRAPHICS_PIPELINE_STATE_DESC mirrorDesc;
 	ZeroMemory(&mirrorDesc, sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC));
@@ -382,9 +385,9 @@ void StencilExample::BuildMainRenderPass()
 	mirrorDesc.pRootSignature = m_mainRenderPass.RootSignature->Get();
 	mirrorDesc.VS = m_standardVS->GetShaderByteCode();
 	mirrorDesc.PS = m_opaquePS->GetShaderByteCode();
-	mirrorDesc.RasterizerState = m_mirrorRasterizerState->GetRasterizerDesc();
-	mirrorDesc.BlendState = m_mirrorBlendState->GetBlendDesc();
-	mirrorDesc.DepthStencilState = m_mirrorDepthStencilState->GetDepthStencilDesc();
+	mirrorDesc.RasterizerState = m_mirrorStencilRasterizerState->GetRasterizerDesc();
+	mirrorDesc.BlendState = m_mirrorStencilBlendState->GetBlendDesc();
+	mirrorDesc.DepthStencilState = m_mirrorStencilDepthStencilState->GetDepthStencilDesc();
 	mirrorDesc.SampleMask = UINT_MAX;
 	mirrorDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 	mirrorDesc.NumRenderTargets = 1;
@@ -425,11 +428,11 @@ void StencilExample::BuildMainRenderPass()
 	// Render Items ---------------------
 	// 
 	// Mirror
-	m_mirrorObject = std::make_unique<GameObject>(m_deviceResources); // Create the mirror (NOTE: This does NOT create a RenderItem)
-	m_mirrorObject->SetMaterialDiffuseAlbedo(DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
-	m_mirrorObject->SetMaterialFresnelR0(DirectX::XMFLOAT3(0.1f, 0.1f, 0.1f));
-	m_mirrorObject->SetMaterialRoughness(0.5f);
-	RenderItem* mirrorRI = m_mirrorObject->CreateRenderItem(&mirrorLayer);
+	m_mirrorStencilObject = std::make_unique<GameObject>(m_deviceResources); // Create the mirror (NOTE: This does NOT create a RenderItem)
+	m_mirrorStencilObject->SetMaterialDiffuseAlbedo(DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f));
+	m_mirrorStencilObject->SetMaterialFresnelR0(DirectX::XMFLOAT3(0.1f, 0.1f, 0.1f));
+	m_mirrorStencilObject->SetMaterialRoughness(0.5f);
+	RenderItem* mirrorRI = m_mirrorStencilObject->CreateRenderItem(&mirrorLayer);
 	mirrorRI->submeshIndex = 0;
 
 	auto& mirrorDT = mirrorRI->DescriptorTables.emplace_back(0, m_textures[(int)TEXTURE::ICE]->GetGPUHandle());
@@ -479,6 +482,9 @@ void StencilExample::BuildReflectedRenderPass()
 
 	// PSO
 	m_reflectedRasterizerState = std::make_unique<RasterizerState>();
+	m_reflectedRasterizerState->SetCullMode(D3D12_CULL_MODE_BACK);
+	m_reflectedRasterizerState->SetFrontCounterClockwise(true);
+
 	m_reflectedBlendState = std::make_unique<BlendState>();
 
 	m_reflectedDepthStencilState = std::make_unique<DepthStencilState>();
@@ -548,6 +554,170 @@ void StencilExample::BuildReflectedRenderPass()
 }
 void StencilExample::BuildMirrorAndShadowRenderPass()
 {
+	using namespace DirectX;
+
+	PROFILE_FUNCTION();
+
+	// Add name for debug/profiling purposes
+	m_mirrorAndShadowsRenderPass.Name = "Mirror and Shadows Render Pass";
+	m_mirrorAndShadowsRenderPass.RenderPassLayers.reserve(2);
+
+	// Root Signature --------------------------------------------------------------------------------
+	// Use the same one as the main render pass
+	m_mirrorAndShadowsRenderPass.RootSignature = m_mainRenderPass.RootSignature;
+
+	// Render Pass Layer: Mirror Layer ----------------------------------------------------------------------
+	RenderPassLayer& mirrorLayer = m_mirrorAndShadowsRenderPass.RenderPassLayers.emplace_back(m_deviceResources);
+	mirrorLayer.Name = "Mirror Layer";
+
+	mirrorLayer.PreWork = [](const RenderPassLayer& layer, ID3D12GraphicsCommandList* commandList)
+	{
+		commandList->OMSetStencilRef(0);
+	};
+
+	// PSO
+	m_mirrorRasterizerState = std::make_unique<RasterizerState>();
+	m_mirrorDepthStencilState = std::make_unique<DepthStencilState>();
+
+	m_mirrorBlendState = std::make_unique<BlendState>();
+	m_mirrorBlendState->SetRenderTargetBlendEnabled(true);
+	m_mirrorBlendState->SetRenderTargetLogicOpEnabled(false);
+	m_mirrorBlendState->SetRenderTargetSrcBlend(D3D12_BLEND_SRC_ALPHA);
+	m_mirrorBlendState->SetRenderTargetDestBlend(D3D12_BLEND_INV_SRC_ALPHA);
+	m_mirrorBlendState->SetRenderTargetBlendOp(D3D12_BLEND_OP_ADD);
+	m_mirrorBlendState->SetRenderTargetSrcBlendAlpha(D3D12_BLEND_ONE);
+	m_mirrorBlendState->SetRenderTargetDestBlendAlpha(D3D12_BLEND_ZERO);
+	m_mirrorBlendState->SetRenderTargetBlendOpAlpha(D3D12_BLEND_OP_ADD);
+	m_mirrorBlendState->SetRenderTargetLogicOp(D3D12_LOGIC_OP_NOOP);
+	m_mirrorBlendState->SetRenderTargetWriteMask(D3D12_COLOR_WRITE_ENABLE_ALL);
+
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC mirrorDesc;
+	ZeroMemory(&mirrorDesc, sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC));
+	mirrorDesc.InputLayout = m_inputLayout->GetInputLayoutDesc(); 
+	mirrorDesc.pRootSignature = m_mirrorAndShadowsRenderPass.RootSignature->Get();
+	mirrorDesc.VS = m_standardVS->GetShaderByteCode(); 
+	mirrorDesc.PS = m_opaquePS->GetShaderByteCode(); 
+	mirrorDesc.RasterizerState = m_mirrorRasterizerState->GetRasterizerDesc();
+	mirrorDesc.BlendState = m_mirrorBlendState->GetBlendDesc();
+	mirrorDesc.DepthStencilState = m_mirrorDepthStencilState->GetDepthStencilDesc();
+	mirrorDesc.SampleMask = UINT_MAX; 
+	mirrorDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+	mirrorDesc.NumRenderTargets = 1; 
+	mirrorDesc.RTVFormats[0] = m_deviceResources->GetBackBufferFormat(); 
+	mirrorDesc.SampleDesc.Count = m_deviceResources->MsaaEnabled() ? 4 : 1; 
+	mirrorDesc.SampleDesc.Quality = m_deviceResources->MsaaEnabled() ? (m_deviceResources->MsaaQuality() - 1) : 0; 
+	mirrorDesc.DSVFormat = m_deviceResources->GetDepthStencilFormat(); 
+
+	mirrorLayer.SetPSO(mirrorDesc);
+
+	// Topology
+	mirrorLayer.Topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+
+	// MeshGroup
+	// Don't reload/recreate the mirror mesh. Just have this layer reference the mirror layer's MeshGroup, which contains the mirror mesh
+	mirrorLayer.Meshes = m_mainRenderPass.RenderPassLayers[1].Meshes;
+
+	// Render Items ---------------------
+	// 
+	// Mirror
+	m_mirrorObject = std::make_unique<GameObject>(m_deviceResources); // Create the skull (NOTE: This does NOT create a RenderItem)
+	m_mirrorObject->SetMaterialDiffuseAlbedo(DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 0.3f));
+	m_mirrorObject->SetMaterialFresnelR0(DirectX::XMFLOAT3(0.1f, 0.1f, 0.1f));
+	m_mirrorObject->SetMaterialRoughness(0.5f);
+
+	RenderItem* mirrorRI = m_mirrorObject->CreateRenderItem(&mirrorLayer);
+	mirrorRI->submeshIndex = 0;
+
+	auto& mirrorDT = mirrorRI->DescriptorTables.emplace_back(0, m_textures[(int)TEXTURE::ICE]->GetGPUHandle());
+	mirrorDT.Update = [](const Timer& timer, int frameIndex) {}; // No update here because the texture is static
+
+
+
+	// Render Pass Layer: Shadow Layer ----------------------------------------------------------------------
+	RenderPassLayer& shadowLayer = m_mirrorAndShadowsRenderPass.RenderPassLayers.emplace_back(m_deviceResources);
+	shadowLayer.Name = "Shadow Layer";
+
+	// PSO
+	m_shadowRasterizerState = std::make_unique<RasterizerState>();
+
+	m_shadowBlendState = std::make_unique<BlendState>();
+	m_shadowBlendState->SetRenderTargetBlendEnabled(true);
+	m_shadowBlendState->SetRenderTargetLogicOpEnabled(false);
+	m_shadowBlendState->SetRenderTargetSrcBlend(D3D12_BLEND_SRC_ALPHA);
+	m_shadowBlendState->SetRenderTargetDestBlend(D3D12_BLEND_INV_SRC_ALPHA);
+	m_shadowBlendState->SetRenderTargetBlendOp(D3D12_BLEND_OP_ADD);
+	m_shadowBlendState->SetRenderTargetSrcBlendAlpha(D3D12_BLEND_ONE);
+	m_shadowBlendState->SetRenderTargetDestBlendAlpha(D3D12_BLEND_ZERO);
+	m_shadowBlendState->SetRenderTargetBlendOpAlpha(D3D12_BLEND_OP_ADD);
+	m_shadowBlendState->SetRenderTargetLogicOp(D3D12_LOGIC_OP_NOOP);
+	m_shadowBlendState->SetRenderTargetWriteMask(D3D12_COLOR_WRITE_ENABLE_ALL);
+	
+	m_shadowDepthStencilState = std::make_unique<DepthStencilState>();
+	m_shadowDepthStencilState->SetDepthEnabled(true);
+	m_shadowDepthStencilState->SetDepthWriteMask(D3D12_DEPTH_WRITE_MASK_ALL);
+	m_shadowDepthStencilState->SetDepthFunc(D3D12_COMPARISON_FUNC_LESS);
+	m_shadowDepthStencilState->SetStencilEnabled(true);
+	m_shadowDepthStencilState->SetStencilReadMask(0xff);
+	m_shadowDepthStencilState->SetStencilWriteMask(0xff);
+
+	m_shadowDepthStencilState->SetFrontFaceStencilFailOp(D3D12_STENCIL_OP_KEEP);
+	m_shadowDepthStencilState->SetFrontFaceStencilDepthFailOp(D3D12_STENCIL_OP_KEEP);
+	m_shadowDepthStencilState->SetFrontFaceStencilPassOp(D3D12_STENCIL_OP_INCR);
+	m_shadowDepthStencilState->SetFrontFaceStencilFunc(D3D12_COMPARISON_FUNC_EQUAL);
+	// We are not rendering backfacing polygons, so these settings do not matter.
+	m_shadowDepthStencilState->SetBackFaceStencilFailOp(D3D12_STENCIL_OP_KEEP);
+	m_shadowDepthStencilState->SetBackFaceStencilDepthFailOp(D3D12_STENCIL_OP_KEEP);
+	m_shadowDepthStencilState->SetBackFaceStencilPassOp(D3D12_STENCIL_OP_INCR);
+	m_shadowDepthStencilState->SetBackFaceStencilFunc(D3D12_COMPARISON_FUNC_EQUAL);
+
+
+	D3D12_GRAPHICS_PIPELINE_STATE_DESC shadowDesc;
+	ZeroMemory(&shadowDesc, sizeof(D3D12_GRAPHICS_PIPELINE_STATE_DESC));
+	shadowDesc.InputLayout = m_inputLayout->GetInputLayoutDesc();
+	shadowDesc.pRootSignature = m_mirrorAndShadowsRenderPass.RootSignature->Get();
+	shadowDesc.VS = m_standardVS->GetShaderByteCode();
+	shadowDesc.PS = m_opaquePS->GetShaderByteCode();
+	shadowDesc.RasterizerState = m_shadowRasterizerState->GetRasterizerDesc();
+	shadowDesc.BlendState = m_shadowBlendState->GetBlendDesc();
+	shadowDesc.DepthStencilState = m_shadowDepthStencilState->GetDepthStencilDesc();
+	shadowDesc.SampleMask = UINT_MAX;
+	shadowDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+	shadowDesc.NumRenderTargets = 1;
+	shadowDesc.RTVFormats[0] = m_deviceResources->GetBackBufferFormat();
+	shadowDesc.SampleDesc.Count = m_deviceResources->MsaaEnabled() ? 4 : 1;
+	shadowDesc.SampleDesc.Quality = m_deviceResources->MsaaEnabled() ? (m_deviceResources->MsaaQuality() - 1) : 0;
+	shadowDesc.DSVFormat = m_deviceResources->GetDepthStencilFormat();
+
+	shadowLayer.SetPSO(shadowDesc);
+
+	// Topology
+	shadowLayer.Topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
+
+	// MeshGroup
+	// Don't reload/recreate the skull mesh. Just have this layer reference the opaque layer's MeshGroup, which contains the skull mesh
+	shadowLayer.Meshes = m_mainRenderPass.RenderPassLayers[0].Meshes;
+
+	// Render Items ---------------------
+	// 
+	// Shadow
+	m_shadowObject = std::make_unique<GameObject>(m_deviceResources); // Create the shadow (NOTE: This does NOT create a RenderItem)
+	m_shadowObject->SetMaterialDiffuseAlbedo(DirectX::XMFLOAT4(0.0f, 0.0f, 0.0f, 0.5f));
+	m_shadowObject->SetMaterialFresnelR0(DirectX::XMFLOAT3(0.001f, 0.001f, 0.001f));
+	m_shadowObject->SetMaterialRoughness(0.0f);
+
+	XMVECTOR shadowPlane = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f); // xz plane
+	XMVECTOR toMainLight = -XMLoadFloat3(&m_passConstants.Lights[0].Direction);
+	XMMATRIX S = XMMatrixShadow(shadowPlane, toMainLight);
+	XMMATRIX shadowOffsetY = XMMatrixTranslation(0.0f, 0.001f, 0.0f);
+	XMMATRIX world = XMMatrixRotationY(0.5f * MathHelper::Pi) * XMMatrixScaling(0.45f, 0.45f, 0.45f) * XMMatrixTranslation(0.0f, 1.0f, -5.0f);
+	XMMATRIX shadowWorld = world * S * shadowOffsetY;
+	m_shadowObject->SetWorldTransform(shadowWorld);
+
+	RenderItem* shadowRI = m_shadowObject->CreateRenderItem(&shadowLayer);
+	shadowRI->submeshIndex = 2;
+
+	auto& shadowDT = shadowRI->DescriptorTables.emplace_back(0, m_textures[(int)TEXTURE::ICE]->GetGPUHandle());
+	shadowDT.Update = [](const Timer& timer, int frameIndex) {}; // No update here because the texture is static
 
 }
 
