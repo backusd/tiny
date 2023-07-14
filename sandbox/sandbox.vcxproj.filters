@@ -33,6 +33,9 @@
     <ClCompile Include="src\StencilExample\StencilExample.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\TreeBillboards\TreeBillboardsScene.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\SandboxApp.h">
@@ -50,6 +53,9 @@
     <ClInclude Include="src\StencilExample\StencilExample.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\TreeBillboards\TreeBillboardsScene.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="src\shaders\color_vs.hlsl" />
@@ -58,6 +64,9 @@
     <FxCompile Include="src\shaders\LightingPS.hlsl" />
     <FxCompile Include="src\shaders\LightingFogPS.hlsl" />
     <FxCompile Include="src\shaders\LightingFogAlphaTestPS.hlsl" />
+    <FxCompile Include="src\shaders\TreeSpriteVS.hlsl" />
+    <FxCompile Include="src\shaders\TreeSpriteGS.hlsl" />
+    <FxCompile Include="src\shaders\TreeSpritePS.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <None Include="src\shaders\Lighting.hlsli" />

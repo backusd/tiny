@@ -11,7 +11,8 @@ static constexpr std::array g_textureFiles{
 		L"src/textures/ice.dds",
 		L"src/textures/stone.dds",
 		L"src/textures/tile.dds",
-		L"src/textures/white1x1.dds"
+		L"src/textures/white1x1.dds",
+		L"src/textures/treeArray2.dds"
 };
 
 std::wstring GetTextureFilename(unsigned int index)

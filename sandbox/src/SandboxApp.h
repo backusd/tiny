@@ -5,6 +5,7 @@
 #include "facade/facade.h"
 #include "LandAndWaves/LandAndWavesScene.h"
 #include "StencilExample/StencilExample.h"
+#include "TreeBillboards/TreeBillboardsScene.h"
 
 
 namespace sandbox
@@ -56,6 +57,8 @@ private:
 	std::shared_ptr<tiny::DeviceResources> m_deviceResources;
 
 	//std::unique_ptr<LandAndWavesScene> m_scene;
-	std::unique_ptr<StencilExample> m_scene; 
+	//std::unique_ptr<StencilExample> m_scene; 
+	std::unique_ptr<TreeBillboardsScene> m_scene;
+
 };
 }

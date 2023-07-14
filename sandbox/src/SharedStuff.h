@@ -20,6 +20,7 @@ enum class TEXTURE : int
 	STONE,
 	TILE,
 	WHITE1X1,
+	TREE_ARRAY_2,
 	Count
 };
 
