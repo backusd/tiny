@@ -11,21 +11,20 @@ public:
     DescriptorVector(std::shared_ptr<DeviceResources> deviceResources, 
                      D3D12_DESCRIPTOR_HEAP_TYPE type, 
                      unsigned int initialCapacity = 8);
-    DescriptorVector(DescriptorVector&& rhs) noexcept = delete;
-//    DescriptorVector(DescriptorVector&& rhs) noexcept :
-//        m_deviceResources(rhs.m_deviceResources),
-//        m_count(rhs.m_count),
-//        m_capacity(rhs.m_capacity),
-//        m_handleIncrementSize(rhs.m_handleIncrementSize),
-//        m_descriptorHeapCopyable(rhs.m_descriptorHeapCopyable),
-//        m_descriptorHeapShaderVisible(rhs.m_descriptorHeapShaderVisible),
-//        m_cpuHeapStart(rhs.m_cpuHeapStart),
-//        m_gpuHeapStart(rhs.m_gpuHeapStart),
-//        m_type(rhs.m_type),
-//        m_releasedIndices(std::move(m_releasedIndices))
-//    {
-//        LOG_CORE_WARN("{}", "DescriptorVector Move Constructor has been called, but I've never tested this function.");
-//    }
+    DescriptorVector(DescriptorVector&& rhs) noexcept :
+        m_deviceResources(rhs.m_deviceResources),
+        m_count(rhs.m_count),
+        m_capacity(rhs.m_capacity),
+        m_handleIncrementSize(rhs.m_handleIncrementSize),
+        m_descriptorHeapCopyable(rhs.m_descriptorHeapCopyable),
+        m_descriptorHeapShaderVisible(rhs.m_descriptorHeapShaderVisible),
+        m_cpuHeapStart(rhs.m_cpuHeapStart),
+        m_gpuHeapStart(rhs.m_gpuHeapStart),
+        m_type(rhs.m_type),
+        m_releasedIndices(std::move(m_releasedIndices))
+    {
+        LOG_CORE_WARN("{}", "DescriptorVector Move Constructor has been called, but I've never tested this function.");
+    }
     DescriptorVector& operator=(DescriptorVector&& rhs) noexcept
     {
         LOG_CORE_WARN("{}", "DescriptorVector Move Assignment operator has been called, but I've never tested this function.");

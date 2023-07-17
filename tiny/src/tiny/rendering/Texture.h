@@ -12,20 +12,19 @@ namespace tiny
 {
 // Texture =======================================================================================================
 class TextureManager; // Forward declare so we can set it as a friend
-//class TextureVector;
+class TextureVector;
 class Texture
 {
 public:	
 	~Texture() noexcept;
 
-	ND inline D3D12_GPU_DESCRIPTOR_HANDLE GetSRVHandle() const noexcept 
-	{
-		return m_descriptorVector->GetGPUHandleAt(m_srvDescriptorIndex); 
-	}
+	ND inline D3D12_GPU_DESCRIPTOR_HANDLE GetSRVHandle() const noexcept { return m_descriptorVector->GetGPUHandleAt(m_srvDescriptorIndex); }
 	ND inline D3D12_GPU_DESCRIPTOR_HANDLE GetUAVHandle() const noexcept { return m_descriptorVector->GetGPUHandleAt(m_uavDescriptorIndex); }
 
-private:
-	Texture() noexcept = default;
+	void CopyData(const std::vector<float>& data);
+	void TransitionToState(D3D12_RESOURCE_STATES newState);
+
+protected:
 	Texture(std::shared_ptr<DeviceResources> deviceResources,
 			Microsoft::WRL::ComPtr<ID3D12Resource> resource,
 			DescriptorVector* descriptorVector,
@@ -33,18 +32,45 @@ private:
 			unsigned int uavIndex = 0,
 			unsigned int indexIntoAllManagedTextures = 0,
 			bool isManagedTexture = false) noexcept;
-	// Note, we need to delete all copy/move constructors. You might think it would be okay to implement move operations, however, if this was
-	// allowed, then we could in theory copy the data over to the new texture object, but when the destructor is called on the rhs object, it would
-	// potentially release the texture resource from the resource manager's data
+
+	Texture(Texture&& rhs) noexcept :
+		m_deviceResources(rhs.m_deviceResources),
+		m_resource(rhs.m_resource),
+		m_currentResourceState(rhs.m_currentResourceState),
+		m_descriptorVector(rhs.m_descriptorVector),
+		m_srvDescriptorIndex(rhs.m_srvDescriptorIndex),
+		m_uavDescriptorIndex(rhs.m_uavDescriptorIndex),
+		m_indexIntoAllManagedTextures(rhs.m_indexIntoAllManagedTextures),
+		m_isManagedTexture(rhs.m_isManagedTexture),
+		m_movedFrom(false)
+	{
+		rhs.m_movedFrom = true;
+	}
+	Texture& operator=(Texture&& rhs) noexcept
+	{
+		m_deviceResources = rhs.m_deviceResources;
+		m_resource = rhs.m_resource;
+		m_currentResourceState = rhs.m_currentResourceState;
+		m_descriptorVector = rhs.m_descriptorVector;
+		m_srvDescriptorIndex = rhs.m_srvDescriptorIndex;
+		m_uavDescriptorIndex = rhs.m_uavDescriptorIndex;
+		m_indexIntoAllManagedTextures = rhs.m_indexIntoAllManagedTextures;
+		m_isManagedTexture = rhs.m_isManagedTexture;
+		m_movedFrom = false;
+
+		rhs.m_movedFrom = true;
+	}
+
+	// Safest to just delete copy constructors. Need to protect against the case where a Texture's destructor attempts to clean up 
+	// its resources but another Texture still references the resource
 	Texture(const Texture&) = delete;	
-	Texture(Texture&&) = delete;
 	Texture& operator=(const Texture&) = delete;
-	Texture& operator=(Texture&&) = delete;
 
 	std::shared_ptr<DeviceResources> m_deviceResources = nullptr;
 
 	// Texture data
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_resource = nullptr;
+	D3D12_RESOURCE_STATES m_currentResourceState = D3D12_RESOURCE_STATE_COMMON;
 
 	// Data for accessing the descriptors for the texture
 	DescriptorVector* m_descriptorVector = nullptr;
@@ -55,28 +81,33 @@ private:
 	unsigned int	  m_indexIntoAllManagedTextures = 0;
 	bool			  m_isManagedTexture = false;
 
+	bool m_movedFrom = false;
+
 	// Declare TextureManager a friend so it can construct a Texture
 	friend TextureManager;
-	//friend TextureVector;
+	friend TextureVector;
 };
 
 // TextureVector ================================================================================================
-//class TextureVector
-//{
-//public:
-//	TextureVector(std::shared_ptr<DeviceResources> deviceResources);
-//
-//	ND const Texture& EmplaceBack(const D3D12_RESOURCE_DESC& desc);
-//
-//private:
-//	std::shared_ptr<DeviceResources> m_deviceResources;
-//
-//	std::vector<Texture> m_textures;
-//	std::vector<Microsoft::WRL::ComPtr<ID3D12Resource>> m_textureResources;
-//
-//	std::unique_ptr<DescriptorVector> m_descriptorVector;
-//
-//};
+class TextureVector
+{
+public:
+	TextureVector(std::shared_ptr<DeviceResources> deviceResources);
+	~TextureVector() noexcept
+	{
+		// See the note in ~TextureManager() for why this is necessary
+		m_textures.clear();
+	}
+
+	ND Texture* EmplaceBack(const D3D12_RESOURCE_DESC& desc, bool createSRV = true, bool createUAV = false);
+	ND inline Texture* operator[](size_t index) { return m_textures[index].get(); }
+
+private:
+	std::shared_ptr<DeviceResources>		m_deviceResources;
+	std::vector<std::unique_ptr<Texture>>	m_textures;
+	std::unique_ptr<DescriptorVector>		m_descriptorVector;
+
+};
 
 // TextureManager ================================================================================================
 // TextureManager is used for managing textures the are read from file. Texture Manager is a singleton, therefore,

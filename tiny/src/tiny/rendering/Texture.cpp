@@ -20,44 +20,146 @@ Texture::Texture(std::shared_ptr<DeviceResources> deviceResources,
 	m_srvDescriptorIndex(srvIndex),
 	m_uavDescriptorIndex(uavIndex),
 	m_indexIntoAllManagedTextures(indexIntoAllManagedTextures),
-	m_isManagedTexture(isManagedTexture)
+	m_isManagedTexture(isManagedTexture),
+	m_currentResourceState(D3D12_RESOURCE_STATE_COMMON)
 {
 	TINY_CORE_ASSERT(m_deviceResources != nullptr, "No device resources");
+	TINY_CORE_ASSERT(m_descriptorVector != nullptr, "No descriptor vector");
 }
 Texture::~Texture() noexcept
 {
-	//m_descriptorVector = nullptr;
-	if (m_isManagedTexture)
+	// If the texture has been moved from, then we don't want to clean up what it was referencing
+	if (!m_movedFrom)
 	{
-		TextureManager::ReleaseTexture(m_indexIntoAllManagedTextures);
+		// NOTE: Only do a delayed delete if the texture is NOT managed. If it is managed
+		//       then the texture manager will be responsible for clean up
+		if (m_isManagedTexture)
+		{
+			TextureManager::ReleaseTexture(m_indexIntoAllManagedTextures);
+		}
+		else
+		{
+			Engine::DelayedDelete(m_resource);
+		}
 	}
-
-	m_resource = nullptr;
-	m_descriptorVector = nullptr;
 }
 
+void Texture::CopyData(const std::vector<float>& data)
+{
+	TINY_CORE_ASSERT(m_currentResourceState == D3D12_RESOURCE_STATE_COPY_DEST, "Texure must be placed in state 'D3D12_RESOURCE_STATE_COPY_DEST' before you can copy data to it");
+
+	D3D12_RESOURCE_DESC desc = m_resource->GetDesc();
+	const UINT num2DSubresources = desc.DepthOrArraySize * desc.MipLevels;
+	const UINT64 uploadBufferSize = GetRequiredIntermediateSize(m_resource.Get(), 0, num2DSubresources);
+
+	Microsoft::WRL::ComPtr<ID3D12Resource> uploadBuffer = nullptr;
+
+	CD3DX12_HEAP_PROPERTIES props = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+	CD3DX12_RESOURCE_DESC uploadDesc = CD3DX12_RESOURCE_DESC::Buffer(uploadBufferSize);
+	GFX_THROW_INFO(
+		m_deviceResources->GetDevice()->CreateCommittedResource(
+			&props,
+			D3D12_HEAP_FLAG_NONE,
+			&uploadDesc,
+			D3D12_RESOURCE_STATE_GENERIC_READ,
+			nullptr,
+			IID_PPV_ARGS(&uploadBuffer)
+		)
+	);
+
+	D3D12_SUBRESOURCE_DATA subResourceData = {}; 
+	subResourceData.pData = data.data(); 
+	subResourceData.RowPitch = desc.Width * sizeof(float); 
+	subResourceData.SlicePitch = subResourceData.RowPitch * desc.Height; 
+
+
+	auto* commandList = m_deviceResources->GetCommandList();
+	UpdateSubresources(commandList, m_resource.Get(), uploadBuffer.Get(), 0, 0, num2DSubresources, &subResourceData);
+
+	Engine::DelayedDelete(uploadBuffer);
+}
+void Texture::TransitionToState(D3D12_RESOURCE_STATES newState)
+{
+	CD3DX12_RESOURCE_BARRIER transition = CD3DX12_RESOURCE_BARRIER::Transition(m_resource.Get(), m_currentResourceState, newState);
+	m_deviceResources->GetCommandList()->ResourceBarrier(1, &transition);
+}
+
+
 // TextureVector ================================================================================================
-//TextureVector::TextureVector(std::shared_ptr<DeviceResources> deviceResources) :
-//	m_deviceResources(deviceResources)
-//{
-//	TINY_CORE_ASSERT(m_deviceResources != nullptr, "No device resources");
-//
-//	m_descriptorVector = std::make_unique<DescriptorVector>(m_deviceResources, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-//
-//}
-//const Texture& TextureVector::EmplaceBack(const D3D12_RESOURCE_DESC& desc)
-//{
-//	CD3DX12_HEAP_PROPERTIES props = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
-//
-//	m_deviceResources->GetDevice()->CreateCommittedResource(
-//		&props,
-//		D3D12_HEAP_FLAG_NONE,
-//		&desc,
-//		D3D12_RESOURCE_STATE_COMMON,
-//		nullptr,
-//		IID_PPV_ARGS(&m_textureResources[iii])
-//	);
-//}
+TextureVector::TextureVector(std::shared_ptr<DeviceResources> deviceResources) :
+	m_deviceResources(deviceResources),
+	m_descriptorVector(new DescriptorVector(deviceResources, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV))
+{
+	TINY_CORE_ASSERT(m_deviceResources != nullptr, "No device resources");
+}
+Texture* TextureVector::EmplaceBack(const D3D12_RESOURCE_DESC& desc, bool createSRV, bool createUAV)
+{
+	TINY_CORE_ASSERT(createSRV || createUAV, "It is an error not to create at least one view for the Texture");
+
+	CD3DX12_HEAP_PROPERTIES props = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
+
+	Microsoft::WRL::ComPtr<ID3D12Resource> resource = nullptr;
+
+	GFX_THROW_INFO(
+		m_deviceResources->GetDevice()->CreateCommittedResource(
+			&props,
+			D3D12_HEAP_FLAG_NONE,
+			&desc,
+			D3D12_RESOURCE_STATE_COMMON,
+			nullptr,
+			IID_PPV_ARGS(&resource)
+		)
+	);
+
+	unsigned int srvIndex = 0;
+	unsigned int uavIndex = 0;
+
+	if (createSRV)
+	{
+		// Create the SRV descriptor for the texture
+		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {}; 
+		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING; 
+		srvDesc.Format = desc.Format; 
+		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D; 
+		srvDesc.Texture2D.MostDetailedMip = 0; 
+		srvDesc.Texture2D.MipLevels = 1; 
+
+		srvIndex = m_descriptorVector->EmplaceBackShaderResourceView(resource.Get(), &srvDesc);
+	}
+
+	if (createUAV)
+	{
+		// Create the UAV descriptor for the texture
+		D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc = {};
+		uavDesc.Format = desc.Format;
+		uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D; 
+		uavDesc.Texture2D.MipSlice = 0; 
+
+		uavIndex = m_descriptorVector->EmplaceBackUnorderedAccessView(resource.Get(), &uavDesc);
+	}
+
+	std::unique_ptr<Texture> t = std::unique_ptr<Texture>(new Texture(m_deviceResources, resource, m_descriptorVector.get(), srvIndex, uavIndex));
+	m_textures.push_back(std::move(t));
+	return m_textures.back().get();
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -131,58 +233,6 @@ Texture* TextureManager::GetTextureImpl(unsigned int indexIntoAllTextures)
 	}
 
 	return m_allTextures[indexIntoAllTextures].texture.get();
-
-
-
-
-//	Microsoft::WRL::ComPtr<ID3D12Resource>& textureResource = m_allTextures[indexIntoAllTextures].textureResource;
-//
-//	// Only read the texture from file if the ref count is 0
-//	if (m_allTextures[indexIntoAllTextures].refCount == 0)
-//	{
-//		TINY_CORE_ASSERT(textureResource == nullptr, "Resource was not nullptr, but ref count was 0");
-//
-//		Microsoft::WRL::ComPtr<ID3D12Resource> uploadHeap = nullptr;
-//
-//		// Load the texture from file
-//		GFX_THROW_INFO(
-//			DirectX::CreateDDSTextureFromFile12(
-//				m_deviceResources->GetDevice(),
-//				m_deviceResources->GetCommandList(),
-//				GetTextureFilename(indexIntoAllTextures).c_str(),
-//				textureResource,
-//				uploadHeap
-//			)
-//		);
-//
-//		// Do a delayed delete on the upload heap
-//		Engine::DelayedDelete(uploadHeap);
-//
-//		// Create the SRV descriptor for the texture
-//		D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc = {};
-//		srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-//		srvDesc.Format = textureResource->GetDesc().Format;
-//		srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-//		srvDesc.Texture2D.MostDetailedMip = 0;
-//		srvDesc.Texture2D.MipLevels = -1;
-//
-//		// Create a SRV and keep track of the index needed to look up this descriptor
-//		m_allTextures[indexIntoAllTextures].descriptorVectorIndex = m_descriptorVector->EmplaceBackShaderResourceView(textureResource.Get(), &srvDesc);
-//	}
-//
-//	TINY_CORE_ASSERT(textureResource != nullptr, "Texture Resource should not be nullptr here");
-//
-//	// Increment the ref count
-//	++m_allTextures[indexIntoAllTextures].refCount;
-//
-//	// Return a Texture object
-//	return std::unique_ptr<Texture>(
-//		new Texture(
-//			m_descriptorVector.get(),
-//			m_allTextures[indexIntoAllTextures].descriptorVectorIndex,
-//			indexIntoAllTextures
-//		)
-//	);
 }
 
 void TextureManager::ReleaseTextureImpl(unsigned int indexIntoAllTextures) noexcept
@@ -202,10 +252,5 @@ void TextureManager::ReleaseTextureImpl(unsigned int indexIntoAllTextures) noexc
 		m_descriptorVector->ReleaseAt(m_allTextures[indexIntoAllTextures].texture->m_srvDescriptorIndex);
 	}
 }
-
-
-
-
-
 
 }

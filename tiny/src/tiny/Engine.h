@@ -14,6 +14,7 @@ class RenderPass;
 class RenderItem;
 class MeshGroup;
 class DynamicMeshGroup;
+class Texture;
 class TextureManager;
 
 class Engine
@@ -103,6 +104,7 @@ private:
 	friend MeshGroup;
 	friend DynamicMeshGroup;
 	template<typename> friend class DynamicMeshGroupT;
+	friend Texture;
 	friend TextureManager;
 };
 }
