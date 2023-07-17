@@ -2,17 +2,17 @@
 
 static constexpr std::array g_textureFiles{
 	L"src/textures/grass.dds",
-		L"src/textures/water1.dds",
-		L"src/textures/WireFence.dds",
-		L"src/textures/bricks.dds",
-		L"src/textures/bricks2.dds",
-		L"src/textures/bricks3.dds",
-		L"src/textures/checkboard.dds",
-		L"src/textures/ice.dds",
-		L"src/textures/stone.dds",
-		L"src/textures/tile.dds",
-		L"src/textures/white1x1.dds",
-		L"src/textures/treeArray2.dds"
+	L"src/textures/water1.dds",
+	L"src/textures/WireFence.dds",
+	L"src/textures/bricks.dds",
+	L"src/textures/bricks2.dds",
+	L"src/textures/bricks3.dds",
+	L"src/textures/checkboard.dds",
+	L"src/textures/ice.dds",
+	L"src/textures/stone.dds",
+	L"src/textures/tile.dds",
+	L"src/textures/white1x1.dds",
+	L"src/textures/treeArray2.dds"
 };
 
 std::wstring GetTextureFilename(unsigned int index)

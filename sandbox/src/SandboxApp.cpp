@@ -27,7 +27,7 @@ Sandbox::Sandbox() :
         m_deviceResources = std::make_shared<tiny::DeviceResources>(GetHWND(), GetWindowHeight(), GetWindowWidth());
         TINY_ASSERT(m_deviceResources != nullptr, "Failed to create device resources");
 
-        m_scene = std::make_unique<TreeBillboardsScene>(m_deviceResources);
+        m_scene = std::make_unique<LandAndWavesSceneCS>(m_deviceResources);
         m_scene->SetViewport(
             0.0f,
             0.0f,

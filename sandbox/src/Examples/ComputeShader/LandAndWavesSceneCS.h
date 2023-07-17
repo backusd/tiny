@@ -1,11 +1,11 @@
 #pragma once
-#include "../facade/facade.h" // NOTE: When including facade, it MUST be included first because of include conflicts between boost and Windows.h
+#include "../../facade/facade.h" // NOTE: When including facade, it MUST be included first because of include conflicts between boost and Windows.h
 #include <tiny.h>
 #include "../SharedStuff.h"
 
 namespace sandbox
 {
-	namespace landandwaves
+	namespace landandwavescs
 	{
 		struct Vertex
 		{
@@ -56,13 +56,60 @@ namespace sandbox
 			// are spot lights for a maximum of MaxLights per object.
 			Light Lights[MaxLights];
 		};
-	}
-class Waves;
 
-class LandAndWavesScene
+		class Waves
+		{
+		public:
+			Waves(int m, int n, float dx, float dt, float speed, float damping);
+			Waves(const Waves& rhs) = delete;
+			Waves& operator=(const Waves& rhs) = delete;
+			~Waves();
+
+			int RowCount()const;
+			int ColumnCount()const;
+			int VertexCount()const;
+			int TriangleCount()const;
+			float Width()const;
+			float Depth()const;
+
+			// Returns the solution at the ith grid point.
+			const DirectX::XMFLOAT3& Position(int i)const { return mCurrSolution[i]; }
+
+			// Returns the solution normal at the ith grid point.
+			const DirectX::XMFLOAT3& Normal(int i)const { return mNormals[i]; }
+
+			// Returns the unit tangent vector at the ith grid point in the local x-axis direction.
+			const DirectX::XMFLOAT3& TangentX(int i)const { return mTangentX[i]; }
+
+			void Update(float dt);
+			void Disturb(int i, int j, float magnitude);
+
+		private:
+			int mNumRows = 0;
+			int mNumCols = 0;
+
+			int mVertexCount = 0;
+			int mTriangleCount = 0;
+
+			// Simulation constants we can precompute.
+			float mK1 = 0.0f;
+			float mK2 = 0.0f;
+			float mK3 = 0.0f;
+
+			float mTimeStep = 0.0f;
+			float mSpatialStep = 0.0f;
+
+			std::vector<DirectX::XMFLOAT3> mPrevSolution;
+			std::vector<DirectX::XMFLOAT3> mCurrSolution;
+			std::vector<DirectX::XMFLOAT3> mNormals;
+			std::vector<DirectX::XMFLOAT3> mTangentX;
+		};
+	}
+
+class LandAndWavesSceneCS
 {
 public:
-	LandAndWavesScene(std::shared_ptr<tiny::DeviceResources> deviceResources);
+	LandAndWavesSceneCS(std::shared_ptr<tiny::DeviceResources> deviceResources);
 
 	void Update(const tiny::Timer& timer);
 	void Render() { tiny::Engine::Render(); }
@@ -95,7 +142,7 @@ private:
 	bool m_keyDIsDown = false;
 
 	// Textures
-	std::array<std::unique_ptr<tiny::Texture>, (int)TEXTURE::Count> m_textures;
+	std::array<tiny::Texture*, (int)TEXTURE::Count> m_textures;
 
 	// Land and Water Scene ------------------------------------------------------------------
 	// 
@@ -108,7 +155,7 @@ private:
 
 	// Render Data
 	tiny::RenderPass m_mainRenderPass;
-	std::unique_ptr<tiny::ConstantBufferT<landandwaves::PassConstants>> m_mainRenderPassConstantsCB = nullptr;
+	std::unique_ptr<tiny::ConstantBufferT<landandwavescs::PassConstants>> m_mainRenderPassConstantsCB = nullptr;
 	std::unique_ptr<tiny::Shader> m_standardVS = nullptr;
 	std::unique_ptr<tiny::Shader> m_opaquePS = nullptr;
 	std::unique_ptr<tiny::Shader> m_alphaTestedPS = nullptr;
@@ -122,8 +169,8 @@ private:
 
 	// Waves
 	std::unique_ptr<GameObject> m_wavesObject = nullptr;
-	std::unique_ptr<Waves> m_waves;
-	tiny::DynamicMeshGroupT<landandwaves::Vertex>* m_dynamicWaveMesh = nullptr;
+	std::unique_ptr<landandwavescs::Waves> m_waves;
+	tiny::DynamicMeshGroupT<landandwavescs::Vertex>* m_dynamicWaveMesh = nullptr;
 
 	std::unique_ptr<tiny::RasterizerState> m_rasterizerState = nullptr;
 	std::unique_ptr<tiny::BlendState> m_blendState = nullptr;
@@ -132,56 +179,5 @@ private:
 	void UpdateCamera(const tiny::Timer& timer);
 
 	std::array<const CD3DX12_STATIC_SAMPLER_DESC, 6> GetStaticSamplers();
-};
-
-// ======================================================================================================
-// Waves
-// ======================================================================================================
-class Waves
-{
-public:
-	Waves(int m, int n, float dx, float dt, float speed, float damping);
-	Waves(const Waves& rhs) = delete;
-	Waves& operator=(const Waves& rhs) = delete;
-	~Waves();
-
-	int RowCount()const;
-	int ColumnCount()const;
-	int VertexCount()const;
-	int TriangleCount()const;
-	float Width()const;
-	float Depth()const;
-
-	// Returns the solution at the ith grid point.
-	const DirectX::XMFLOAT3& Position(int i)const { return mCurrSolution[i]; }
-
-	// Returns the solution normal at the ith grid point.
-	const DirectX::XMFLOAT3& Normal(int i)const { return mNormals[i]; }
-
-	// Returns the unit tangent vector at the ith grid point in the local x-axis direction.
-	const DirectX::XMFLOAT3& TangentX(int i)const { return mTangentX[i]; }
-
-	void Update(float dt);
-	void Disturb(int i, int j, float magnitude);
-
-private:
-	int mNumRows = 0;
-	int mNumCols = 0;
-
-	int mVertexCount = 0;
-	int mTriangleCount = 0;
-
-	// Simulation constants we can precompute.
-	float mK1 = 0.0f;
-	float mK2 = 0.0f;
-	float mK3 = 0.0f;
-
-	float mTimeStep = 0.0f;
-	float mSpatialStep = 0.0f;
-
-	std::vector<DirectX::XMFLOAT3> mPrevSolution;
-	std::vector<DirectX::XMFLOAT3> mCurrSolution;
-	std::vector<DirectX::XMFLOAT3> mNormals;
-	std::vector<DirectX::XMFLOAT3> mTangentX;
 };
 }

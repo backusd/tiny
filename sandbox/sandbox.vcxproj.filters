@@ -24,16 +24,19 @@
     <ClCompile Include="src\facade\facade.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\LandAndWaves\LandAndWavesScene.cpp">
+    <ClCompile Include="src\Examples\LandAndWaves\LandAndWavesScene.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\SharedStuff.cpp">
+    <ClCompile Include="src\Examples\SharedStuff.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\StencilExample\StencilExample.cpp">
+    <ClCompile Include="src\Examples\StencilExample\StencilExample.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\TreeBillboards\TreeBillboardsScene.cpp">
+    <ClCompile Include="src\Examples\TreeBillboards\TreeBillboardsScene.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Examples\ComputeShader\LandAndWavesSceneCS.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -44,16 +47,19 @@
     <ClInclude Include="src\facade\facade.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\LandAndWaves\LandAndWavesScene.h">
+    <ClInclude Include="src\Examples\LandAndWaves\LandAndWavesScene.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\SharedStuff.h">
+    <ClInclude Include="src\Examples\SharedStuff.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\StencilExample\StencilExample.h">
+    <ClInclude Include="src\Examples\StencilExample\StencilExample.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\TreeBillboards\TreeBillboardsScene.h">
+    <ClInclude Include="src\Examples\TreeBillboards\TreeBillboardsScene.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Examples\ComputeShader\LandAndWavesSceneCS.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -1,5 +1,5 @@
 #pragma once
-#include "../facade/facade.h" // NOTE: When including facade, it MUST be included first because of include conflicts between boost and Windows.h
+#include "../../facade/facade.h" // NOTE: When including facade, it MUST be included first because of include conflicts between boost and Windows.h
 #include <tiny.h>
 #include "../SharedStuff.h"
 
@@ -148,7 +148,7 @@ private:
 	bool m_keyDIsDown = false;
 
 	// Textures
-	std::array<std::unique_ptr<tiny::Texture>, (int)TEXTURE::Count> m_textures;
+	std::array<tiny::Texture*, (int)TEXTURE::Count> m_textures;
 
 	// Land and Water Scene ------------------------------------------------------------------
 	// 

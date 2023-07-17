@@ -3,9 +3,11 @@
 #include <tiny.h>
 
 #include "facade/facade.h"
-#include "LandAndWaves/LandAndWavesScene.h"
-#include "StencilExample/StencilExample.h"
-#include "TreeBillboards/TreeBillboardsScene.h"
+#include "Examples/LandAndWaves/LandAndWavesScene.h"
+#include "Examples/StencilExample/StencilExample.h"
+#include "Examples/TreeBillboards/TreeBillboardsScene.h"
+#include "Examples/ComputeShader/LandAndWavesSceneCS.h"
+
 
 
 namespace sandbox
@@ -58,7 +60,8 @@ private:
 
 	//std::unique_ptr<LandAndWavesScene> m_scene;
 	//std::unique_ptr<StencilExample> m_scene; 
-	std::unique_ptr<TreeBillboardsScene> m_scene;
+	//std::unique_ptr<TreeBillboardsScene> m_scene;
+	std::unique_ptr<LandAndWavesSceneCS> m_scene;
 
 };
 }
