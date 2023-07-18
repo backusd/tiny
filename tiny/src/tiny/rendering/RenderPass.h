@@ -7,6 +7,7 @@
 #include "tiny/rendering/RootSignature.h"
 #include "tiny/rendering/RootConstantBufferView.h"
 #include "tiny/rendering/RenderPassLayer.h"
+#include "tiny/rendering/ComputeLayer.h"
 #include "tiny/utils/Timer.h"
 
 
@@ -73,8 +74,11 @@ public:
 	// 0+ constant buffer views for per-pass constants
 	std::vector<RootConstantBufferView> ConstantBufferViews;
 
-	// 1+ render layers
+	// 0+ render layers
 	std::vector<RenderPassLayer> RenderPassLayers;
+
+	// 0+ render layers
+	std::vector<ComputeLayer> ComputeLayers;
 
 	// Name (for debug/profiling purposes)
 	std::string Name = "Unnamed RenderPass";
@@ -84,4 +88,5 @@ private:
 	RenderPass(const RenderPass&) = delete;
 	RenderPass& operator=(const RenderPass&) = delete;
 };
+
 }

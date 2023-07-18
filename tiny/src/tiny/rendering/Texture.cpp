@@ -82,6 +82,7 @@ void Texture::TransitionToState(D3D12_RESOURCE_STATES newState)
 {
 	CD3DX12_RESOURCE_BARRIER transition = CD3DX12_RESOURCE_BARRIER::Transition(m_resource.Get(), m_currentResourceState, newState);
 	m_deviceResources->GetCommandList()->ResourceBarrier(1, &transition);
+	m_currentResourceState = newState;
 }
 
 

@@ -12,6 +12,7 @@ namespace tiny
 class ConstantBuffer;
 class RenderPass;
 class RenderItem;
+class ComputeItem;
 class MeshGroup;
 class DynamicMeshGroup;
 class Texture;
@@ -60,6 +61,8 @@ private:
 	static inline void RemoveRenderPass(RenderPass* pass) noexcept { Get().RemoveRenderPassImpl(pass); }
 	static inline void AddRenderItem(RenderItem* item) noexcept { Get().AddRenderItemImpl(item); }
 	static inline void RemoveRenderItem(RenderItem* item) noexcept { Get().RemoveRenderItemImpl(item); }
+	static inline void AddComputeItem(ComputeItem* item) noexcept { Get().AddComputeItemImpl(item); }
+	static inline void RemoveComputeItem(ComputeItem* item) noexcept { Get().RemoveComputeItemImpl(item); }
 	static inline void AddDynamicMeshGroup(DynamicMeshGroup* mesh) noexcept { Get().AddDynamicMeshGroupImpl(mesh); }
 	static inline void RemoveDynamicMeshGroup(DynamicMeshGroup* mesh) noexcept { Get().RemoveDynamicMeshGroupImpl(mesh); }
 	
@@ -67,6 +70,8 @@ private:
 	void RemoveRenderPassImpl(RenderPass* pass) noexcept;
 	void AddRenderItemImpl(RenderItem* item) noexcept;
 	void RemoveRenderItemImpl(RenderItem* item) noexcept;
+	void AddComputeItemImpl(ComputeItem* item) noexcept;
+	void RemoveComputeItemImpl(ComputeItem* item) noexcept;
 	void AddDynamicMeshGroupImpl(DynamicMeshGroup* mesh) noexcept;
 	void RemoveDynamicMeshGroupImpl(DynamicMeshGroup* mesh) noexcept;
 
@@ -94,6 +99,7 @@ private:
 
 	// Data that will be looped over during Update
 	std::vector<RenderItem*> m_allRenderItems;
+	std::vector<ComputeItem*> m_allComputeItems;
 	std::vector<DynamicMeshGroup*> m_dynamicMeshes;
 
 
@@ -101,6 +107,7 @@ private:
 	friend ConstantBuffer;
 	friend RenderPass;
 	friend RenderItem;
+	friend ComputeItem;
 	friend MeshGroup;
 	friend DynamicMeshGroup;
 	template<typename> friend class DynamicMeshGroupT;

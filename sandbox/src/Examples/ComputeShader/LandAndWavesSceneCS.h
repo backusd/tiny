@@ -104,6 +104,40 @@ namespace sandbox
 			std::vector<DirectX::XMFLOAT3> mNormals;
 			std::vector<DirectX::XMFLOAT3> mTangentX;
 		};
+
+		class GPUWaves
+		{
+		public:
+			GPUWaves(std::shared_ptr<tiny::DeviceResources> deviceResources,
+					 UINT m, UINT n,
+					 float dx, float dt, 
+					 float speed, float damping);
+			GPUWaves(const GPUWaves& rhs) = delete;
+			GPUWaves(GPUWaves&& rhs) = delete;
+			GPUWaves& operator=(const GPUWaves& rhs) = delete;
+			GPUWaves& operator=(GPUWaves&& rhs) = delete;
+			~GPUWaves() {}
+
+
+		private:
+			std::shared_ptr<tiny::DeviceResources> m_deviceResources;
+			tiny::TextureVector m_textureVector;
+
+			UINT m_numRows; 
+			UINT m_numColumns;
+
+			UINT m_vertexCount;
+			UINT m_TriangleCount;
+
+			float m_k[3] = { 0.0f, 0.0f, 0.0f };
+
+			float m_timeStep;
+			float m_spatialStep;
+
+			tiny::Texture* m_prevSol = nullptr;
+			tiny::Texture* m_currSol = nullptr;
+			tiny::Texture* m_nextSol = nullptr;
+		};
 	}
 
 class LandAndWavesSceneCS
@@ -168,6 +202,8 @@ private:
 	std::unique_ptr<GameObject> m_boxObject = nullptr;
 
 	// Waves
+	std::unique_ptr<landandwavescs::GPUWaves> m_gpuWaves = nullptr;
+
 	std::unique_ptr<GameObject> m_wavesObject = nullptr;
 	std::unique_ptr<landandwavescs::Waves> m_waves;
 	tiny::DynamicMeshGroupT<landandwavescs::Vertex>* m_dynamicWaveMesh = nullptr;

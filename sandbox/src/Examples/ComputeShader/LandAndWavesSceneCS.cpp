@@ -20,6 +20,8 @@ LandAndWavesSceneCS::LandAndWavesSceneCS(std::shared_ptr<DeviceResources> device
 	m_camera.SetPosition(0.0f, 2.0f, -15.0f);
 	m_camera.SetLens(0.25f * MathHelper::Pi, m_deviceResources->AspectRatio(), 1.0f, 1000.0f);
 
+	m_gpuWaves = std::make_unique<GPUWaves>(m_deviceResources, 256, 256, 0.25f, 0.03f, 2.0f, 0.2f);
+
 	LoadTextures();
 	BuildLandAndWaterScene();
 
@@ -822,5 +824,66 @@ namespace landandwavescs
 		mCurrSolution[(static_cast<size_t>(i) + 1) * mNumCols + j].y += halfMag;
 		mCurrSolution[(static_cast<size_t>(i) - 1) * mNumCols + j].y += halfMag;
 	}
+
+	// ---------------------------------------------------------------------------
+
+	GPUWaves::GPUWaves(std::shared_ptr<tiny::DeviceResources> deviceResources,
+		UINT m, UINT n,
+		float dx, float dt,
+		float speed, float damping) :
+		m_deviceResources(deviceResources),
+		m_textureVector(deviceResources),
+		m_numRows(m),
+		m_numColumns(n),
+		m_vertexCount(m * n),
+		m_TriangleCount((m - 1) * (n - 1) * 2),
+		m_timeStep(dt),
+		m_spatialStep(dx)
+	{
+		TINY_ASSERT((m * n) % 256 == 0, "Must be a multiple of 256");
+
+		float d = damping * dt + 2.0f; 
+		float e = (speed * speed) * (dt * dt) / (dx * dx);
+		m_k[0] = (damping * dt - 2.0f) / d;
+		m_k[1] = (4.0f - 8.0f * e) / d;
+		m_k[2] = (2.0f * e) / d;
+
+		D3D12_RESOURCE_DESC texDesc; 
+		ZeroMemory(&texDesc, sizeof(D3D12_RESOURCE_DESC)); 
+		texDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D; 
+		texDesc.Alignment = 0; 
+		texDesc.Width = m_numColumns; 
+		texDesc.Height = m_numRows; 
+		texDesc.DepthOrArraySize = 1; 
+		texDesc.MipLevels = 1; 
+		texDesc.Format = DXGI_FORMAT_R32_FLOAT; 
+		texDesc.SampleDesc.Count = 1; 
+		texDesc.SampleDesc.Quality = 0; 
+		texDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN; 
+		texDesc.Flags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS; 
+
+		m_prevSol = m_textureVector.EmplaceBack(texDesc, true, true);
+		m_currSol = m_textureVector.EmplaceBack(texDesc, true, true);
+		m_nextSol = m_textureVector.EmplaceBack(texDesc, true, true);
+
+		TINY_ASSERT(m_prevSol != nullptr, "Something went wrong");
+		TINY_ASSERT(m_currSol != nullptr, "Something went wrong");
+		TINY_ASSERT(m_nextSol != nullptr, "Something went wrong");
+
+		std::vector<float> initData(m_numRows * m_numColumns, 0.0f);
+		for (int i = 0; i < initData.size(); ++i) 
+			initData[i] = 0.0f; 
+
+		m_prevSol->TransitionToState(D3D12_RESOURCE_STATE_COPY_DEST);
+		m_prevSol->CopyData(initData);
+		m_prevSol->TransitionToState(D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+
+		m_currSol->TransitionToState(D3D12_RESOURCE_STATE_COPY_DEST);
+		m_currSol->CopyData(initData);
+		m_currSol->TransitionToState(D3D12_RESOURCE_STATE_GENERIC_READ);
+
+		m_nextSol->TransitionToState(D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+	}
+
 }
 }

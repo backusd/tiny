@@ -13,7 +13,7 @@ class RenderItem
 public:
 	RenderItem() noexcept
 	{
-		// Register the RenderItem with the Engine
+		// Register the RenderItem with the Engine (used by the Engine to call RenderItem::Update)
 		Engine::AddRenderItem(this);
 	}
 	// Because we are storing render items in a vector, it is possible that even when using emplace_back, the vector

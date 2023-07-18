@@ -140,7 +140,39 @@ void Engine::RenderImpl()
 
 		TINY_CORE_ASSERT(pass != nullptr, "Pass should never be nullptr");
 		TINY_CORE_ASSERT(pass->RootSignature != nullptr, "Pass has no root signature");
-		TINY_CORE_ASSERT(pass->RenderPassLayers.size() > 0, "Pass has no render layers");
+		TINY_CORE_ASSERT(pass->RenderPassLayers.size() > 0 || pass->ComputeLayers.size() > 0, "Pass has no render layers nor compute layers. Must have at least 1 type of layer to be valid.");
+
+		// Before attempting to perform any rendering, first perform all compute operations
+		for (const ComputeLayer& layer : pass->ComputeLayers)
+		{
+			PROFILE_SCOPE(layer.Name.c_str());
+
+			TINY_CORE_ASSERT(layer.ComputeItems.size() > 0, "Compute layer has no compute items");
+			TINY_CORE_ASSERT(layer.PipelineState != nullptr, "Compute layer has no pipeline state");
+			TINY_CORE_ASSERT(layer.RootSignature != nullptr, "Compute layer has no root signature");
+
+			// Pre-Work method - possibly for transitioning resources
+			layer.PreWork(layer, commandList);
+
+			// Root Signature / PSO
+			commandList->SetComputeRootSignature(layer.RootSignature->Get());
+			commandList->SetPipelineState(layer.PipelineState.Get());
+
+			// Iterate over each compute item and call dispatch to submit compute work to the GPU
+			for (const ComputeItem& item : layer.ComputeItems)
+			{
+				// Tables and CBV's ARE allowed to be empty
+				for (const RootDescriptorTable& table : item.DescriptorTables) 
+					table.Bind(commandList); 
+
+				for (const RootConstantBufferView& cbv : item.ConstantBufferViews) 
+					cbv.Bind(commandList, m_currentFrameIndex); 
+
+				commandList->Dispatch(item.ThreadGroupCountX, item.ThreadGroupCountY, item.ThreadGroupCountZ);
+			}
+		}
+
+
 
 		// Pre-Work method - possibly for transitioning resources or anything necessary
 		pass->PreWork(pass, commandList);
@@ -300,6 +332,21 @@ void Engine::RemoveRenderItemImpl(RenderItem* item) noexcept
 	std::vector<RenderItem*>::iterator position = std::find(m_allRenderItems.begin(), m_allRenderItems.end(), item);
 	if (position != m_allRenderItems.end())
 		m_allRenderItems.erase(position);
+}
+void Engine::AddComputeItemImpl(ComputeItem* item) noexcept
+{
+	// The reason for holding a list of compute items is strictly so we can call ComputeItem::Update()
+	// Therefore, we do NOT want duplicate compute items, which is possible if a compute item is shared
+	// across render passes
+	std::vector<ComputeItem*>::iterator position = std::find(m_allComputeItems.begin(), m_allComputeItems.end(), item);
+	if (position == m_allComputeItems.end())
+		m_allComputeItems.push_back(item);
+}
+void Engine::RemoveComputeItemImpl(ComputeItem* item) noexcept
+{
+	std::vector<ComputeItem*>::iterator position = std::find(m_allComputeItems.begin(), m_allComputeItems.end(), item);
+	if (position != m_allComputeItems.end())
+		m_allComputeItems.erase(position);
 }
 void Engine::AddDynamicMeshGroupImpl(DynamicMeshGroup* mesh) noexcept
 {

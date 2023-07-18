@@ -113,6 +113,8 @@
     <ClInclude Include="src\tiny\Core.h" />
     <ClInclude Include="src\tiny\Log.h" />
     <ClInclude Include="src\tiny\rendering\BlendState.h" />
+    <ClInclude Include="src\tiny\rendering\ComputeItem.h" />
+    <ClInclude Include="src\tiny\rendering\ComputeLayer.h" />
     <ClInclude Include="src\tiny\rendering\ConstantBuffer.h" />
     <ClInclude Include="src\tiny\rendering\DepthStencilState.h" />
     <ClInclude Include="src\tiny\rendering\DescriptorVector.h" />
