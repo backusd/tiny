@@ -35,14 +35,15 @@ public:
 	}
 	~ComputeLayer() noexcept = default;
 
-	inline void SetPSO(const D3D12_GRAPHICS_PIPELINE_STATE_DESC& desc)
+	inline void SetPSO(const D3D12_COMPUTE_PIPELINE_STATE_DESC& desc)
 	{
 		GFX_THROW_INFO(
-			m_deviceResources->GetDevice()->CreateGraphicsPipelineState(&desc, IID_PPV_ARGS(&PipelineState))
+			m_deviceResources->GetDevice()->CreateComputePipelineState(&desc, IID_PPV_ARGS(&PipelineState))
 		);
 	}
 
 	std::function<void(const ComputeLayer&, ID3D12GraphicsCommandList*)> PreWork = [](const ComputeLayer&, ID3D12GraphicsCommandList*) {};
+	std::function<void(const ComputeLayer&, ID3D12GraphicsCommandList*)> PostWork = [](const ComputeLayer&, ID3D12GraphicsCommandList*) {};
 
 	// Shared pointer because root signatures may be shared
 	std::shared_ptr<RootSignature> RootSignature;

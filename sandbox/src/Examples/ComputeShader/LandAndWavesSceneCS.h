@@ -105,6 +105,16 @@ namespace sandbox
 			std::vector<DirectX::XMFLOAT3> mTangentX;
 		};
 
+		struct WavesUpdateSettings
+		{
+			float WaveConstant0 = 0.0f;
+			float WaveConstant1 = 0.0f;
+			float WaveConstant2 = 0.0f;
+
+			float DisturbMag = 0.0f;
+			DirectX::XMINT2 DisturbIndex = DirectX::XMINT2(0, 0);
+		};
+
 		class GPUWaves
 		{
 		public:
@@ -118,6 +128,17 @@ namespace sandbox
 			GPUWaves& operator=(GPUWaves&& rhs) = delete;
 			~GPUWaves() {}
 
+			void PreUpdate();
+			void PostUpdate();
+
+			ND inline float WaveConstant(unsigned int iii) const noexcept { return m_k[iii]; }
+
+			ND inline tiny::Texture* PrevSol() const noexcept { return m_prevSol; }
+			ND inline tiny::Texture* CurrSol() const noexcept { return m_currSol; }
+			ND inline tiny::Texture* NextSol() const noexcept { return m_nextSol; }
+
+			ND inline UINT NumRows() const noexcept { return m_numRows; }
+			ND inline UINT NumColumns() const noexcept { return m_numColumns; }
 
 		private:
 			std::shared_ptr<tiny::DeviceResources> m_deviceResources;
@@ -203,6 +224,10 @@ private:
 
 	// Waves
 	std::unique_ptr<landandwavescs::GPUWaves> m_gpuWaves = nullptr;
+	std::unique_ptr<tiny::Shader> m_wavesDisturbCS = nullptr;
+	std::unique_ptr<tiny::Shader> m_wavesUpdateCS = nullptr;
+	std::unique_ptr<tiny::ConstantBufferT<landandwavescs::WavesUpdateSettings>> m_waveUpdateSettings = nullptr;
+	int m_waveUpdateNumFramesDirty = tiny::gNumFrameResources;
 
 	std::unique_ptr<GameObject> m_wavesObject = nullptr;
 	std::unique_ptr<landandwavescs::Waves> m_waves;

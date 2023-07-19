@@ -77,6 +77,7 @@ private:
 
 	// Update methods
 	void UpdateRenderItems(const Timer& timer);
+	void UpdateComputeItems(const Timer& timer);
 	void UpdateRenderPasses(const Timer& timer);
 	void UpdateDynamicMeshes(const Timer& timer);
 

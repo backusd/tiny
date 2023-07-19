@@ -117,6 +117,7 @@
     <ClInclude Include="src\tiny\rendering\ComputeLayer.h" />
     <ClInclude Include="src\tiny\rendering\ConstantBuffer.h" />
     <ClInclude Include="src\tiny\rendering\DepthStencilState.h" />
+    <ClInclude Include="src\tiny\rendering\DescriptorManager.h" />
     <ClInclude Include="src\tiny\rendering\DescriptorVector.h" />
     <ClInclude Include="src\tiny\rendering\GeometryGenerator.h" />
     <ClInclude Include="src\tiny\rendering\InputLayout.h" />

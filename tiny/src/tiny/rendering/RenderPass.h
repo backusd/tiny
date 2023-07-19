@@ -61,7 +61,7 @@ public:
 	{
 		// Loop over the constant buffer views to update per-pass constants
 		for (auto& rcbv : ConstantBufferViews)
-			rcbv.Update(timer, nullptr, frameIndex);
+			rcbv.Update(timer, frameIndex);
 	}
 
 	// Function pointers for Pre/Post-Work 

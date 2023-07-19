@@ -19,6 +19,7 @@ StencilExample::StencilExample(std::shared_ptr<DeviceResources> deviceResources)
 	PROFILE_SCOPE("StencilExample()");
 
 	Engine::Init(m_deviceResources);
+	DescriptorManager::Init(m_deviceResources);
 	TextureManager::Init(m_deviceResources);
 
 
@@ -132,7 +133,7 @@ void StencilExample::BuildMainRenderPass()
 
 	// Currently using root parameter index #2 for the per-pass constants
 	auto& renderPassCBV = m_mainRenderPass.ConstantBufferViews.emplace_back(2, m_mainRenderPassConstantsCB.get());
-	renderPassCBV.Update = [this](const Timer& timer, RenderItem* ri, int frameIndex)
+	renderPassCBV.Update = [this](const Timer& timer, int frameIndex)
 	{
 		DirectX::XMMATRIX view = m_camera.GetView();
 		DirectX::XMMATRIX proj = m_camera.GetProj();
@@ -456,7 +457,7 @@ void StencilExample::BuildReflectedRenderPass()
 
 	// Currently using root parameter index #2 for the per-pass constants
 	auto& renderPassCBV = m_reflectedRenderPass.ConstantBufferViews.emplace_back(2, m_reflectedRenderPassConstantsCB.get());
-	renderPassCBV.Update = [this](const Timer& timer, RenderItem* ri, int frameIndex) 
+	renderPassCBV.Update = [this](const Timer& timer, int frameIndex) 
 	{
 		// Reflect the lighting but keep all other constants the same
 

@@ -1,5 +1,6 @@
 #include "tiny-pch.h"
 #include "Engine.h"
+#include "rendering/DescriptorManager.h"
 #include "rendering/RenderPass.h"
 #include "rendering/RenderPassLayer.h"
 #include "rendering/RenderItem.h"
@@ -130,7 +131,7 @@ void Engine::RenderImpl()
 
 	{
 		PROFILE_SCOPE("SetDescriptorHeaps");
-		ID3D12DescriptorHeap* descriptorHeaps[] = { TextureManager::GetHeapPointer() };
+		ID3D12DescriptorHeap* descriptorHeaps[] = { DescriptorManager::GetRawHeapPointer() };
 		commandList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
 	}
 
@@ -163,13 +164,16 @@ void Engine::RenderImpl()
 			{
 				// Tables and CBV's ARE allowed to be empty
 				for (const RootDescriptorTable& table : item.DescriptorTables) 
-					table.Bind(commandList); 
+					commandList->SetComputeRootDescriptorTable(table.RootParameterIndex, table.DescriptorHandle);
 
 				for (const RootConstantBufferView& cbv : item.ConstantBufferViews) 
-					cbv.Bind(commandList, m_currentFrameIndex); 
+					commandList->SetComputeRootConstantBufferView(cbv.RootParameterIndex, cbv.ConstantBuffer->GetGPUVirtualAddress(m_currentFrameIndex));
 
 				commandList->Dispatch(item.ThreadGroupCountX, item.ThreadGroupCountY, item.ThreadGroupCountZ);
 			}
+
+			// Post-Work method - possibly for transitioning resources
+			layer.PostWork(layer, commandList);
 		}
 
 
@@ -277,6 +281,16 @@ void Engine::UpdateRenderItems(const Timer& timer)
 	PROFILE_FUNCTION();
 
 	for (RenderItem* item : m_allRenderItems)
+	{
+		TINY_CORE_ASSERT(item != nullptr, "RenderItem should never be nullptr");
+		item->Update(timer, m_currentFrameIndex);
+	}
+}
+void Engine::UpdateComputeItems(const Timer& timer)
+{
+	PROFILE_FUNCTION();
+
+	for (ComputeItem* item : m_allComputeItems)
 	{
 		TINY_CORE_ASSERT(item != nullptr, "RenderItem should never be nullptr");
 		item->Update(timer, m_currentFrameIndex);

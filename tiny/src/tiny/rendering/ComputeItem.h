@@ -52,6 +52,16 @@ public:
 		Engine::RemoveComputeItem(this);
 	}
 
+	void Update(const Timer& timer, int frameIndex)
+	{
+		// Loop over the constant buffer views and descriptor tables to update them
+		for (auto& rcbv : ConstantBufferViews)
+			rcbv.Update(timer, frameIndex);
+
+		for (auto& dt : DescriptorTables)
+			dt.Update(timer, frameIndex);
+	}
+
 	// 0+ constant buffer views for per-item constants
 	std::vector<RootConstantBufferView> ConstantBufferViews;
 

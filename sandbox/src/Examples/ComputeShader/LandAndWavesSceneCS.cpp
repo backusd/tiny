@@ -12,6 +12,7 @@ LandAndWavesSceneCS::LandAndWavesSceneCS(std::shared_ptr<DeviceResources> device
 	PROFILE_SCOPE("LandAndWavesSceneCS()");
 
 	Engine::Init(m_deviceResources);
+	DescriptorManager::Init(m_deviceResources);
 	TextureManager::Init(m_deviceResources);
 
 
@@ -67,6 +68,91 @@ void LandAndWavesSceneCS::BuildLandAndWaterScene()
 	m_mainRenderPass.Name = "Main Render Pass";
 	m_mainRenderPass.RenderPassLayers.reserve(3);
 
+	// Compute Layer ---------------------------------------------------------------------------------
+	m_mainRenderPass.ComputeLayers.reserve(1);
+	ComputeLayer& computeLayer = m_mainRenderPass.ComputeLayers.emplace_back(m_deviceResources);
+
+	// Root Signature
+	CD3DX12_DESCRIPTOR_RANGE uavTable0, uavTable1, uavTable2; 
+	uavTable0.Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 0); 
+	uavTable1.Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 1); 
+	uavTable2.Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, 1, 2); 
+	
+	// Root parameter can be a table, root descriptor or root constants.
+	CD3DX12_ROOT_PARAMETER csSlotRootParameter[4]; 
+
+	// Perfomance TIP: Order from most frequent to least frequent.
+	csSlotRootParameter[0].InitAsConstantBufferView(0);
+	csSlotRootParameter[1].InitAsDescriptorTable(1, &uavTable0); 
+	csSlotRootParameter[2].InitAsDescriptorTable(1, &uavTable1); 
+	csSlotRootParameter[3].InitAsDescriptorTable(1, &uavTable2); 
+
+	// A root signature is an array of root parameters.
+	CD3DX12_ROOT_SIGNATURE_DESC computeRootSigDesc(4, csSlotRootParameter, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_NONE);
+
+	computeLayer.RootSignature = std::make_shared<RootSignature>(m_deviceResources, computeRootSigDesc);
+
+	// PSO
+	m_wavesDisturbCS = std::make_unique<Shader>(m_deviceResources, "src/shaders/output/WavesDisturbCS.cso");
+	m_wavesUpdateCS = std::make_unique<Shader>(m_deviceResources, "src/shaders/output/WavesUpdateCS.cso");
+
+	D3D12_COMPUTE_PIPELINE_STATE_DESC wavesUpdatePSO;
+	ZeroMemory(&wavesUpdatePSO, sizeof(D3D12_COMPUTE_PIPELINE_STATE_DESC));
+	wavesUpdatePSO.pRootSignature = computeLayer.RootSignature->Get();
+	wavesUpdatePSO.CS = m_wavesDisturbCS->GetShaderByteCode();
+	wavesUpdatePSO.Flags = D3D12_PIPELINE_STATE_FLAG_NONE; 
+
+	computeLayer.SetPSO(wavesUpdatePSO);
+
+	// Compute Item
+	ComputeItem& computeItem = computeLayer.ComputeItems.emplace_back();
+	computeItem.ThreadGroupCountX = m_gpuWaves->NumColumns() / 16;
+	computeItem.ThreadGroupCountY = m_gpuWaves->NumRows() / 16;
+	computeItem.ThreadGroupCountZ = 1;
+
+	m_waveUpdateSettings = std::make_unique<ConstantBufferT<WavesUpdateSettings>>(m_deviceResources); 
+	auto& waveUpdateCBV = computeItem.ConstantBufferViews.emplace_back(0, m_waveUpdateSettings.get());
+	waveUpdateCBV.Update = [this](const Timer& timer, int frameIndex)
+	{
+		// Only update the cbuffer data if the constants have changed.
+		if (m_waveUpdateNumFramesDirty > 0)
+		{
+			WavesUpdateSettings settings;
+			settings.WaveConstant0 = m_gpuWaves->WaveConstant(0);
+			settings.WaveConstant1 = m_gpuWaves->WaveConstant(1);
+			settings.WaveConstant2 = m_gpuWaves->WaveConstant(2);
+
+			m_waveUpdateSettings->CopyData(frameIndex, settings);
+
+			--m_waveUpdateNumFramesDirty;
+		}
+	};
+
+	auto& prevSolDT = computeItem.DescriptorTables.emplace_back(1, m_gpuWaves->PrevSol()->GetUAVHandle());
+	prevSolDT.Update = [](const Timer& timer, int frameIndex) {}; // No update here because the texture is static
+	
+	auto& currSolDT = computeItem.DescriptorTables.emplace_back(2, m_gpuWaves->CurrSol()->GetUAVHandle());
+	currSolDT.Update = [](const Timer& timer, int frameIndex) {}; // No update here because the texture is static
+	
+	auto& nextSolDT = computeItem.DescriptorTables.emplace_back(3, m_gpuWaves->NextSol()->GetUAVHandle());
+	nextSolDT.Update = [](const Timer& timer, int frameIndex) {}; // No update here because the texture is static
+
+	computeLayer.PreWork = [this](const ComputeLayer&, ID3D12GraphicsCommandList*)
+	{
+		m_gpuWaves->PreUpdate();
+	};
+	computeLayer.PostWork = [this](const ComputeLayer&, ID3D12GraphicsCommandList*) 
+	{
+		m_gpuWaves->PostUpdate();
+	};
+
+
+
+
+
+
+
+
 	// Root Signature --------------------------------------------------------------------------------
 	CD3DX12_DESCRIPTOR_RANGE texTable;
 	texTable.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0);
@@ -95,7 +181,7 @@ void LandAndWavesSceneCS::BuildLandAndWaterScene()
 
 	// Currently using root parameter index #2 for the per-pass constants
 	auto& renderPassCBV = m_mainRenderPass.ConstantBufferViews.emplace_back(2, m_mainRenderPassConstantsCB.get());
-	renderPassCBV.Update = [this](const Timer& timer, RenderItem* ri, int frameIndex)
+	renderPassCBV.Update = [this](const Timer& timer, int frameIndex)
 	{
 		DirectX::XMMATRIX view = m_camera.GetView();
 		DirectX::XMMATRIX proj = m_camera.GetProj();
@@ -290,6 +376,11 @@ void LandAndWavesSceneCS::BuildLandAndWaterScene()
 
 
 	// Render Pass Layer: Transparent ----------------------------------------------------------------------
+	//RenderPassLayer& gpuWavesLayer = m_mainRenderPass.RenderPassLayers.emplace_back(m_deviceResources);
+	//transparentLayer.Name = "Transparent Layer";
+	
+	
+	
 	RenderPassLayer& transparentLayer = m_mainRenderPass.RenderPassLayers.emplace_back(m_deviceResources);
 	transparentLayer.Name = "Transparent Layer";
 
@@ -374,66 +465,6 @@ void LandAndWavesSceneCS::BuildLandAndWaterScene()
 		// No update here because the texture is static
 	};
 
-
-
-//	m_wavesObjectConstantsCB = std::make_unique<ConstantBufferT<ObjectConstants>>(m_deviceResources);
-//	m_wavesMaterialCB = std::make_unique<ConstantBufferT<Material>>(m_deviceResources);
-//
-//	RenderItem& wavesRI = transparentLayer.RenderItems.emplace_back();
-//
-//	wavesRI.World = MathHelper::Identity4x4();
-//	DirectX::XMStoreFloat4x4(&wavesRI.TexTransform, DirectX::XMMatrixScaling(5.0f, 5.0f, 1.0f));
-//	wavesRI.material = std::make_unique<Material>();
-//	wavesRI.material->DiffuseAlbedo = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 0.5f);
-//	wavesRI.material->FresnelR0 = DirectX::XMFLOAT3(0.1f, 0.1f, 0.1f);
-//	wavesRI.material->Roughness = 0.0f;
-//
-//	m_wavesRI = &wavesRI;
-//
-//	auto& wavesConstantsCBV = wavesRI.ConstantBufferViews.emplace_back(1, m_wavesObjectConstantsCB.get());
-//	wavesConstantsCBV.Update = [this](const Timer& timer, RenderItem* ri, int frameIndex)
-//	{
-//		// Only update the cbuffer data if the constants have changed.  
-//		if (ri->NumFramesDirty > 0)
-//		{
-//			DirectX::XMMATRIX world = DirectX::XMLoadFloat4x4(&ri->World);
-//			DirectX::XMMATRIX texTransform = DirectX::XMLoadFloat4x4(&ri->TexTransform);
-//
-//			ObjectConstants objConstants;
-//			DirectX::XMStoreFloat4x4(&objConstants.World, DirectX::XMMatrixTranspose(world));
-//			DirectX::XMStoreFloat4x4(&objConstants.TexTransform, DirectX::XMMatrixTranspose(texTransform));
-//
-//			m_wavesObjectConstantsCB->CopyData(frameIndex, objConstants);
-//
-//			--ri->NumFramesDirty;
-//		}
-//	};
-//
-//	auto& wavesMaterialCBV = wavesRI.ConstantBufferViews.emplace_back(3, m_wavesMaterialCB.get());
-//	wavesMaterialCBV.Update = [this](const Timer& timer, RenderItem* ri, int frameIndex)
-//	{
-//		if (ri->materialNumFramesDirty > 0)
-//		{
-//			// Must transpose the transform before loading it into the constant buffer
-//			DirectX::XMMATRIX transform = DirectX::XMLoadFloat4x4(&ri->material->MatTransform);
-//
-//			Material mat = *ri->material.get();
-//			DirectX::XMStoreFloat4x4(&mat.MatTransform, DirectX::XMMatrixTranspose(transform));
-//
-//			m_wavesMaterialCB->CopyData(frameIndex, mat);
-//
-//			// Next FrameResource need to be updated too.
-//			--ri->materialNumFramesDirty;
-//		}
-//	};
-//
-//	wavesRI.submeshIndex = 0; // Only using a single mesh, so automatically it is at index 0
-//
-//	auto& waveDT = wavesRI.DescriptorTables.emplace_back(0, m_textures[(int)TEXTURE::WATER1]->GetGPUHandle());
-//	waveDT.Update = [](const Timer& timer, int frameIndex)
-//	{
-//		// No update here because the texture is static
-//	};
 }
 
 
@@ -612,7 +643,6 @@ std::array<const CD3DX12_STATIC_SAMPLER_DESC, 6> LandAndWavesSceneCS::GetStaticS
 		anisotropicWrap, anisotropicClamp };
 }
 
-
 float LandAndWavesSceneCS::GetHillsHeight(float x, float z)const
 {
 	return 0.3f * (z * sinf(0.1f * x) + x * cosf(0.1f * z));
@@ -630,12 +660,6 @@ DirectX::XMFLOAT3 LandAndWavesSceneCS::GetHillsNormal(float x, float z)const
 
 	return n;
 }
-
-
-
-
-
-
 
 void LandAndWavesSceneCS::OnMouseMove(float x, float y)
 {
@@ -883,6 +907,23 @@ namespace landandwavescs
 		m_currSol->TransitionToState(D3D12_RESOURCE_STATE_GENERIC_READ);
 
 		m_nextSol->TransitionToState(D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+	}
+
+	void GPUWaves::PreUpdate()
+	{
+		// The current solution needs to be transitioned to have unordered access by the compute shader
+		m_currSol->TransitionToState(D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+	}
+
+	void GPUWaves::PostUpdate()
+	{
+		Texture* tmp = m_prevSol;
+		m_prevSol = m_currSol;
+		m_currSol = m_nextSol;
+		m_nextSol = tmp;
+
+		// The current solution needs to be able to be read by the vertex shader, so change its state to GENERIC_READ.
+		m_currSol->TransitionToState(D3D12_RESOURCE_STATE_GENERIC_READ);
 	}
 
 }

@@ -9,14 +9,12 @@ namespace tiny
 // Texture ===============================================================================================================
 Texture::Texture(std::shared_ptr<DeviceResources> deviceResources,
 				 Microsoft::WRL::ComPtr<ID3D12Resource> resource,
-				 DescriptorVector* descriptorVector,
 				 unsigned int srvIndex,
 				 unsigned int uavIndex,
 				 unsigned int indexIntoAllManagedTextures,
 				 bool isManagedTexture) noexcept :
 	m_deviceResources(deviceResources),
 	m_resource(resource),
-	m_descriptorVector(descriptorVector),
 	m_srvDescriptorIndex(srvIndex),
 	m_uavDescriptorIndex(uavIndex),
 	m_indexIntoAllManagedTextures(indexIntoAllManagedTextures),
@@ -24,7 +22,6 @@ Texture::Texture(std::shared_ptr<DeviceResources> deviceResources,
 	m_currentResourceState(D3D12_RESOURCE_STATE_COMMON)
 {
 	TINY_CORE_ASSERT(m_deviceResources != nullptr, "No device resources");
-	TINY_CORE_ASSERT(m_descriptorVector != nullptr, "No descriptor vector");
 }
 Texture::~Texture() noexcept
 {
@@ -88,8 +85,7 @@ void Texture::TransitionToState(D3D12_RESOURCE_STATES newState)
 
 // TextureVector ================================================================================================
 TextureVector::TextureVector(std::shared_ptr<DeviceResources> deviceResources) :
-	m_deviceResources(deviceResources),
-	m_descriptorVector(new DescriptorVector(deviceResources, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV))
+	m_deviceResources(deviceResources)
 {
 	TINY_CORE_ASSERT(m_deviceResources != nullptr, "No device resources");
 }
@@ -125,7 +121,7 @@ Texture* TextureVector::EmplaceBack(const D3D12_RESOURCE_DESC& desc, bool create
 		srvDesc.Texture2D.MostDetailedMip = 0; 
 		srvDesc.Texture2D.MipLevels = 1; 
 
-		srvIndex = m_descriptorVector->EmplaceBackShaderResourceView(resource.Get(), &srvDesc);
+		srvIndex = DescriptorManager::EmplaceBackShaderResourceView(resource.Get(), &srvDesc);
 	}
 
 	if (createUAV)
@@ -136,10 +132,10 @@ Texture* TextureVector::EmplaceBack(const D3D12_RESOURCE_DESC& desc, bool create
 		uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D; 
 		uavDesc.Texture2D.MipSlice = 0; 
 
-		uavIndex = m_descriptorVector->EmplaceBackUnorderedAccessView(resource.Get(), &uavDesc);
+		uavIndex = DescriptorManager::EmplaceBackUnorderedAccessView(resource.Get(), &uavDesc);
 	}
 
-	std::unique_ptr<Texture> t = std::unique_ptr<Texture>(new Texture(m_deviceResources, resource, m_descriptorVector.get(), srvIndex, uavIndex));
+	std::unique_ptr<Texture> t = std::unique_ptr<Texture>(new Texture(m_deviceResources, resource, srvIndex, uavIndex));
 	m_textures.push_back(std::move(t));
 	return m_textures.back().get();
 }
@@ -178,9 +174,6 @@ void TextureManager::InitImpl(std::shared_ptr<DeviceResources> deviceResources) 
 	// Initialize all tuples to nullptr and a ref count of 0 (and set dummy descriptor heap index of 0)
 	for (unsigned int iii = 0; iii < count; ++iii)
 		m_allTextures.emplace_back();
-
-	// Create the descriptor vector
-	m_descriptorVector = std::make_unique<DescriptorVector>(m_deviceResources, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
 	// Set Initialized flag
 	m_initialized = true;
@@ -222,10 +215,10 @@ Texture* TextureManager::GetTextureImpl(unsigned int indexIntoAllTextures)
 		srvDesc.Texture2D.MipLevels = -1;
 
 		// Create a SRV and keep track of the index needed to look up this descriptor
-		unsigned int srvIndex = m_descriptorVector->EmplaceBackShaderResourceView(textureResource.Get(), &srvDesc);
+		unsigned int srvIndex = DescriptorManager::EmplaceBackShaderResourceView(textureResource.Get(), &srvDesc);
 
 		m_allTextures[indexIntoAllTextures].refCount = 1;
-		m_allTextures[indexIntoAllTextures].texture = std::unique_ptr<Texture>(new Texture(m_deviceResources, textureResource, m_descriptorVector.get(), srvIndex, 0, indexIntoAllTextures, true));
+		m_allTextures[indexIntoAllTextures].texture = std::unique_ptr<Texture>(new Texture(m_deviceResources, textureResource, srvIndex, 0, indexIntoAllTextures, true));
 	}
 	else
 	{
@@ -250,7 +243,7 @@ void TextureManager::ReleaseTextureImpl(unsigned int indexIntoAllTextures) noexc
 		Engine::DelayedDelete(m_allTextures[indexIntoAllTextures].texture->m_resource);
 
 		// Inform the descriptor vector that the view for this texture can be removed
-		m_descriptorVector->ReleaseAt(m_allTextures[indexIntoAllTextures].texture->m_srvDescriptorIndex);
+		DescriptorManager::ReleaseAt(m_allTextures[indexIntoAllTextures].texture->m_srvDescriptorIndex);
 	}
 }
 

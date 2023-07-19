@@ -58,7 +58,7 @@ RenderItem* GameObject::CreateRenderItem(tiny::RenderPassLayer* layer)
 
 	// Constant Buffer
 	auto& boxConstantsCBV = ri.ConstantBufferViews.emplace_back(1, m_objectConstantsCB.get());
-	boxConstantsCBV.Update = [this](const Timer& timer, RenderItem* ri, int frameIndex)
+	boxConstantsCBV.Update = [this](const Timer& timer, int frameIndex)
 	{
 		// Only update the cbuffer data if the constants have changed.
 		if (m_numFramesDirty > 0)
@@ -78,7 +78,7 @@ RenderItem* GameObject::CreateRenderItem(tiny::RenderPassLayer* layer)
 
 	// Material Buffer
 	auto& boxMaterialCBV = ri.ConstantBufferViews.emplace_back(3, m_materialCB.get());
-	boxMaterialCBV.Update = [this](const Timer& timer, RenderItem* ri, int frameIndex)
+	boxMaterialCBV.Update = [this](const Timer& timer, int frameIndex)
 	{
 		if (m_materialNumFramesDirty > 0)
 		{

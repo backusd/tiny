@@ -2,7 +2,7 @@
 #include "tiny-pch.h"
 #include "tiny/Core.h"
 #include "tiny/DeviceResources.h"
-#include "tiny/rendering/DescriptorVector.h"
+#include "tiny/rendering/DescriptorManager.h"
 
 // External methods so that the client can define which textures are included in the app
 extern std::wstring GetTextureFilename(unsigned int index);
@@ -18,8 +18,8 @@ class Texture
 public:	
 	~Texture() noexcept;
 
-	ND inline D3D12_GPU_DESCRIPTOR_HANDLE GetSRVHandle() const noexcept { return m_descriptorVector->GetGPUHandleAt(m_srvDescriptorIndex); }
-	ND inline D3D12_GPU_DESCRIPTOR_HANDLE GetUAVHandle() const noexcept { return m_descriptorVector->GetGPUHandleAt(m_uavDescriptorIndex); }
+	ND inline D3D12_GPU_DESCRIPTOR_HANDLE GetSRVHandle() const noexcept { return DescriptorManager::GetGPUHandleAt(m_srvDescriptorIndex); }
+	ND inline D3D12_GPU_DESCRIPTOR_HANDLE GetUAVHandle() const noexcept { return DescriptorManager::GetGPUHandleAt(m_uavDescriptorIndex); }
 
 	void CopyData(const std::vector<float>& data);
 	void TransitionToState(D3D12_RESOURCE_STATES newState);
@@ -27,7 +27,6 @@ public:
 protected:
 	Texture(std::shared_ptr<DeviceResources> deviceResources,
 			Microsoft::WRL::ComPtr<ID3D12Resource> resource,
-			DescriptorVector* descriptorVector,
 			unsigned int srvIndex,
 			unsigned int uavIndex = 0,
 			unsigned int indexIntoAllManagedTextures = 0,
@@ -37,7 +36,6 @@ protected:
 		m_deviceResources(rhs.m_deviceResources),
 		m_resource(rhs.m_resource),
 		m_currentResourceState(rhs.m_currentResourceState),
-		m_descriptorVector(rhs.m_descriptorVector),
 		m_srvDescriptorIndex(rhs.m_srvDescriptorIndex),
 		m_uavDescriptorIndex(rhs.m_uavDescriptorIndex),
 		m_indexIntoAllManagedTextures(rhs.m_indexIntoAllManagedTextures),
@@ -51,7 +49,6 @@ protected:
 		m_deviceResources = rhs.m_deviceResources;
 		m_resource = rhs.m_resource;
 		m_currentResourceState = rhs.m_currentResourceState;
-		m_descriptorVector = rhs.m_descriptorVector;
 		m_srvDescriptorIndex = rhs.m_srvDescriptorIndex;
 		m_uavDescriptorIndex = rhs.m_uavDescriptorIndex;
 		m_indexIntoAllManagedTextures = rhs.m_indexIntoAllManagedTextures;
@@ -73,7 +70,6 @@ protected:
 	D3D12_RESOURCE_STATES m_currentResourceState = D3D12_RESOURCE_STATE_COMMON;
 
 	// Data for accessing the descriptors for the texture
-	DescriptorVector* m_descriptorVector = nullptr;
 	unsigned int	  m_srvDescriptorIndex = 0;
 	unsigned int	  m_uavDescriptorIndex = 0;
 
@@ -105,8 +101,6 @@ public:
 private:
 	std::shared_ptr<DeviceResources>		m_deviceResources;
 	std::vector<std::unique_ptr<Texture>>	m_textures;
-	std::unique_ptr<DescriptorVector>		m_descriptorVector;
-
 };
 
 // TextureManager ================================================================================================
@@ -134,7 +128,6 @@ public:
 
 	static inline void Init(std::shared_ptr<DeviceResources> deviceResources) noexcept { Get().InitImpl(deviceResources); }
 	ND static inline Texture* GetTexture(unsigned int indexIntoAllTextures) { return std::move(Get().GetTextureImpl(indexIntoAllTextures)); }
-	ND static inline ID3D12DescriptorHeap* GetHeapPointer() noexcept { return Get().GetHeapPointerImpl(); }
 
 private:
 	TextureManager() noexcept = default;
@@ -147,7 +140,6 @@ private:
 
 	void InitImpl(std::shared_ptr<DeviceResources> deviceResources) noexcept;
 	ND Texture* GetTextureImpl(unsigned int indexIntoAllTextures);
-	ND inline ID3D12DescriptorHeap* GetHeapPointerImpl() const noexcept { return m_descriptorVector->GetRawHeapPointer(); }
 
 private:
 	static void ReleaseTexture(unsigned int indexIntoAllTextures) noexcept { Get().ReleaseTextureImpl(indexIntoAllTextures); }
@@ -158,9 +150,6 @@ private:
 
 	// all textures, their reference count, and their index into the DescriptorVector
 	std::vector<TextureInstanceData> m_allTextures;
-
-	// Descriptor Vector to hold all the shader resource views for the Textures
-	std::unique_ptr<DescriptorVector> m_descriptorVector = nullptr;
 
 	// Make Texture a friend so its destructor can call ReleaseTexture()
 	friend Texture;

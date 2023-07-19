@@ -10,6 +10,7 @@
 #include "tiny/rendering/BlendState.h"
 #include "tiny/rendering/ConstantBuffer.h"
 #include "tiny/rendering/DepthStencilState.h"
+#include "tiny/rendering/DescriptorManager.h"
 #include "tiny/rendering/DescriptorVector.h"
 #include "tiny/rendering/GeometryGenerator.h"
 #include "tiny/rendering/InputLayout.h"

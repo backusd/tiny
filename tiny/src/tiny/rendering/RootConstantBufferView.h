@@ -34,6 +34,6 @@ public:
 	UINT RootParameterIndex;
 	ConstantBuffer* ConstantBuffer;
 
-	std::function<void(const Timer&, RenderItem*, int)> Update = [](const Timer&, RenderItem*, int) {};
+	std::function<void(const Timer&, int)> Update = [](const Timer&, int) {};
 };
 }

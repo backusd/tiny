@@ -50,7 +50,7 @@ public:
 	{
 		// Loop over the constant buffer views and descriptor tables to update them
 		for (auto& rcbv : ConstantBufferViews)
-			rcbv.Update(timer, this, frameIndex);
+			rcbv.Update(timer, frameIndex);
 
 		for (auto& dt : DescriptorTables)
 			dt.Update(timer, frameIndex);
