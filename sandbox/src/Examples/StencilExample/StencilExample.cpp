@@ -353,7 +353,7 @@ void StencilExample::BuildMainRenderPass()
 	// For this layer, we set the stencil value = 1
 	mirrorLayer.PreWork = [](const RenderPassLayer& layer, ID3D12GraphicsCommandList* commandList)
 	{
-		commandList->OMSetStencilRef(1);
+		GFX_THROW_INFO_ONLY(commandList->OMSetStencilRef(1));
 	};
 
 	// PSO
@@ -573,7 +573,7 @@ void StencilExample::BuildMirrorAndShadowRenderPass()
 
 	mirrorLayer.PreWork = [](const RenderPassLayer& layer, ID3D12GraphicsCommandList* commandList)
 	{
-		commandList->OMSetStencilRef(0);
+		GFX_THROW_INFO_ONLY(commandList->OMSetStencilRef(0));
 	};
 
 	// PSO

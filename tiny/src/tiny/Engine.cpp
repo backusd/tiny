@@ -286,7 +286,9 @@ void Engine::PresentImpl()
 	// Add an instruction to the command queue to set a new fence point. 
 	// Because we are on the GPU timeline, the new fence point won't be 
 	// set until the GPU finishes processing all the commands prior to this Signal().
-	m_deviceResources->GetCommandQueue()->Signal(m_deviceResources->GetFence(), m_fences[m_currentFrameIndex]);
+	GFX_THROW_INFO(
+		m_deviceResources->GetCommandQueue()->Signal(m_deviceResources->GetFence(), m_fences[m_currentFrameIndex])
+	);
 }
 void Engine::CleanupResources() noexcept
 {
