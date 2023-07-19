@@ -35,10 +35,10 @@ public:
 	MeshGroup& operator=(MeshGroup&& rhs) noexcept;
 	virtual ~MeshGroup() noexcept {}
 
-	inline void Bind(ID3D12GraphicsCommandList* commandList) const noexcept
+	inline void Bind(ID3D12GraphicsCommandList* commandList) const
 	{
-		commandList->IASetVertexBuffers(0, 1, &m_vertexBufferView);
-		commandList->IASetIndexBuffer(&m_indexBufferView);
+		GFX_THROW_INFO_ONLY(commandList->IASetVertexBuffers(0, 1, &m_vertexBufferView));
+		GFX_THROW_INFO_ONLY(commandList->IASetIndexBuffer(&m_indexBufferView));
 	}
 
 	ND inline const SubmeshGeometry& GetSubmesh(unsigned int index) const noexcept { return m_submeshes[index]; }

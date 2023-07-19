@@ -26,14 +26,9 @@ public:
 	RootConstantBufferView& operator=(RootConstantBufferView&&) noexcept = default;
 	~RootConstantBufferView() noexcept {}
 
-	inline void Bind(ID3D12GraphicsCommandList* commandList, int frameIndex) const noexcept
-	{
-		commandList->SetGraphicsRootConstantBufferView(RootParameterIndex, ConstantBuffer->GetGPUVirtualAddress(frameIndex));
-	}
 
 	UINT RootParameterIndex;
 	ConstantBuffer* ConstantBuffer;
-
 	std::function<void(const Timer&, int)> Update = [](const Timer&, int) {};
 };
 }

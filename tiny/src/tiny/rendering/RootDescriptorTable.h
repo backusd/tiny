@@ -21,14 +21,7 @@ public:
 	RootDescriptorTable& operator=(RootDescriptorTable&&) noexcept = default;
 	~RootDescriptorTable() noexcept {}
 
-	inline void Bind(ID3D12GraphicsCommandList* commandList) const noexcept
-	{
-		commandList->SetGraphicsRootDescriptorTable(RootParameterIndex, DescriptorHandle);
-	}
-
 	std::function<void(const Timer&, int)> Update = [](const Timer&, int) {};
-
-
 	UINT RootParameterIndex;
 	D3D12_GPU_DESCRIPTOR_HANDLE DescriptorHandle;
 };

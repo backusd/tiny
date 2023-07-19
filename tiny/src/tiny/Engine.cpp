@@ -66,6 +66,7 @@ void Engine::UpdateImpl(const Timer& timer)
 
 	// Update dynamic data
 	UpdateRenderItems(timer);
+	UpdateComputeItems(timer);
 	UpdateRenderPasses(timer);
 	UpdateDynamicMeshes(timer);
 }
@@ -99,8 +100,8 @@ void Engine::RenderImpl()
 
 	{
 		PROFILE_SCOPE("SetViewport/ScissorRects");
-		commandList->RSSetViewports(1, &m_viewport);
-		commandList->RSSetScissorRects(1, &m_scissorRect);
+		GFX_THROW_INFO_ONLY(commandList->RSSetViewports(1, &m_viewport));
+		GFX_THROW_INFO_ONLY(commandList->RSSetScissorRects(1, &m_scissorRect));
 	}
 
 	// Indicate a state transition on the resource usage.
@@ -111,28 +112,32 @@ void Engine::RenderImpl()
 			D3D12_RESOURCE_STATE_PRESENT,
 			D3D12_RESOURCE_STATE_RENDER_TARGET
 		);
-		commandList->ResourceBarrier(1, &_b);
+		GFX_THROW_INFO_ONLY(commandList->ResourceBarrier(1, &_b));
 	}
 
 	// Clear the back buffer and depth buffer.
 	{
 		PROFILE_SCOPE("Clear RTV & DSV");
 		FLOAT color[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
-		commandList->ClearRenderTargetView(m_deviceResources->CurrentBackBufferView(), color, 0, nullptr);
-		commandList->ClearDepthStencilView(m_deviceResources->DepthStencilView(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
+		GFX_THROW_INFO_ONLY(commandList->ClearRenderTargetView(m_deviceResources->CurrentBackBufferView(), color, 0, nullptr));
+		GFX_THROW_INFO_ONLY(commandList->ClearDepthStencilView(m_deviceResources->DepthStencilView(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr));
 	}
 	// Specify the buffers we are going to render to.
 	auto currentBackBufferView = m_deviceResources->CurrentBackBufferView();
 	auto depthStencilView = m_deviceResources->DepthStencilView();
 	{
 		PROFILE_SCOPE("OMSetRenderTargets");
-		commandList->OMSetRenderTargets(1, &currentBackBufferView, true, &depthStencilView);
+		GFX_THROW_INFO_ONLY(
+			commandList->OMSetRenderTargets(1, &currentBackBufferView, true, &depthStencilView)
+		);
 	}
 
 	{
 		PROFILE_SCOPE("SetDescriptorHeaps");
 		ID3D12DescriptorHeap* descriptorHeaps[] = { DescriptorManager::GetRawHeapPointer() };
-		commandList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps);
+		GFX_THROW_INFO_ONLY(
+			commandList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps)
+		);
 	}
 
 	for (RenderPass* pass : m_renderPasses)
@@ -156,20 +161,27 @@ void Engine::RenderImpl()
 			layer.PreWork(layer, commandList);
 
 			// Root Signature / PSO
-			commandList->SetComputeRootSignature(layer.RootSignature->Get());
-			commandList->SetPipelineState(layer.PipelineState.Get());
+			GFX_THROW_INFO_ONLY(commandList->SetComputeRootSignature(layer.RootSignature->Get()));
+			GFX_THROW_INFO_ONLY(commandList->SetPipelineState(layer.PipelineState.Get()));
 
 			// Iterate over each compute item and call dispatch to submit compute work to the GPU
 			for (const ComputeItem& item : layer.ComputeItems)
 			{
 				// Tables and CBV's ARE allowed to be empty
-				for (const RootDescriptorTable& table : item.DescriptorTables) 
-					commandList->SetComputeRootDescriptorTable(table.RootParameterIndex, table.DescriptorHandle);
+				for (const RootDescriptorTable& table : item.DescriptorTables)
+				{
+					GFX_THROW_INFO_ONLY(
+						commandList->SetComputeRootDescriptorTable(table.RootParameterIndex, table.DescriptorHandle)
+					);
+				}
+				for (const RootConstantBufferView& cbv : item.ConstantBufferViews)
+				{
+					GFX_THROW_INFO_ONLY(
+						commandList->SetComputeRootConstantBufferView(cbv.RootParameterIndex, cbv.ConstantBuffer->GetGPUVirtualAddress(m_currentFrameIndex))
+					);
+				}
 
-				for (const RootConstantBufferView& cbv : item.ConstantBufferViews) 
-					commandList->SetComputeRootConstantBufferView(cbv.RootParameterIndex, cbv.ConstantBuffer->GetGPUVirtualAddress(m_currentFrameIndex));
-
-				commandList->Dispatch(item.ThreadGroupCountX, item.ThreadGroupCountY, item.ThreadGroupCountZ);
+				GFX_THROW_INFO_ONLY(commandList->Dispatch(item.ThreadGroupCountX, item.ThreadGroupCountY, item.ThreadGroupCountZ));
 			}
 
 			// Post-Work method - possibly for transitioning resources
@@ -182,11 +194,15 @@ void Engine::RenderImpl()
 		pass->PreWork(pass, commandList);
 
 		// Set only a single root signature per RenderPass
-		commandList->SetGraphicsRootSignature(pass->RootSignature->Get());
+		GFX_THROW_INFO_ONLY(commandList->SetGraphicsRootSignature(pass->RootSignature->Get()));
 
 		// Bind any per-pass constant buffer views
 		for (const RootConstantBufferView& cbv : pass->ConstantBufferViews)
-			cbv.Bind(commandList, m_currentFrameIndex);
+		{
+			GFX_THROW_INFO_ONLY(
+				commandList->SetGraphicsRootConstantBufferView(cbv.RootParameterIndex, cbv.ConstantBuffer->GetGPUVirtualAddress(m_currentFrameIndex))
+			);
+		}
 
 		// Render the render layers for the pass
 		for (const RenderPassLayer& layer : pass->RenderPassLayers)
@@ -198,10 +214,10 @@ void Engine::RenderImpl()
 			TINY_CORE_ASSERT(layer.Meshes != nullptr, "Layer has no mesh group");
 
 			// PSO / Pre-Work / MeshGroup / Primitive Topology
-			commandList->SetPipelineState(layer.PipelineState.Get());
+			GFX_THROW_INFO_ONLY(commandList->SetPipelineState(layer.PipelineState.Get()));
 			layer.PreWork(layer, commandList);		// Pre-Work method (example usage: setting stencil value)
 			layer.Meshes->Bind(commandList);
-			commandList->IASetPrimitiveTopology(layer.Topology);
+			GFX_THROW_INFO_ONLY(commandList->IASetPrimitiveTopology(layer.Topology));
 
 			MeshGroup* meshGroup = layer.Meshes.get();
 
@@ -209,13 +225,23 @@ void Engine::RenderImpl()
 			{
 				// Tables and CBV's ARE allowed to be empty
 				for (const RootDescriptorTable& table : item.DescriptorTables)
-					table.Bind(commandList);
+				{
+					GFX_THROW_INFO_ONLY(
+						commandList->SetGraphicsRootDescriptorTable(table.RootParameterIndex, table.DescriptorHandle)
+					);
+				}
 
 				for (const RootConstantBufferView& cbv : item.ConstantBufferViews)
-					cbv.Bind(commandList, m_currentFrameIndex);
+				{
+					GFX_THROW_INFO_ONLY(
+						commandList->SetGraphicsRootConstantBufferView(cbv.RootParameterIndex, cbv.ConstantBuffer->GetGPUVirtualAddress(m_currentFrameIndex))
+					);
+				}
 
 				SubmeshGeometry mesh = meshGroup->GetSubmesh(item.submeshIndex);
-				commandList->DrawIndexedInstanced(mesh.IndexCount, 1, mesh.StartIndexLocation, mesh.BaseVertexLocation, 0);
+				GFX_THROW_INFO_ONLY(
+					commandList->DrawIndexedInstanced(mesh.IndexCount, 1, mesh.StartIndexLocation, mesh.BaseVertexLocation, 0)
+				);
 			}
 		}
 
@@ -230,7 +256,7 @@ void Engine::RenderImpl()
 			D3D12_RESOURCE_STATE_RENDER_TARGET,
 			D3D12_RESOURCE_STATE_PRESENT
 		);
-		commandList->ResourceBarrier(1, &_b2);
+		GFX_THROW_INFO_ONLY(commandList->ResourceBarrier(1, &_b2));
 	}
 
 	// Done recording commands.
@@ -243,14 +269,16 @@ void Engine::RenderImpl()
 	{
 		PROFILE_SCOPE("commandQueue->ExecuteCommandLists()");
 		ID3D12CommandList* cmdsLists[] = { commandList };
-		m_deviceResources->GetCommandQueue()->ExecuteCommandLists(_countof(cmdsLists), cmdsLists);
+		GFX_THROW_INFO_ONLY(
+			m_deviceResources->GetCommandQueue()->ExecuteCommandLists(_countof(cmdsLists), cmdsLists)
+		);
 	}
 }
 void Engine::PresentImpl()
 {
 	PROFILE_FUNCTION();
 	TINY_CORE_ASSERT(m_initialized, "Engine has not been initialized");
-
+	
 	m_deviceResources->Present();
 
 	m_fences[m_currentFrameIndex] = m_deviceResources->GetCurrentFenceValue();
