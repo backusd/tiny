@@ -5,6 +5,7 @@
 #include "tiny/DeviceResources.h"
 #include "ComputeItem.h"
 #include "RootSignature.h"
+#include "tiny/utils/Timer.h"
 
 
 namespace tiny
@@ -42,8 +43,12 @@ public:
 		);
 	}
 
-	std::function<void(const ComputeLayer&, ID3D12GraphicsCommandList*)> PreWork = [](const ComputeLayer&, ID3D12GraphicsCommandList*) {};
-	std::function<void(const ComputeLayer&, ID3D12GraphicsCommandList*)> PostWork = [](const ComputeLayer&, ID3D12GraphicsCommandList*) {};
+	// PreWork needs to return a bool: false -> signals early exit (i.e. do not call Dispatch for this RenderLayer)
+	// Also, because a ComputeLayer can be executed during the Update phase, it can get access to the Timer. However, 
+	// if the ComputeLayer is execute during a RenderPass, then it will NOT have access to the timer and the timer 
+	// parameter will be nullptr
+	std::function<bool(const ComputeLayer&, ID3D12GraphicsCommandList*, const Timer*, int)> PreWork = [](const ComputeLayer&, ID3D12GraphicsCommandList*, const Timer*, int) { return true; };
+	std::function<void(const ComputeLayer&, ID3D12GraphicsCommandList*, const Timer*, int)> PostWork = [](const ComputeLayer&, ID3D12GraphicsCommandList*, const Timer*, int) { };
 
 	// Shared pointer because root signatures may be shared
 	std::shared_ptr<RootSignature> RootSignature;

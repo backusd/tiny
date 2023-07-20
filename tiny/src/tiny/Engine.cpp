@@ -64,6 +64,12 @@ void Engine::UpdateImpl(const Timer& timer)
 	// Cleanup resources that were passed to DelayedDelete()
 	CleanupResources();
 
+	// Before we attempt to run any compute layer updates, we must reset the command list and allocator
+	ResetCommandAllocatorAndCommandList();
+
+	// Run any compute layers that are strictly necessary during the update phase
+	RunComputeLayerUpdates(timer);
+
 	// Update dynamic data
 	UpdateRenderItems(timer);
 	UpdateComputeItems(timer);
@@ -76,27 +82,7 @@ void Engine::RenderImpl()
 	TINY_CORE_ASSERT(m_initialized, "Engine has not been initialized");
 	TINY_CORE_ASSERT(m_renderPasses.size() > 0, "No render passes");
 
-	// Reuse the memory associated with command recording.
-	// We can only reset when the associated command lists have finished execution on the GPU.
-	Microsoft::WRL::ComPtr<ID3D12CommandAllocator> commandAllocator = m_allocators[m_currentFrameIndex];
-	{
-		PROFILE_SCOPE("commandAllocator->Reset()");
-		GFX_THROW_INFO(commandAllocator->Reset());
-	}
-
-	// A command list can be reset after it has been added to the command queue via ExecuteCommandList.
-	// Reusing the command list reuses memory.
-	// NOTE: When resetting the commandlist, we are allowed to specify the PSO we want the command list to have.
-	//       However, this is slightly inconvenient given the way we have structured the loop below. According to
-	//		 the documentation for resetting using nullptr: "If NULL, the runtime sets a dummy initial pipeline 
-	//		 state so that drivers don't have to deal with undefined state. The overhead for this is low, 
-	//		 particularly for a command list, for which the overall cost of recording the command list likely 
-	//		 dwarfs the cost of one initial state setting."
 	auto commandList = m_deviceResources->GetCommandList();
-	{
-		PROFILE_SCOPE("commandList->Reset()");
-		GFX_THROW_INFO(commandList->Reset(commandAllocator.Get(), nullptr));
-	}
 
 	{
 		PROFILE_SCOPE("SetViewport/ScissorRects");
@@ -132,14 +118,6 @@ void Engine::RenderImpl()
 		);
 	}
 
-	{
-		PROFILE_SCOPE("SetDescriptorHeaps");
-		ID3D12DescriptorHeap* descriptorHeaps[] = { DescriptorManager::GetRawHeapPointer() };
-		GFX_THROW_INFO_ONLY(
-			commandList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps)
-		);
-	}
-
 	for (RenderPass* pass : m_renderPasses)
 	{
 		PROFILE_SCOPE(pass->Name.c_str());
@@ -151,47 +129,14 @@ void Engine::RenderImpl()
 		// Before attempting to perform any rendering, first perform all compute operations
 		for (const ComputeLayer& layer : pass->ComputeLayers)
 		{
-			PROFILE_SCOPE(layer.Name.c_str());
-
-			TINY_CORE_ASSERT(layer.ComputeItems.size() > 0, "Compute layer has no compute items");
-			TINY_CORE_ASSERT(layer.PipelineState != nullptr, "Compute layer has no pipeline state");
-			TINY_CORE_ASSERT(layer.RootSignature != nullptr, "Compute layer has no root signature");
-
-			// Pre-Work method - possibly for transitioning resources
-			layer.PreWork(layer, commandList);
-
-			// Root Signature / PSO
-			GFX_THROW_INFO_ONLY(commandList->SetComputeRootSignature(layer.RootSignature->Get()));
-			GFX_THROW_INFO_ONLY(commandList->SetPipelineState(layer.PipelineState.Get()));
-
-			// Iterate over each compute item and call dispatch to submit compute work to the GPU
-			for (const ComputeItem& item : layer.ComputeItems)
-			{
-				// Tables and CBV's ARE allowed to be empty
-				for (const RootDescriptorTable& table : item.DescriptorTables)
-				{
-					GFX_THROW_INFO_ONLY(
-						commandList->SetComputeRootDescriptorTable(table.RootParameterIndex, table.DescriptorHandle)
-					);
-				}
-				for (const RootConstantBufferView& cbv : item.ConstantBufferViews)
-				{
-					GFX_THROW_INFO_ONLY(
-						commandList->SetComputeRootConstantBufferView(cbv.RootParameterIndex, cbv.ConstantBuffer->GetGPUVirtualAddress(m_currentFrameIndex))
-					);
-				}
-
-				GFX_THROW_INFO_ONLY(commandList->Dispatch(item.ThreadGroupCountX, item.ThreadGroupCountY, item.ThreadGroupCountZ));
-			}
-
-			// Post-Work method - possibly for transitioning resources
-			layer.PostWork(layer, commandList);
+			RunComputeLayer(layer, nullptr); // NOTE: Pass nullptr for the timer, because we do not have access to the timer during the Rendering phase
 		}
 
 
 
 		// Pre-Work method - possibly for transitioning resources or anything necessary
-		pass->PreWork(pass, commandList);
+		if (!pass->PreWork(pass, commandList))
+			continue;
 
 		// Set only a single root signature per RenderPass
 		GFX_THROW_INFO_ONLY(commandList->SetGraphicsRootSignature(pass->RootSignature->Get()));
@@ -215,7 +160,10 @@ void Engine::RenderImpl()
 
 			// PSO / Pre-Work / MeshGroup / Primitive Topology
 			GFX_THROW_INFO_ONLY(commandList->SetPipelineState(layer.PipelineState.Get()));
-			layer.PreWork(layer, commandList);		// Pre-Work method (example usage: setting stencil value)
+			
+			if (!layer.PreWork(layer, commandList))		// Pre-Work method (example usage: setting stencil value)
+				continue;
+
 			layer.Meshes->Bind(commandList);
 			GFX_THROW_INFO_ONLY(commandList->IASetPrimitiveTopology(layer.Topology));
 
@@ -305,6 +253,88 @@ void Engine::CleanupResources() noexcept
 			}
 		);
 	}
+}
+void Engine::ResetCommandAllocatorAndCommandList()
+{
+	auto commandList = m_deviceResources->GetCommandList();
+
+	// Reuse the memory associated with command recording.
+	// We can only reset when the associated command lists have finished execution on the GPU.
+	Microsoft::WRL::ComPtr<ID3D12CommandAllocator> commandAllocator = m_allocators[m_currentFrameIndex]; 
+	{
+		PROFILE_SCOPE("commandAllocator->Reset()");
+		GFX_THROW_INFO(m_allocators[m_currentFrameIndex]->Reset());
+	} 
+
+	// A command list can be reset after it has been added to the command queue via ExecuteCommandList.
+	// Reusing the command list reuses memory.
+	// NOTE: When resetting the commandlist, we are allowed to specify the PSO we want the command list to have.
+	//       However, this is slightly inconvenient given the way we have structured the loop below. According to
+	//		 the documentation for resetting using nullptr: "If NULL, the runtime sets a dummy initial pipeline 
+	//		 state so that drivers don't have to deal with undefined state. The overhead for this is low, 
+	//		 particularly for a command list, for which the overall cost of recording the command list likely 
+	//		 dwarfs the cost of one initial state setting."
+	{ 
+		PROFILE_SCOPE("commandList->Reset()"); 
+		GFX_THROW_INFO(commandList->Reset(commandAllocator.Get(), nullptr));
+	}
+
+	{
+		PROFILE_SCOPE("SetDescriptorHeaps");
+		ID3D12DescriptorHeap* descriptorHeaps[] = { DescriptorManager::GetRawHeapPointer() };
+		GFX_THROW_INFO_ONLY(
+			commandList->SetDescriptorHeaps(_countof(descriptorHeaps), descriptorHeaps)
+		);
+	}
+}
+void Engine::RunComputeLayerUpdates(const Timer& timer)
+{
+	for (ComputeLayer* layer : m_computeLayersUpdateOnly)
+	{
+		RunComputeLayer(*layer, &timer);
+	}
+}
+void Engine::RunComputeLayer(const ComputeLayer& layer, const Timer* timer)
+{
+	auto commandList = m_deviceResources->GetCommandList();
+
+	PROFILE_SCOPE(layer.Name.c_str());
+
+	TINY_CORE_ASSERT(layer.ComputeItems.size() > 0, "Compute layer has no compute items");
+	TINY_CORE_ASSERT(layer.PipelineState != nullptr, "Compute layer has no pipeline state");
+	TINY_CORE_ASSERT(layer.RootSignature != nullptr, "Compute layer has no root signature");
+
+	// Pre-Work method - possibly for transitioning resources
+	//		If it returns false, that means we should quit early and not call Dispatch for this RenderLayer
+	if (!layer.PreWork(layer, commandList, timer, m_currentFrameIndex))
+		return;
+
+	// Root Signature / PSO
+	GFX_THROW_INFO_ONLY(commandList->SetComputeRootSignature(layer.RootSignature->Get()));
+	GFX_THROW_INFO_ONLY(commandList->SetPipelineState(layer.PipelineState.Get()));
+
+	// Iterate over each compute item and call dispatch to submit compute work to the GPU
+	for (const ComputeItem& item : layer.ComputeItems)
+	{
+		// Tables and CBV's ARE allowed to be empty
+		for (const RootDescriptorTable& table : item.DescriptorTables)
+		{
+			GFX_THROW_INFO_ONLY(
+				commandList->SetComputeRootDescriptorTable(table.RootParameterIndex, table.DescriptorHandle)
+			);
+		}
+		for (const RootConstantBufferView& cbv : item.ConstantBufferViews)
+		{
+			GFX_THROW_INFO_ONLY(
+				commandList->SetComputeRootConstantBufferView(cbv.RootParameterIndex, cbv.ConstantBuffer->GetGPUVirtualAddress(m_currentFrameIndex))
+			);
+		}
+
+		GFX_THROW_INFO_ONLY(commandList->Dispatch(item.ThreadGroupCountX, item.ThreadGroupCountY, item.ThreadGroupCountZ));
+	}
+
+	// Post-Work method - possibly for transitioning resources
+	layer.PostWork(layer, commandList, timer, m_currentFrameIndex);
 }
 void Engine::UpdateRenderItems(const Timer& timer)
 {
@@ -406,6 +436,20 @@ void Engine::RemoveDynamicMeshGroupImpl(DynamicMeshGroup* mesh) noexcept
 	std::vector<DynamicMeshGroup*>::iterator position = std::find(m_dynamicMeshes.begin(), m_dynamicMeshes.end(), mesh); 
 	if (position != m_dynamicMeshes.end())
 		m_dynamicMeshes.erase(position);
+}
+void Engine::AddComputeUpdateLayerImpl(ComputeLayer* layer) noexcept
+{
+	TINY_CORE_ASSERT(layer != nullptr, "Should not be attempting to add null ComputeLayer");
+	std::vector<ComputeLayer*>::iterator position = std::find(m_computeLayersUpdateOnly.begin(), m_computeLayersUpdateOnly.end(), layer);
+	if (position == m_computeLayersUpdateOnly.end())
+		m_computeLayersUpdateOnly.push_back(layer);
+}
+void Engine::RemoveComputeUpdateLayerImpl(ComputeLayer* layer) noexcept
+{
+	TINY_CORE_ASSERT(layer != nullptr, "Should not be attempting to delete null ComputeLayer");
+	std::vector<ComputeLayer*>::iterator position = std::find(m_computeLayersUpdateOnly.begin(), m_computeLayersUpdateOnly.end(), layer);
+	if (position != m_computeLayersUpdateOnly.end())
+		m_computeLayersUpdateOnly.erase(position);
 }
 
 }

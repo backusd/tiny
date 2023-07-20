@@ -78,9 +78,12 @@ void Texture::CopyData(const std::vector<float>& data)
 }
 void Texture::TransitionToState(D3D12_RESOURCE_STATES newState)
 {
-	CD3DX12_RESOURCE_BARRIER transition = CD3DX12_RESOURCE_BARRIER::Transition(m_resource.Get(), m_currentResourceState, newState);
-	GFX_THROW_INFO_ONLY(m_deviceResources->GetCommandList()->ResourceBarrier(1, &transition));
-	m_currentResourceState = newState;
+	if (m_currentResourceState != newState) LIKELY
+	{
+		CD3DX12_RESOURCE_BARRIER transition = CD3DX12_RESOURCE_BARRIER::Transition(m_resource.Get(), m_currentResourceState, newState);
+		GFX_THROW_INFO_ONLY(m_deviceResources->GetCommandList()->ResourceBarrier(1, &transition));
+		m_currentResourceState = newState;
+	}
 }
 
 

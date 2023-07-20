@@ -65,7 +65,8 @@ public:
 	}
 
 	// Function pointers for Pre/Post-Work 
-	std::function<void(RenderPass*, ID3D12GraphicsCommandList*)> PreWork = [](RenderPass*, ID3D12GraphicsCommandList*) {};
+	// PreWork needs to return a bool: false -> signals early exit (i.e. do not make a Draw call for this layer)
+	std::function<bool(RenderPass*, ID3D12GraphicsCommandList*)> PreWork = [](RenderPass*, ID3D12GraphicsCommandList*) { return true; };
 	std::function<void(RenderPass*, ID3D12GraphicsCommandList*)> PostWork = [](RenderPass*, ID3D12GraphicsCommandList*) {};
 
 	// Shared pointer because root signatures may be shared

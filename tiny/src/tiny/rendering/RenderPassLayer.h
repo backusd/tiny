@@ -61,7 +61,8 @@ public:
 		}
 	}
 
-	std::function<void(const RenderPassLayer&, ID3D12GraphicsCommandList*)> PreWork = [](const RenderPassLayer&, ID3D12GraphicsCommandList*) {};
+	// PreWork needs to return a bool: false -> signals early exit (i.e. do not make a Draw call for this layer)
+	std::function<bool(const RenderPassLayer&, ID3D12GraphicsCommandList*)> PreWork = [](const RenderPassLayer&, ID3D12GraphicsCommandList*) { return true; };
 
 	std::vector<RenderItem> RenderItems;
 	Microsoft::WRL::ComPtr<ID3D12PipelineState> PipelineState;

@@ -167,6 +167,10 @@ class LandAndWavesSceneCS
 {
 public:
 	LandAndWavesSceneCS(std::shared_ptr<tiny::DeviceResources> deviceResources);
+	~LandAndWavesSceneCS()
+	{
+		tiny::Engine::RemoveComputeUpdateLayer(m_wavesComputeLayerDisturb.get());
+	}
 
 	void Update(const tiny::Timer& timer);
 	void Render() { tiny::Engine::Render(); }
@@ -232,8 +236,8 @@ private:
 	std::unique_ptr<tiny::ConstantBufferT<landandwavescs::WavesUpdateSettings>> m_waveUpdateSettings = nullptr;
 	int m_waveUpdateNumFramesDirty = tiny::gNumFrameResources;
 	tiny::RootDescriptorTable* m_displacementMapDT = nullptr;
-
 	std::unique_ptr<GridGameObject> m_wavesObject = nullptr;
+	std::unique_ptr<tiny::ComputeLayer> m_wavesComputeLayerDisturb = nullptr;
 
 	//std::unique_ptr<GameObject> m_wavesObject = nullptr;
 	//std::unique_ptr<landandwavescs::Waves> m_waves;

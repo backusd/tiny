@@ -68,7 +68,7 @@ void LandAndWavesSceneCS::BuildLandAndWaterScene()
 	m_mainRenderPass.Name = "Main Render Pass";
 	m_mainRenderPass.RenderPassLayers.reserve(3);
 
-	// Compute Layer ---------------------------------------------------------------------------------
+	// Compute Layer: Update ---------------------------------------------------------------------------------
 	m_mainRenderPass.ComputeLayers.reserve(1);
 	ComputeLayer& computeLayer = m_mainRenderPass.ComputeLayers.emplace_back(m_deviceResources);
 
@@ -93,13 +93,12 @@ void LandAndWavesSceneCS::BuildLandAndWaterScene()
 	computeLayer.RootSignature = std::make_shared<RootSignature>(m_deviceResources, computeRootSigDesc);
 
 	// PSO
-	m_wavesDisturbCS = std::make_unique<Shader>(m_deviceResources, "src/shaders/output/WavesDisturbCS.cso");
 	m_wavesUpdateCS = std::make_unique<Shader>(m_deviceResources, "src/shaders/output/WavesUpdateCS.cso");
 
 	D3D12_COMPUTE_PIPELINE_STATE_DESC wavesUpdatePSO;
 	ZeroMemory(&wavesUpdatePSO, sizeof(D3D12_COMPUTE_PIPELINE_STATE_DESC));
 	wavesUpdatePSO.pRootSignature = computeLayer.RootSignature->Get();
-	wavesUpdatePSO.CS = m_wavesDisturbCS->GetShaderByteCode();
+	wavesUpdatePSO.CS = m_wavesUpdateCS->GetShaderByteCode();
 	wavesUpdatePSO.Flags = D3D12_PIPELINE_STATE_FLAG_NONE; 
 
 	computeLayer.SetPSO(wavesUpdatePSO);
@@ -122,6 +121,13 @@ void LandAndWavesSceneCS::BuildLandAndWaterScene()
 			settings.WaveConstant1 = m_gpuWaves->WaveConstant(1);
 			settings.WaveConstant2 = m_gpuWaves->WaveConstant(2);
 
+			int i = MathHelper::Rand(4, m_gpuWaves->NumRows() - 5);
+			int j = MathHelper::Rand(4, m_gpuWaves->NumColumns() - 5);
+			float r = MathHelper::RandF(1.0f, 2.0f); 
+
+			settings.DisturbIndex = DirectX::XMINT2(j, i);
+			settings.DisturbMag = r;
+
 			m_waveUpdateSettings->CopyData(frameIndex, settings);
 
 			--m_waveUpdateNumFramesDirty;
@@ -137,14 +143,115 @@ void LandAndWavesSceneCS::BuildLandAndWaterScene()
 	auto& nextSolDT = computeItem.DescriptorTables.emplace_back(3, m_gpuWaves->NextSol()->GetUAVHandle());
 	nextSolDT.Update = [](const Timer& timer, int frameIndex) {}; // No update here because the texture is static
 
-	computeLayer.PreWork = [this](const ComputeLayer&, ID3D12GraphicsCommandList*)
+	computeLayer.PreWork = [this](const ComputeLayer&, ID3D12GraphicsCommandList*, const Timer*, int) -> bool
 	{
 		m_gpuWaves->PreUpdate();
+		return true;
 	};
-	computeLayer.PostWork = [this](const ComputeLayer&, ID3D12GraphicsCommandList*) 
+	computeLayer.PostWork = [this](const ComputeLayer&, ID3D12GraphicsCommandList*, const Timer*, int) 
 	{
 		m_gpuWaves->PostUpdate();
 	};
+
+
+	// Compute Layer: Disturb ---------------------------------------------------------------------------------
+	m_wavesComputeLayerDisturb = std::make_unique<ComputeLayer>(m_deviceResources);
+	Engine::AddComputeUpdateLayer(m_wavesComputeLayerDisturb.get());
+
+	// Root Signature
+	m_wavesComputeLayerDisturb->RootSignature = std::make_shared<RootSignature>(m_deviceResources, computeRootSigDesc);
+
+	// PSO
+	m_wavesDisturbCS = std::make_unique<Shader>(m_deviceResources, "src/shaders/output/WavesDisturbCS.cso");
+
+	D3D12_COMPUTE_PIPELINE_STATE_DESC wavesDisturbPSO = wavesUpdatePSO;
+	wavesDisturbPSO.CS = m_wavesDisturbCS->GetShaderByteCode();
+
+	m_wavesComputeLayerDisturb->SetPSO(wavesDisturbPSO);
+
+	// Compute Item
+	ComputeItem& computeItemDisturb = m_wavesComputeLayerDisturb->ComputeItems.emplace_back();
+	computeItemDisturb.ThreadGroupCountX = 1;
+	computeItemDisturb.ThreadGroupCountY = 1;
+	computeItemDisturb.ThreadGroupCountZ = 1;
+
+	auto& waveDisturbCBV = computeItemDisturb.ConstantBufferViews.emplace_back(0, m_waveUpdateSettings.get());
+	waveDisturbCBV.Update = [this](const Timer& timer, int frameIndex) 
+	{
+	//	// Every quarter second, generate a random wave.
+	//	static float t_base = 0.0f;
+	//
+	//	// Check if we are beyond the quarter second mark
+	//	if (timer.TotalTime() - t_base > 0.25f)
+	//	{
+	//		WavesUpdateSettings settings; 
+	//		settings.WaveConstant0 = m_gpuWaves->WaveConstant(0); 
+	//		settings.WaveConstant1 = m_gpuWaves->WaveConstant(1); 
+	//		settings.WaveConstant2 = m_gpuWaves->WaveConstant(2); 
+	//
+	//		int i = MathHelper::Rand(4, m_gpuWaves->NumRows() - 5); 
+	//		int j = MathHelper::Rand(4, m_gpuWaves->NumColumns() - 5); 
+	//		float r = MathHelper::RandF(1.0f, 2.0f); 
+	//
+	//		settings.DisturbIndex = DirectX::XMINT2(j, i); 
+	//		settings.DisturbMag = r; 
+	//
+	//		m_waveUpdateSettings->CopyData(frameIndex, settings); 
+	//	}
+	};
+
+	auto& prevSolDisturbDT = computeItemDisturb.DescriptorTables.emplace_back(1, m_gpuWaves->PrevSol()->GetUAVHandle());
+	prevSolDisturbDT.Update = [](const Timer& timer, int frameIndex) {}; // No update here because the texture is static
+
+	auto& currSolDisturbDT = computeItemDisturb.DescriptorTables.emplace_back(2, m_gpuWaves->CurrSol()->GetUAVHandle());
+	currSolDisturbDT.Update = [](const Timer& timer, int frameIndex) {}; // No update here because the texture is static
+
+	auto& nextSolDisturbDT = computeItemDisturb.DescriptorTables.emplace_back(3, m_gpuWaves->NextSol()->GetUAVHandle());
+	nextSolDisturbDT.Update = [](const Timer& timer, int frameIndex) {}; // No update here because the texture is static
+
+	m_wavesComputeLayerDisturb->PreWork = [this](const ComputeLayer&, ID3D12GraphicsCommandList*, const Timer* timer, int frameIndex) -> bool
+	{
+		// Every quarter second, generate a random wave.
+		static float t_base = 0.0f;
+
+		// Check if we are beyond the quarter second mark
+		if (timer->TotalTime() - t_base > 0.25f)
+		{
+			t_base += 0.25f;
+
+			m_gpuWaves->PreUpdate(); // Call PreUpdate to tansition the texture to UAV
+
+			WavesUpdateSettings settings;
+			settings.WaveConstant0 = m_gpuWaves->WaveConstant(0);
+			settings.WaveConstant1 = m_gpuWaves->WaveConstant(1);
+			settings.WaveConstant2 = m_gpuWaves->WaveConstant(2);
+
+			int i = MathHelper::Rand(4, m_gpuWaves->NumRows() - 5);
+			int j = MathHelper::Rand(4, m_gpuWaves->NumColumns() - 5);
+			float r = MathHelper::RandF(1.0f, 2.0f);
+
+			settings.DisturbIndex = DirectX::XMINT2(j, i);
+			settings.DisturbMag = r;
+
+			m_waveUpdateSettings->CopyData(frameIndex, settings); 
+			return true;
+		}
+
+		// return false because we only want to apply an update every quarter second
+		return false;
+	};
+	m_wavesComputeLayerDisturb->PostWork = [this](const ComputeLayer&, ID3D12GraphicsCommandList*, const Timer*, int)
+	{
+		//m_gpuWaves->PostUpdate();
+	};
+
+
+
+
+
+
+
+
 
 
 

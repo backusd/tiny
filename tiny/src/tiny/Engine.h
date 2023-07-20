@@ -13,6 +13,7 @@ class ConstantBuffer;
 class RenderPass;
 class RenderItem;
 class ComputeItem;
+class ComputeLayer;
 class MeshGroup;
 class DynamicMeshGroup;
 class Texture;
@@ -31,6 +32,9 @@ public:
 	static inline void SetViewport(const D3D12_VIEWPORT& vp) noexcept { Get().SetViewportImpl(vp); }
 	static inline void SetScissorRect(const D3D12_RECT& rect) noexcept { Get().SetScissorRectImpl(rect); }
 	ND static inline int GetCurrentFrameIndex() noexcept { return Get().GetCurrentFrameIndexImpl(); }
+
+	static inline void AddComputeUpdateLayer(ComputeLayer* layer) noexcept { Get().AddComputeUpdateLayerImpl(layer); }
+	static inline void RemoveComputeUpdateLayer(ComputeLayer* layer) noexcept { Get().RemoveComputeUpdateLayerImpl(layer); }
 
 private:
 	Engine() noexcept = default;
@@ -75,11 +79,17 @@ private:
 	void AddDynamicMeshGroupImpl(DynamicMeshGroup* mesh) noexcept;
 	void RemoveDynamicMeshGroupImpl(DynamicMeshGroup* mesh) noexcept;
 
+	void AddComputeUpdateLayerImpl(ComputeLayer* layer) noexcept;
+	void RemoveComputeUpdateLayerImpl(ComputeLayer* layer) noexcept;
+
 	// Update methods
+	void ResetCommandAllocatorAndCommandList();
 	void UpdateRenderItems(const Timer& timer);
 	void UpdateComputeItems(const Timer& timer);
 	void UpdateRenderPasses(const Timer& timer);
 	void UpdateDynamicMeshes(const Timer& timer);
+	void RunComputeLayerUpdates(const Timer& timer);
+	void RunComputeLayer(const ComputeLayer& layer, const Timer* timer);
 
 private:
 	std::shared_ptr<DeviceResources> m_deviceResources = nullptr;
@@ -102,6 +112,7 @@ private:
 	std::vector<RenderItem*> m_allRenderItems;
 	std::vector<ComputeItem*> m_allComputeItems;
 	std::vector<DynamicMeshGroup*> m_dynamicMeshes;
+	std::vector<ComputeLayer*> m_computeLayersUpdateOnly;
 
 
 	// Declare all render classes friends of the Engine
@@ -109,6 +120,7 @@ private:
 	friend RenderPass;
 	friend RenderItem;
 	friend ComputeItem;
+	friend ComputeLayer;
 	friend MeshGroup;
 	friend DynamicMeshGroup;
 	template<typename> friend class DynamicMeshGroupT;
