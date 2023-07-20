@@ -29,22 +29,10 @@ using namespace tiny;
 namespace sandbox
 {
 GameObject::GameObject(std::shared_ptr<tiny::DeviceResources> deviceResources) :
-	m_deviceResources(deviceResources),
-	m_material()
+	GameObjectBase<BasicObjectConstants, BasicMaterial>(deviceResources)
 {
-	m_objectConstantsCB = std::make_unique<ConstantBufferT<ObjectConstants>>(m_deviceResources);
-	m_materialCB = std::make_unique<ConstantBufferT<Material>>(m_deviceResources);
-}
-GameObject::~GameObject()
-{
-	// Remove all render items associated with this object
-	for (auto& tup : m_allRenderItems)
-	{
-		RenderPassLayer* layer = std::get<0>(tup);
-		RenderItem* ri = std::get<1>(tup);
-		if (layer != nullptr && ri != nullptr)
-			layer->RemoveRenderItem(ri);
-	}
+	m_constantsCB = std::make_unique<ConstantBufferT<BasicObjectConstants>>(m_deviceResources);
+	m_materialCB = std::make_unique<ConstantBufferT<BasicMaterial>>(m_deviceResources);
 }
 
 RenderItem* GameObject::CreateRenderItem(tiny::RenderPassLayer* layer)
@@ -57,22 +45,22 @@ RenderItem* GameObject::CreateRenderItem(tiny::RenderPassLayer* layer)
 	m_allRenderItems.emplace_back(layer, &ri);
 
 	// Constant Buffer
-	auto& boxConstantsCBV = ri.ConstantBufferViews.emplace_back(1, m_objectConstantsCB.get());
+	auto& boxConstantsCBV = ri.ConstantBufferViews.emplace_back(1, m_constantsCB.get());
 	boxConstantsCBV.Update = [this](const Timer& timer, int frameIndex)
 	{
 		// Only update the cbuffer data if the constants have changed.
-		if (m_numFramesDirty > 0)
+		if (m_constantsNumFramesDirty > 0)
 		{
 			DirectX::XMMATRIX world = DirectX::XMLoadFloat4x4(&m_objectConstants.World);
 			DirectX::XMMATRIX texTransform = DirectX::XMLoadFloat4x4(&m_objectConstants.TexTransform);
 
-			ObjectConstants boxConstants;
+			BasicObjectConstants boxConstants;
 			DirectX::XMStoreFloat4x4(&boxConstants.World, DirectX::XMMatrixTranspose(world));
 			DirectX::XMStoreFloat4x4(&boxConstants.TexTransform, DirectX::XMMatrixTranspose(texTransform));
 
-			m_objectConstantsCB->CopyData(frameIndex, boxConstants);
+			m_constantsCB->CopyData(frameIndex, boxConstants);
 
-			--m_numFramesDirty;
+			--m_constantsNumFramesDirty;
 		}
 	};
 
@@ -85,7 +73,7 @@ RenderItem* GameObject::CreateRenderItem(tiny::RenderPassLayer* layer)
 			// Must transpose the transform before loading it into the constant buffer
 			DirectX::XMMATRIX transform = DirectX::XMLoadFloat4x4(&m_material.MatTransform);
 
-			Material mat = m_material;
+			BasicMaterial mat = m_material;
 			DirectX::XMStoreFloat4x4(&mat.MatTransform, DirectX::XMMatrixTranspose(transform));
 
 			m_materialCB->CopyData(frameIndex, mat);
@@ -126,21 +114,143 @@ void GameObject::SetMaterialTransform(const DirectX::XMMATRIX& transform) noexce
 void GameObject::SetWorldTransform(const DirectX::XMFLOAT4X4& transform) noexcept
 {
 	m_objectConstants.World = transform;
-	m_numFramesDirty = gNumFrameResources;
+	m_constantsNumFramesDirty = gNumFrameResources;
 }
 void GameObject::SetWorldTransform(const DirectX::XMMATRIX& transform) noexcept
 {
 	DirectX::XMStoreFloat4x4(&m_objectConstants.World, transform);
-	m_numFramesDirty = gNumFrameResources;
+	m_constantsNumFramesDirty = gNumFrameResources;
 }
 void GameObject::SetTextureTransform(const DirectX::XMFLOAT4X4& transform) noexcept
 {
 	m_objectConstants.TexTransform = transform;
-	m_numFramesDirty = gNumFrameResources;
+	m_constantsNumFramesDirty = gNumFrameResources;
 }
 void GameObject::SetTextureTransform(const DirectX::XMMATRIX& transform) noexcept
 {
 	DirectX::XMStoreFloat4x4(&m_objectConstants.TexTransform, transform);
-	m_numFramesDirty = gNumFrameResources;
+	m_constantsNumFramesDirty = gNumFrameResources;
 }
+
+
+// =========================================================================================
+// GridGameObject
+
+GridGameObject::GridGameObject(std::shared_ptr<tiny::DeviceResources> deviceResources) :
+	GameObjectBase<GridObjectConstants, BasicMaterial>(deviceResources)
+{
+	m_constantsCB = std::make_unique<ConstantBufferT<GridObjectConstants>>(m_deviceResources);
+	m_materialCB = std::make_unique<ConstantBufferT<BasicMaterial>>(m_deviceResources);
+}
+
+RenderItem* GridGameObject::CreateRenderItem(tiny::RenderPassLayer* layer)
+{
+	TINY_ASSERT(layer != nullptr, "Layer should never be nullptr");
+
+	RenderItem& ri = layer->RenderItems.emplace_back();
+
+	// Keep track of all render items and which layer they belong to (will be used in the destructor)
+	m_allRenderItems.emplace_back(layer, &ri);
+
+	// Constant Buffer
+	auto& gridConstantsCBV = ri.ConstantBufferViews.emplace_back(1, m_constantsCB.get());
+	gridConstantsCBV.Update = [this](const Timer& timer, int frameIndex)
+	{
+		// Only update the cbuffer data if the constants have changed.
+		if (m_constantsNumFramesDirty > 0)
+		{
+			DirectX::XMMATRIX world = DirectX::XMLoadFloat4x4(&m_objectConstants.World);
+			DirectX::XMMATRIX texTransform = DirectX::XMLoadFloat4x4(&m_objectConstants.TexTransform);
+
+			GridObjectConstants gridConstants;
+			DirectX::XMStoreFloat4x4(&gridConstants.World, DirectX::XMMatrixTranspose(world));
+			DirectX::XMStoreFloat4x4(&gridConstants.TexTransform, DirectX::XMMatrixTranspose(texTransform));
+
+			gridConstants.DisplacementMapTexelSize = m_objectConstants.DisplacementMapTexelSize;
+			gridConstants.GridSpatialStep = m_objectConstants.GridSpatialStep;
+
+			m_constantsCB->CopyData(frameIndex, gridConstants);
+
+			--m_constantsNumFramesDirty;
+		}
+	};
+
+	// Material Buffer
+	auto& boxMaterialCBV = ri.ConstantBufferViews.emplace_back(3, m_materialCB.get());
+	boxMaterialCBV.Update = [this](const Timer& timer, int frameIndex)
+	{
+		if (m_materialNumFramesDirty > 0)
+		{
+			// Must transpose the transform before loading it into the constant buffer
+			DirectX::XMMATRIX transform = DirectX::XMLoadFloat4x4(&m_material.MatTransform);
+
+			BasicMaterial mat = m_material;
+			DirectX::XMStoreFloat4x4(&mat.MatTransform, DirectX::XMMatrixTranspose(transform));
+
+			m_materialCB->CopyData(frameIndex, mat);
+
+			// Next FrameResource need to be updated too.
+			--m_materialNumFramesDirty;
+		}
+	};
+
+	return &ri;
+}
+
+void GridGameObject::SetMaterialDiffuseAlbedo(const DirectX::XMFLOAT4& albedo) noexcept
+{
+	m_material.DiffuseAlbedo = albedo;
+	m_materialNumFramesDirty = gNumFrameResources;
+}
+void GridGameObject::SetMaterialFresnelR0(const DirectX::XMFLOAT3& fresnel) noexcept
+{
+	m_material.FresnelR0 = fresnel;
+	m_materialNumFramesDirty = gNumFrameResources;
+}
+void GridGameObject::SetMaterialRoughness(float roughness) noexcept
+{
+	m_material.Roughness = roughness;
+	m_materialNumFramesDirty = gNumFrameResources;
+}
+void GridGameObject::SetMaterialTransform(const DirectX::XMFLOAT4X4& transform) noexcept
+{
+	m_material.MatTransform = transform;
+	m_materialNumFramesDirty = gNumFrameResources;
+}
+void GridGameObject::SetMaterialTransform(const DirectX::XMMATRIX& transform) noexcept
+{
+	DirectX::XMStoreFloat4x4(&m_material.MatTransform, transform);
+	m_materialNumFramesDirty = gNumFrameResources;
+}
+void GridGameObject::SetWorldTransform(const DirectX::XMFLOAT4X4& transform) noexcept
+{
+	m_objectConstants.World = transform;
+	m_constantsNumFramesDirty = gNumFrameResources;
+}
+void GridGameObject::SetWorldTransform(const DirectX::XMMATRIX& transform) noexcept
+{
+	DirectX::XMStoreFloat4x4(&m_objectConstants.World, transform);
+	m_constantsNumFramesDirty = gNumFrameResources;
+}
+void GridGameObject::SetTextureTransform(const DirectX::XMFLOAT4X4& transform) noexcept
+{
+	m_objectConstants.TexTransform = transform;
+	m_constantsNumFramesDirty = gNumFrameResources;
+}
+void GridGameObject::SetTextureTransform(const DirectX::XMMATRIX& transform) noexcept
+{
+	DirectX::XMStoreFloat4x4(&m_objectConstants.TexTransform, transform);
+	m_constantsNumFramesDirty = gNumFrameResources;
+}
+void GridGameObject::SetDisplacementMapTexelSize(const DirectX::XMFLOAT2& size) noexcept
+{
+	m_objectConstants.DisplacementMapTexelSize = size;
+	m_constantsNumFramesDirty = gNumFrameResources;
+}
+void GridGameObject::SetGridSpatialStep(float step) noexcept
+{
+	m_objectConstants.GridSpatialStep = step;
+	m_constantsNumFramesDirty = gNumFrameResources;
+}
+
 }

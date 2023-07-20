@@ -57,53 +57,53 @@ namespace sandbox
 			Light Lights[MaxLights];
 		};
 
-		class Waves
-		{
-		public:
-			Waves(int m, int n, float dx, float dt, float speed, float damping);
-			Waves(const Waves& rhs) = delete;
-			Waves& operator=(const Waves& rhs) = delete;
-			~Waves();
-
-			int RowCount()const;
-			int ColumnCount()const;
-			int VertexCount()const;
-			int TriangleCount()const;
-			float Width()const;
-			float Depth()const;
-
-			// Returns the solution at the ith grid point.
-			const DirectX::XMFLOAT3& Position(int i)const { return mCurrSolution[i]; }
-
-			// Returns the solution normal at the ith grid point.
-			const DirectX::XMFLOAT3& Normal(int i)const { return mNormals[i]; }
-
-			// Returns the unit tangent vector at the ith grid point in the local x-axis direction.
-			const DirectX::XMFLOAT3& TangentX(int i)const { return mTangentX[i]; }
-
-			void Update(float dt);
-			void Disturb(int i, int j, float magnitude);
-
-		private:
-			int mNumRows = 0;
-			int mNumCols = 0;
-
-			int mVertexCount = 0;
-			int mTriangleCount = 0;
-
-			// Simulation constants we can precompute.
-			float mK1 = 0.0f;
-			float mK2 = 0.0f;
-			float mK3 = 0.0f;
-
-			float mTimeStep = 0.0f;
-			float mSpatialStep = 0.0f;
-
-			std::vector<DirectX::XMFLOAT3> mPrevSolution;
-			std::vector<DirectX::XMFLOAT3> mCurrSolution;
-			std::vector<DirectX::XMFLOAT3> mNormals;
-			std::vector<DirectX::XMFLOAT3> mTangentX;
-		};
+//		class Waves
+//		{
+//		public:
+//			Waves(int m, int n, float dx, float dt, float speed, float damping);
+//			Waves(const Waves& rhs) = delete;
+//			Waves& operator=(const Waves& rhs) = delete;
+//			~Waves();
+//
+//			int RowCount()const;
+//			int ColumnCount()const;
+//			int VertexCount()const;
+//			int TriangleCount()const;
+//			float Width()const;
+//			float Depth()const;
+//
+//			// Returns the solution at the ith grid point.
+//			const DirectX::XMFLOAT3& Position(int i)const { return mCurrSolution[i]; }
+//
+//			// Returns the solution normal at the ith grid point.
+//			const DirectX::XMFLOAT3& Normal(int i)const { return mNormals[i]; }
+//
+//			// Returns the unit tangent vector at the ith grid point in the local x-axis direction.
+//			const DirectX::XMFLOAT3& TangentX(int i)const { return mTangentX[i]; }
+//
+//			void Update(float dt);
+//			void Disturb(int i, int j, float magnitude);
+//
+//		private:
+//			int mNumRows = 0;
+//			int mNumCols = 0;
+//
+//			int mVertexCount = 0;
+//			int mTriangleCount = 0;
+//
+//			// Simulation constants we can precompute.
+//			float mK1 = 0.0f;
+//			float mK2 = 0.0f;
+//			float mK3 = 0.0f;
+//
+//			float mTimeStep = 0.0f;
+//			float mSpatialStep = 0.0f;
+//
+//			std::vector<DirectX::XMFLOAT3> mPrevSolution;
+//			std::vector<DirectX::XMFLOAT3> mCurrSolution;
+//			std::vector<DirectX::XMFLOAT3> mNormals;
+//			std::vector<DirectX::XMFLOAT3> mTangentX;
+//		};
 
 		struct WavesUpdateSettings
 		{
@@ -139,6 +139,8 @@ namespace sandbox
 
 			ND inline UINT NumRows() const noexcept { return m_numRows; }
 			ND inline UINT NumColumns() const noexcept { return m_numColumns; }
+
+			ND inline float SpatialStep() const noexcept { return m_spatialStep; }
 
 		private:
 			std::shared_ptr<tiny::DeviceResources> m_deviceResources;
@@ -203,7 +205,7 @@ private:
 	// 
 	float GetHillsHeight(float x, float z) const;
 	DirectX::XMFLOAT3 GetHillsNormal(float x, float z) const;
-	void UpdateWavesVertices(const tiny::Timer&);
+	//void UpdateWavesVertices(const tiny::Timer&);
 	void UpdateWavesMaterials(const tiny::Timer& timer);
 
 
@@ -224,14 +226,18 @@ private:
 
 	// Waves
 	std::unique_ptr<landandwavescs::GPUWaves> m_gpuWaves = nullptr;
+	std::unique_ptr<tiny::Shader> m_wavesVS = nullptr;
 	std::unique_ptr<tiny::Shader> m_wavesDisturbCS = nullptr;
 	std::unique_ptr<tiny::Shader> m_wavesUpdateCS = nullptr;
 	std::unique_ptr<tiny::ConstantBufferT<landandwavescs::WavesUpdateSettings>> m_waveUpdateSettings = nullptr;
 	int m_waveUpdateNumFramesDirty = tiny::gNumFrameResources;
+	tiny::RootDescriptorTable* m_displacementMapDT = nullptr;
 
-	std::unique_ptr<GameObject> m_wavesObject = nullptr;
-	std::unique_ptr<landandwavescs::Waves> m_waves;
-	tiny::DynamicMeshGroupT<landandwavescs::Vertex>* m_dynamicWaveMesh = nullptr;
+	std::unique_ptr<GridGameObject> m_wavesObject = nullptr;
+
+	//std::unique_ptr<GameObject> m_wavesObject = nullptr;
+	//std::unique_ptr<landandwavescs::Waves> m_waves;
+	//tiny::DynamicMeshGroupT<landandwavescs::Vertex>* m_dynamicWaveMesh = nullptr;
 
 	std::unique_ptr<tiny::RasterizerState> m_rasterizerState = nullptr;
 	std::unique_ptr<tiny::BlendState> m_blendState = nullptr;

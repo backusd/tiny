@@ -75,6 +75,7 @@
     <FxCompile Include="src\shaders\TreeSpritePS.hlsl" />
     <FxCompile Include="src\shaders\WavesDisturbCS.hlsl" />
     <FxCompile Include="src\shaders\WavesUpdateCS.hlsl" />
+    <FxCompile Include="src\shaders\WavesVS.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <None Include="src\shaders\Lighting.hlsli" />
