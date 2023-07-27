@@ -168,9 +168,6 @@ unsigned int DescriptorVector::EmplaceBackConstantBufferView(const D3D12_CONSTAN
 }
 unsigned int DescriptorVector::EmplaceBackUnorderedAccessView(ID3D12Resource* pResource, const D3D12_UNORDERED_ACCESS_VIEW_DESC* desc)
 {
-    LOG_CORE_WARN("{}", "DescriptorVector::EmplaceBackUnorderedAccessView() has been called, but I've never tested this function.");
-    LOG_CORE_WARN("{}", "That being said, I think it works correctly - However, in the call to CreateUnorderedAccessView(), I pass nullptr for the (optional) pCounterResource parameter and I'm not sure what this parameter is used for exactly");
-
     TINY_CORE_ASSERT(m_type == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, "Invalid to create an Unordered Access View if the type is not D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV");
 
     // Get the next available index into the heap and increase the capacity if necessary
