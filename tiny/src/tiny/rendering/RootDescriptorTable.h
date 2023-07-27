@@ -21,8 +21,14 @@ public:
 	RootDescriptorTable& operator=(RootDescriptorTable&&) noexcept = default;
 	~RootDescriptorTable() noexcept {}
 
-	std::function<void(const Timer&, int)> Update = [](const Timer&, int) {};
-	UINT RootParameterIndex;
+	std::function<void(RootDescriptorTable*, const Timer&, int)> Update = [](RootDescriptorTable*, const Timer&, int) {};
+	
 	D3D12_GPU_DESCRIPTOR_HANDLE DescriptorHandle;
+
+	UINT Index() const { return RootParameterIndex; }
+
+private:
+	UINT RootParameterIndex;
+
 };
 }

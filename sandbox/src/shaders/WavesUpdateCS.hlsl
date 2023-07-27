@@ -23,15 +23,26 @@ void UpdateWavesCS(int3 dispatchThreadID : SV_DispatchThreadID)
 	
     int x = dispatchThreadID.x;
     int y = dispatchThreadID.y;
-
-    gOutput[int2(x, y)] =
-		gWaveConstant0 * gPrevSolInput[int2(x, y)].r +
-		gWaveConstant1 * gCurrSolInput[int2(x, y)].r +
-		gWaveConstant2 * (
+	
+    float f1 = gWaveConstant0 * gPrevSolInput[int2(x, y)].r;
+    float f2 = gWaveConstant1 * gCurrSolInput[int2(x, y)].r;
+    float f3 = gWaveConstant2 * (
 			gCurrSolInput[int2(x, y + 1)].r +
 			gCurrSolInput[int2(x, y - 1)].r +
 			gCurrSolInput[int2(x + 1, y)].r +
 			gCurrSolInput[int2(x - 1, y)].r);
+	
+    float f4 = f1 + f2 + f3;
+    gOutput[int2(x, y)] = f4;
+
+//    gOutput[int2(x, y)] =
+//		gWaveConstant0 * gPrevSolInput[int2(x, y)].r +
+//		gWaveConstant1 * gCurrSolInput[int2(x, y)].r +
+//		gWaveConstant2 * (
+//			gCurrSolInput[int2(x, y + 1)].r +
+//			gCurrSolInput[int2(x, y - 1)].r +
+//			gCurrSolInput[int2(x + 1, y)].r +
+//			gCurrSolInput[int2(x - 1, y)].r);
 }
 
 [numthreads(1, 1, 1)]

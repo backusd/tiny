@@ -49,9 +49,15 @@ void DisturbWavesCS(int3 groupThreadID : SV_GroupThreadID,
     float halfMag = 0.5f * gDisturbMag;
 
 	// Buffer is RW so operator += is well defined.
-    gOutput[int2(x, y)] += gDisturbMag;
-    gOutput[int2(x + 1, y)] += halfMag;
-    gOutput[int2(x - 1, y)] += halfMag;
-    gOutput[int2(x, y + 1)] += halfMag;
-    gOutput[int2(x, y - 1)] += halfMag;
+    //gOutput[int2(x, y)] += gDisturbMag;
+    //gOutput[int2(x + 1, y)] += halfMag;
+    //gOutput[int2(x - 1, y)] += halfMag;
+    //gOutput[int2(x, y + 1)] += halfMag;
+    //gOutput[int2(x, y - 1)] += halfMag;
+	
+    gCurrSolInput[int2(x, y)] += gDisturbMag;
+    gCurrSolInput[int2(x + 1, y)] += halfMag;
+    gCurrSolInput[int2(x - 1, y)] += halfMag;
+    gCurrSolInput[int2(x, y + 1)] += halfMag;
+    gCurrSolInput[int2(x, y - 1)] += halfMag;
 }

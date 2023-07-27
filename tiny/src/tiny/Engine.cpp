@@ -64,17 +64,17 @@ void Engine::UpdateImpl(const Timer& timer)
 	// Cleanup resources that were passed to DelayedDelete()
 	CleanupResources();
 
-	// Before we attempt to run any compute layer updates, we must reset the command list and allocator
-	ResetCommandAllocatorAndCommandList();
-
-	// Run any compute layers that are strictly necessary during the update phase
-	RunComputeLayerUpdates(timer);
-
 	// Update dynamic data
 	UpdateRenderItems(timer);
 	UpdateComputeItems(timer);
 	UpdateRenderPasses(timer);
 	UpdateDynamicMeshes(timer);
+
+	// Before we attempt to run any compute layer updates, we must reset the command list and allocator
+	ResetCommandAllocatorAndCommandList();
+
+	// Run any compute layers that are strictly necessary during the update phase
+	RunComputeLayerUpdates(timer);
 }
 void Engine::RenderImpl()
 {
@@ -175,7 +175,7 @@ void Engine::RenderImpl()
 				for (const RootDescriptorTable& table : item.DescriptorTables)
 				{
 					GFX_THROW_INFO_ONLY(
-						commandList->SetGraphicsRootDescriptorTable(table.RootParameterIndex, table.DescriptorHandle)
+						commandList->SetGraphicsRootDescriptorTable(table.Index(), table.DescriptorHandle)
 					);
 				}
 
@@ -320,7 +320,7 @@ void Engine::RunComputeLayer(const ComputeLayer& layer, const Timer* timer)
 		for (const RootDescriptorTable& table : item.DescriptorTables)
 		{
 			GFX_THROW_INFO_ONLY(
-				commandList->SetComputeRootDescriptorTable(table.RootParameterIndex, table.DescriptorHandle)
+				commandList->SetComputeRootDescriptorTable(table.Index(), table.DescriptorHandle)
 			);
 		}
 		for (const RootConstantBufferView& cbv : item.ConstantBufferViews)

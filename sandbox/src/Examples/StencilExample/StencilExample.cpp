@@ -320,7 +320,7 @@ void StencilExample::BuildMainRenderPass()
 	floorRI->submeshIndex = 0;
 
 	auto& floorDT = floorRI->DescriptorTables.emplace_back(0, m_textures[(int)TEXTURE::CHECKBOARD]->GetSRVHandle());
-	floorDT.Update = [](const Timer& timer, int frameIndex) { }; // No update here because the texture is static
+	floorDT.Update = [](RootDescriptorTable* dt, const Timer& timer, int frameIndex) { }; // No update here because the texture is static
 
 	// Wall
 	m_wallObject = std::make_unique<GameObject>(m_deviceResources); // Create the wall (NOTE: This does NOT create a RenderItem)
@@ -331,7 +331,7 @@ void StencilExample::BuildMainRenderPass()
 	wallRI->submeshIndex = 1;
 
 	auto& wallDT = wallRI->DescriptorTables.emplace_back(0, m_textures[(int)TEXTURE::BRICKS3]->GetSRVHandle());
-	wallDT.Update = [](const Timer& timer, int frameIndex) {}; // No update here because the texture is static
+	wallDT.Update = [](RootDescriptorTable* dt, const Timer& timer, int frameIndex) {}; // No update here because the texture is static
 
 	// Skull
 	m_skullObject = std::make_unique<GameObject>(m_deviceResources); // Create the skull (NOTE: This does NOT create a RenderItem)
@@ -343,7 +343,7 @@ void StencilExample::BuildMainRenderPass()
 	skullRI->submeshIndex = 2;
 
 	auto& skullDT = skullRI->DescriptorTables.emplace_back(0, m_textures[(int)TEXTURE::WHITE1X1]->GetSRVHandle());
-	skullDT.Update = [](const Timer& timer, int frameIndex) {}; // No update here because the texture is static
+	skullDT.Update = [](RootDescriptorTable* dt, const Timer& timer, int frameIndex) {}; // No update here because the texture is static
 
 
 	// Render Pass Layer: Mirror (Stencil) ----------------------------------------------------------------------
@@ -438,7 +438,7 @@ void StencilExample::BuildMainRenderPass()
 	mirrorRI->submeshIndex = 0;
 
 	auto& mirrorDT = mirrorRI->DescriptorTables.emplace_back(0, m_textures[(int)TEXTURE::ICE]->GetSRVHandle());
-	mirrorDT.Update = [](const Timer& timer, int frameIndex) {}; // No update here because the texture is static
+	mirrorDT.Update = [](RootDescriptorTable* dt, const Timer& timer, int frameIndex) {}; // No update here because the texture is static
 
 }
 void StencilExample::BuildReflectedRenderPass()
@@ -551,7 +551,7 @@ void StencilExample::BuildReflectedRenderPass()
 	skullRI->submeshIndex = 2;
 
 	auto& skullDT = skullRI->DescriptorTables.emplace_back(0, m_textures[(int)TEXTURE::WHITE1X1]->GetSRVHandle());
-	skullDT.Update = [](const Timer& timer, int frameIndex) {}; // No update here because the texture is static
+	skullDT.Update = [](RootDescriptorTable* dt, const Timer& timer, int frameIndex) {}; // No update here because the texture is static
 
 }
 void StencilExample::BuildMirrorAndShadowRenderPass()
@@ -632,7 +632,7 @@ void StencilExample::BuildMirrorAndShadowRenderPass()
 	mirrorRI->submeshIndex = 0;
 
 	auto& mirrorDT = mirrorRI->DescriptorTables.emplace_back(0, m_textures[(int)TEXTURE::ICE]->GetSRVHandle());
-	mirrorDT.Update = [](const Timer& timer, int frameIndex) {}; // No update here because the texture is static
+	mirrorDT.Update = [](RootDescriptorTable* dt, const Timer& timer, int frameIndex) {}; // No update here because the texture is static
 
 
 
@@ -720,7 +720,7 @@ void StencilExample::BuildMirrorAndShadowRenderPass()
 	shadowRI->submeshIndex = 2;
 
 	auto& shadowDT = shadowRI->DescriptorTables.emplace_back(0, m_textures[(int)TEXTURE::ICE]->GetSRVHandle());
-	shadowDT.Update = [](const Timer& timer, int frameIndex) {}; // No update here because the texture is static
+	shadowDT.Update = [](RootDescriptorTable* dt, const Timer& timer, int frameIndex) {}; // No update here because the texture is static
 
 }
 

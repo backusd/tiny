@@ -59,7 +59,7 @@ public:
 			rcbv.Update(timer, frameIndex);
 
 		for (auto& dt : DescriptorTables)
-			dt.Update(timer, frameIndex);
+			dt.Update(&dt, timer, frameIndex);
 	}
 
 	// 0+ constant buffer views for per-item constants

@@ -233,15 +233,10 @@ private:
 	std::unique_ptr<tiny::Shader> m_wavesVS = nullptr;
 	std::unique_ptr<tiny::Shader> m_wavesDisturbCS = nullptr;
 	std::unique_ptr<tiny::Shader> m_wavesUpdateCS = nullptr;
-	std::unique_ptr<tiny::ConstantBufferT<landandwavescs::WavesUpdateSettings>> m_waveUpdateSettings = nullptr;
+	std::unique_ptr<tiny::ConstantBufferT<landandwavescs::WavesUpdateSettings>> m_waveUpdateSettingsCB = nullptr;
 	int m_waveUpdateNumFramesDirty = tiny::gNumFrameResources;
-	tiny::RootDescriptorTable* m_displacementMapDT = nullptr;
 	std::unique_ptr<GridGameObject> m_wavesObject = nullptr;
 	std::unique_ptr<tiny::ComputeLayer> m_wavesComputeLayerDisturb = nullptr;
-
-	//std::unique_ptr<GameObject> m_wavesObject = nullptr;
-	//std::unique_ptr<landandwavescs::Waves> m_waves;
-	//tiny::DynamicMeshGroupT<landandwavescs::Vertex>* m_dynamicWaveMesh = nullptr;
 
 	std::unique_ptr<tiny::RasterizerState> m_rasterizerState = nullptr;
 	std::unique_ptr<tiny::BlendState> m_blendState = nullptr;

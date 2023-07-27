@@ -71,6 +71,7 @@ void LandAndWavesSceneCS::BuildLandAndWaterScene()
 	// Compute Layer: Update ---------------------------------------------------------------------------------
 	m_mainRenderPass.ComputeLayers.reserve(1);
 	ComputeLayer& computeLayer = m_mainRenderPass.ComputeLayers.emplace_back(m_deviceResources);
+	computeLayer.Name = "Compute Layer: Update";
 
 	// Root Signature
 	CD3DX12_DESCRIPTOR_RANGE uavTable0, uavTable1, uavTable2; 
@@ -109,8 +110,8 @@ void LandAndWavesSceneCS::BuildLandAndWaterScene()
 	computeItem.ThreadGroupCountY = m_gpuWaves->NumRows() / 16;
 	computeItem.ThreadGroupCountZ = 1;
 
-	m_waveUpdateSettings = std::make_unique<ConstantBufferT<WavesUpdateSettings>>(m_deviceResources); 
-	auto& waveUpdateCBV = computeItem.ConstantBufferViews.emplace_back(0, m_waveUpdateSettings.get());
+	m_waveUpdateSettingsCB = std::make_unique<ConstantBufferT<WavesUpdateSettings>>(m_deviceResources); 
+	auto& waveUpdateCBV = computeItem.ConstantBufferViews.emplace_back(0, m_waveUpdateSettingsCB.get());
 	waveUpdateCBV.Update = [this](const Timer& timer, int frameIndex)
 	{
 		// Only update the cbuffer data if the constants have changed.
@@ -120,28 +121,35 @@ void LandAndWavesSceneCS::BuildLandAndWaterScene()
 			settings.WaveConstant0 = m_gpuWaves->WaveConstant(0);
 			settings.WaveConstant1 = m_gpuWaves->WaveConstant(1);
 			settings.WaveConstant2 = m_gpuWaves->WaveConstant(2);
-
-			int i = MathHelper::Rand(4, m_gpuWaves->NumRows() - 5);
-			int j = MathHelper::Rand(4, m_gpuWaves->NumColumns() - 5);
-			float r = MathHelper::RandF(1.0f, 2.0f); 
-
-			settings.DisturbIndex = DirectX::XMINT2(j, i);
-			settings.DisturbMag = r;
-
-			m_waveUpdateSettings->CopyData(frameIndex, settings);
-
+			settings.DisturbIndex = DirectX::XMINT2(0, 0);
+			settings.DisturbMag = 1.0f;
+		
+			m_waveUpdateSettingsCB->CopyData(frameIndex, settings);
+		
 			--m_waveUpdateNumFramesDirty;
 		}
 	};
-
+	computeItem.DescriptorTables.reserve(4);
 	auto& prevSolDT = computeItem.DescriptorTables.emplace_back(1, m_gpuWaves->PrevSol()->GetUAVHandle());
-	prevSolDT.Update = [](const Timer& timer, int frameIndex) {}; // No update here because the texture is static
+	prevSolDT.Update = [this](RootDescriptorTable* dt, const Timer& timer, int frameIndex)
+	{
+		// The textures get shuffled every frame, so this needs to get updated every frame as well
+		dt->DescriptorHandle = m_gpuWaves->PrevSol()->GetUAVHandle();
+	};
 	
 	auto& currSolDT = computeItem.DescriptorTables.emplace_back(2, m_gpuWaves->CurrSol()->GetUAVHandle());
-	currSolDT.Update = [](const Timer& timer, int frameIndex) {}; // No update here because the texture is static
+	currSolDT.Update = [this](RootDescriptorTable* dt, const Timer& timer, int frameIndex)
+	{
+		// The textures get shuffled every frame, so this needs to get updated every frame as well
+		dt->DescriptorHandle = m_gpuWaves->CurrSol()->GetUAVHandle();
+	}; 
 	
 	auto& nextSolDT = computeItem.DescriptorTables.emplace_back(3, m_gpuWaves->NextSol()->GetUAVHandle());
-	nextSolDT.Update = [](const Timer& timer, int frameIndex) {}; // No update here because the texture is static
+	nextSolDT.Update = [this](RootDescriptorTable* dt, const Timer& timer, int frameIndex)
+	{
+		// The textures get shuffled every frame, so this needs to get updated every frame as well
+		dt->DescriptorHandle = m_gpuWaves->NextSol()->GetUAVHandle();
+	};
 
 	computeLayer.PreWork = [this](const ComputeLayer&, ID3D12GraphicsCommandList*, const Timer*, int) -> bool
 	{
@@ -156,10 +164,11 @@ void LandAndWavesSceneCS::BuildLandAndWaterScene()
 
 	// Compute Layer: Disturb ---------------------------------------------------------------------------------
 	m_wavesComputeLayerDisturb = std::make_unique<ComputeLayer>(m_deviceResources);
+	m_wavesComputeLayerDisturb->Name = "Compute Layer: Disturb";
 	Engine::AddComputeUpdateLayer(m_wavesComputeLayerDisturb.get());
 
 	// Root Signature
-	m_wavesComputeLayerDisturb->RootSignature = std::make_shared<RootSignature>(m_deviceResources, computeRootSigDesc);
+	m_wavesComputeLayerDisturb->RootSignature = computeLayer.RootSignature;
 
 	// PSO
 	m_wavesDisturbCS = std::make_unique<Shader>(m_deviceResources, "src/shaders/output/WavesDisturbCS.cso");
@@ -175,39 +184,33 @@ void LandAndWavesSceneCS::BuildLandAndWaterScene()
 	computeItemDisturb.ThreadGroupCountY = 1;
 	computeItemDisturb.ThreadGroupCountZ = 1;
 
-	auto& waveDisturbCBV = computeItemDisturb.ConstantBufferViews.emplace_back(0, m_waveUpdateSettings.get());
+	auto& waveDisturbCBV = computeItemDisturb.ConstantBufferViews.emplace_back(0, m_waveUpdateSettingsCB.get());
 	waveDisturbCBV.Update = [this](const Timer& timer, int frameIndex) 
 	{
-	//	// Every quarter second, generate a random wave.
-	//	static float t_base = 0.0f;
-	//
-	//	// Check if we are beyond the quarter second mark
-	//	if (timer.TotalTime() - t_base > 0.25f)
-	//	{
-	//		WavesUpdateSettings settings; 
-	//		settings.WaveConstant0 = m_gpuWaves->WaveConstant(0); 
-	//		settings.WaveConstant1 = m_gpuWaves->WaveConstant(1); 
-	//		settings.WaveConstant2 = m_gpuWaves->WaveConstant(2); 
-	//
-	//		int i = MathHelper::Rand(4, m_gpuWaves->NumRows() - 5); 
-	//		int j = MathHelper::Rand(4, m_gpuWaves->NumColumns() - 5); 
-	//		float r = MathHelper::RandF(1.0f, 2.0f); 
-	//
-	//		settings.DisturbIndex = DirectX::XMINT2(j, i); 
-	//		settings.DisturbMag = r; 
-	//
-	//		m_waveUpdateSettings->CopyData(frameIndex, settings); 
-	//	}
 	};
 
+	computeItemDisturb.DescriptorTables.reserve(4);
+
 	auto& prevSolDisturbDT = computeItemDisturb.DescriptorTables.emplace_back(1, m_gpuWaves->PrevSol()->GetUAVHandle());
-	prevSolDisturbDT.Update = [](const Timer& timer, int frameIndex) {}; // No update here because the texture is static
+	prevSolDisturbDT.Update = [this](RootDescriptorTable* dt, const Timer& timer, int frameIndex)
+	{
+		// The textures get shuffled every frame, so this needs to get updated every frame as well
+		dt->DescriptorHandle = m_gpuWaves->PrevSol()->GetUAVHandle();
+	};
 
 	auto& currSolDisturbDT = computeItemDisturb.DescriptorTables.emplace_back(2, m_gpuWaves->CurrSol()->GetUAVHandle());
-	currSolDisturbDT.Update = [](const Timer& timer, int frameIndex) {}; // No update here because the texture is static
+	currSolDisturbDT.Update = [this](RootDescriptorTable* dt, const Timer& timer, int frameIndex)
+	{
+		// The textures get shuffled every frame, so this needs to get updated every frame as well
+		dt->DescriptorHandle = m_gpuWaves->CurrSol()->GetUAVHandle();
+	};
 
 	auto& nextSolDisturbDT = computeItemDisturb.DescriptorTables.emplace_back(3, m_gpuWaves->NextSol()->GetUAVHandle());
-	nextSolDisturbDT.Update = [](const Timer& timer, int frameIndex) {}; // No update here because the texture is static
+	nextSolDisturbDT.Update = [this](RootDescriptorTable* dt, const Timer& timer, int frameIndex)
+	{
+		// The textures get shuffled every frame, so this needs to get updated every frame as well
+		dt->DescriptorHandle = m_gpuWaves->NextSol()->GetUAVHandle();
+	};
 
 	m_wavesComputeLayerDisturb->PreWork = [this](const ComputeLayer&, ID3D12GraphicsCommandList*, const Timer* timer, int frameIndex) -> bool
 	{
@@ -233,7 +236,7 @@ void LandAndWavesSceneCS::BuildLandAndWaterScene()
 			settings.DisturbIndex = DirectX::XMINT2(j, i);
 			settings.DisturbMag = r;
 
-			m_waveUpdateSettings->CopyData(frameIndex, settings); 
+			m_waveUpdateSettingsCB->CopyData(frameIndex, settings); 
 			return true;
 		}
 
@@ -425,7 +428,7 @@ void LandAndWavesSceneCS::BuildLandAndWaterScene()
 	gridRI->submeshIndex = 0; // Only using a single mesh, so automatically it is at index 0
 
 	auto& gridDT = gridRI->DescriptorTables.emplace_back(0, m_textures[(int)TEXTURE::GRASS]->GetSRVHandle());
-	gridDT.Update = [](const Timer& timer, int frameIndex)
+	gridDT.Update = [](RootDescriptorTable* dt, const Timer& timer, int frameIndex)
 	{
 		// No update here because the texture is static
 	};
@@ -479,7 +482,7 @@ void LandAndWavesSceneCS::BuildLandAndWaterScene()
 	boxRI->submeshIndex = 0; // Only using a single mesh, so automatically it is at index 0
 
 	auto& boxDT = boxRI->DescriptorTables.emplace_back(0, m_textures[(int)TEXTURE::WIRE_FENCE]->GetSRVHandle());
-	boxDT.Update = [](const Timer& timer, int frameIndex)
+	boxDT.Update = [](RootDescriptorTable* dt, const Timer& timer, int frameIndex)
 	{
 		// No update here because the texture is static
 	};
@@ -547,114 +550,18 @@ void LandAndWavesSceneCS::BuildLandAndWaterScene()
 	wavesRI->submeshIndex = 0;
 
 	auto& wavesDT = wavesRI->DescriptorTables.emplace_back(0, m_textures[(int)TEXTURE::WATER1]->GetSRVHandle());
-	wavesDT.Update = [](const Timer& timer, int frameIndex)
+	wavesDT.Update = [](RootDescriptorTable* dt, const Timer& timer, int frameIndex)
 	{
 		// No update here because the texture is static
 	};
 	auto& wavesDisplacementMapDT = wavesRI->DescriptorTables.emplace_back(4, m_gpuWaves->CurrSol()->GetSRVHandle());
-	m_displacementMapDT = &wavesDisplacementMapDT;
-	wavesDisplacementMapDT.Update = [this](const Timer& timer, int frameIndex)
+	wavesDisplacementMapDT.Update = [this](RootDescriptorTable* dt, const Timer& timer, int frameIndex)
 	{
 		// Need to update the descriptor handle every frame because the "current solution" will get shuffled
 		// every frame
-		m_displacementMapDT->DescriptorHandle = m_gpuWaves->CurrSol()->GetSRVHandle();
+		dt->DescriptorHandle = m_gpuWaves->CurrSol()->GetSRVHandle();
 	};
 
-
-
-
-
-
-
-
-	
-
-
-
-	
-//	RenderPassLayer& transparentLayer = m_mainRenderPass.RenderPassLayers.emplace_back(m_deviceResources);
-//	transparentLayer.Name = "Transparent Layer";
-//
-//	// PSO
-//	std::unique_ptr<BlendState> transparentBlendState = std::make_unique<BlendState>();
-//	transparentBlendState->SetRenderTargetBlendEnabled(true);
-//	transparentBlendState->SetRenderTargetLogicOpEnabled(false);
-//	transparentBlendState->SetRenderTargetSrcBlend(D3D12_BLEND_SRC_ALPHA);
-//	transparentBlendState->SetRenderTargetDestBlend(D3D12_BLEND_INV_SRC_ALPHA);
-//	transparentBlendState->SetRenderTargetBlendOp(D3D12_BLEND_OP_ADD);
-//	transparentBlendState->SetRenderTargetSrcBlendAlpha(D3D12_BLEND_ONE);
-//	transparentBlendState->SetRenderTargetDestBlendAlpha(D3D12_BLEND_ZERO);
-//	transparentBlendState->SetRenderTargetBlendOpAlpha(D3D12_BLEND_OP_ADD);
-//	transparentBlendState->SetRenderTargetLogicOp(D3D12_LOGIC_OP_NOOP);
-//	transparentBlendState->SetRenderTargetWriteMask(D3D12_COLOR_WRITE_ENABLE_ALL);
-//
-//	D3D12_GRAPHICS_PIPELINE_STATE_DESC transparentDesc = opaqueDesc;
-//	transparentDesc.BlendState = transparentBlendState->GetBlendDesc();
-//
-//	transparentLayer.SetPSO(transparentDesc);
-//
-//	// Topology
-//	transparentLayer.Topology = D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST;
-//
-//	// MeshGroup
-//	m_waves = std::make_unique<Waves>(128, 128, 1.0f, 0.03f, 4.0f, 0.2f);
-//	std::vector<std::uint16_t> waveIndices(3 * m_waves->TriangleCount()); // 3 indices per face
-//	TINY_CORE_ASSERT(m_waves->VertexCount() < 0x0000ffff, "Too many vertices");
-//
-//	// Iterate over each quad.
-//	int m = m_waves->RowCount();
-//	int n = m_waves->ColumnCount();
-//	int k = 0;
-//	for (int i = 0; i < m - 1; ++i)
-//	{
-//		for (int j = 0; j < n - 1; ++j)
-//		{
-//			waveIndices[k] = i * n + j;
-//			waveIndices[static_cast<size_t>(k) + 1] = i * n + j + 1;
-//			waveIndices[static_cast<size_t>(k) + 2] = (i + 1) * n + j;
-//
-//			waveIndices[static_cast<size_t>(k) + 3] = (i + 1) * n + j;
-//			waveIndices[static_cast<size_t>(k) + 4] = i * n + j + 1;
-//			waveIndices[static_cast<size_t>(k) + 5] = (i + 1) * n + j + 1;
-//
-//			k += 6; // next quad
-//		}
-//	}
-//
-//	std::vector<Vertex> waveVertices(m_waves->VertexCount());
-//	float wavesWidth = m_waves->Width();
-//	float wavesDepth = m_waves->Depth();
-//	// Using a parallel_for loop here speeds this up from 1.5ms to 0.3ms when compared to a raw for-loop
-//	concurrency::parallel_for(1, m_waves->VertexCount() - 1, [&, this](int i)
-//		{
-//			waveVertices[i].Pos = m_waves->Position(i);
-//			waveVertices[i].Normal = m_waves->Normal(i);
-//
-//			// Derive tex-coords from position by 
-//			// mapping [-w/2,w/2] --> [0,1]
-//			waveVertices[i].TexC.x = 0.5f + waveVertices[i].Pos.x / wavesWidth;
-//			waveVertices[i].TexC.y = 0.5f - waveVertices[i].Pos.z / wavesDepth;
-//		}
-//	);
-//
-//	transparentLayer.Meshes = std::make_shared<DynamicMeshGroupT<Vertex>>(m_deviceResources, std::move(waveVertices), std::move(waveIndices));
-//	m_dynamicWaveMesh = static_cast<DynamicMeshGroupT<Vertex>*>(transparentLayer.Meshes.get());
-//
-//	// Render Items
-//	m_wavesObject = std::make_unique<GameObject>(m_deviceResources); // Create the waves (NOTE: This does NOT create a RenderItem)
-//	m_wavesObject->SetMaterialDiffuseAlbedo(DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 0.5f));
-//	m_wavesObject->SetMaterialFresnelR0(DirectX::XMFLOAT3(0.1f, 0.1f, 0.1f));
-//	m_wavesObject->SetMaterialRoughness(0.0f);
-//	m_wavesObject->SetTextureTransform(DirectX::XMMatrixScaling(5.0f, 5.0f, 1.0f));
-//	RenderItem* wavesRI = m_wavesObject->CreateRenderItem(&transparentLayer);
-//
-//	wavesRI->submeshIndex = 0; // Only using a single mesh, so automatically it is at index 0
-//
-//	auto& wavesDT = wavesRI->DescriptorTables.emplace_back(0, m_textures[(int)TEXTURE::WATER1]->GetSRVHandle());
-//	wavesDT.Update = [](const Timer& timer, int frameIndex)
-//	{
-//		// No update here because the texture is static
-//	};
 
 }
 
@@ -697,62 +604,7 @@ void LandAndWavesSceneCS::UpdateCamera(const Timer& timer)
 
 	m_camera.UpdateViewMatrix();
 }
-//void LandAndWavesSceneCS::UpdateWavesVertices(const Timer& timer)
-//{
-//	PROFILE_FUNCTION();
-//
-//	// Every quarter second, generate a random wave.
-//	static float t_base = 0.0f;
-//	{
-//		PROFILE_SCOPE("Disturbing Waves");
-//
-//		if ((timer.TotalTime() - t_base) >= 0.25f)
-//		{
-//			t_base += 0.25f;
-//
-//			int i = MathHelper::Rand(4, m_waves->RowCount() - 5);
-//			int j = MathHelper::Rand(4, m_waves->ColumnCount() - 5);
-//
-//			float r = MathHelper::RandF(0.2f, 0.5f);
-//
-//			m_waves->Disturb(i, j, r);
-//		}
-//	}
-//
-//	// Update the wave simulation.
-//	m_waves->Update(timer.DeltaTime());
-//
-//	// Update the wave vertex buffer with the new solution.
-//	{
-//		PROFILE_SCOPE("Extracting vertices");
-//
-//		std::vector<Vertex>& vertices = m_dynamicWaveMesh->GetVertices();
-//		{
-//			PROFILE_SCOPE("Constructing new vertices");
-//
-//			float width = m_waves->Width();
-//			float depth = m_waves->Depth();
-//
-//			// Using a parallel_for loop here speeds this up from 1.5ms to 0.3ms when compared to a raw for-loop
-//			concurrency::parallel_for(1, m_waves->VertexCount() - 1, [&, this](int i)
-//				{
-//					vertices[i].Pos = m_waves->Position(i);
-//					vertices[i].Normal = m_waves->Normal(i);
-//
-//					// Derive tex-coords from position by 
-//					// mapping [-w/2,w/2] --> [0,1]
-//					vertices[i].TexC.x = 0.5f + vertices[i].Pos.x / width;
-//					vertices[i].TexC.y = 0.5f - vertices[i].Pos.z / depth;
-//				}
-//			);
-//		}
-//
-//		{
-//			PROFILE_SCOPE("Dynamic Wave Mesh -> Copy Vertices");
-//			m_dynamicWaveMesh->UploadVertices(Engine::GetCurrentFrameIndex());
-//		}
-//	}
-//}
+
 void LandAndWavesSceneCS::UpdateWavesMaterials(const Timer& timer)
 {
 	PROFILE_FUNCTION();
@@ -874,174 +726,6 @@ void LandAndWavesSceneCS::OnMouseMove(float x, float y)
 // ======================================================================================================
 namespace landandwavescs
 {
-//	Waves::Waves(int m, int n, float dx, float dt, float speed, float damping)
-//	{
-//		using namespace DirectX;
-//
-//		mNumRows = m;
-//		mNumCols = n;
-//
-//		mVertexCount = m * n;
-//		mTriangleCount = (m - 1) * (n - 1) * 2;
-//
-//		mTimeStep = dt;
-//		mSpatialStep = dx;
-//
-//		float d = damping * dt + 2.0f;
-//		float e = (speed * speed) * (dt * dt) / (dx * dx);
-//		mK1 = (damping * dt - 2.0f) / d;
-//		mK2 = (4.0f - 8.0f * e) / d;
-//		mK3 = (2.0f * e) / d;
-//
-//		mPrevSolution.resize(static_cast<size_t>(m) * n);
-//		mCurrSolution.resize(static_cast<size_t>(m) * n);
-//		mNormals.resize(static_cast<size_t>(m) * n);
-//		mTangentX.resize(static_cast<size_t>(m) * n);
-//
-//		// Generate grid vertices in system memory.
-//
-//		float halfWidth = (n - 1) * dx * 0.5f;
-//		float halfDepth = (m - 1) * dx * 0.5f;
-//		for (int i = 0; i < m; ++i)
-//		{
-//			float z = halfDepth - i * dx;
-//			for (int j = 0; j < n; ++j)
-//			{
-//				float x = -halfWidth + j * dx;
-//
-//				mPrevSolution[static_cast<size_t>(i) * n + j] = XMFLOAT3(x, 0.0f, z);
-//				mCurrSolution[static_cast<size_t>(i) * n + j] = XMFLOAT3(x, 0.0f, z);
-//				mNormals[static_cast<size_t>(i) * n + j] = XMFLOAT3(0.0f, 1.0f, 0.0f);
-//				mTangentX[static_cast<size_t>(i) * n + j] = XMFLOAT3(1.0f, 0.0f, 0.0f);
-//			}
-//		}
-//	}
-//
-//	Waves::~Waves()
-//	{
-//	}
-//
-//	int Waves::RowCount()const
-//	{
-//		return mNumRows;
-//	}
-//
-//	int Waves::ColumnCount()const
-//	{
-//		return mNumCols;
-//	}
-//
-//	int Waves::VertexCount()const
-//	{
-//		return mVertexCount;
-//	}
-//
-//	int Waves::TriangleCount()const
-//	{
-//		return mTriangleCount;
-//	}
-//
-//	float Waves::Width()const
-//	{
-//		return mNumCols * mSpatialStep;
-//	}
-//
-//	float Waves::Depth()const
-//	{
-//		return mNumRows * mSpatialStep;
-//	}
-//
-//	void Waves::Update(float dt)
-//	{
-//		using namespace DirectX;
-//
-//		PROFILE_FUNCTION();
-//
-//		static float t = 0;
-//
-//		// Accumulate time.
-//		t += dt;
-//
-//		// Only update the simulation at the specified time step.
-//		if (t >= mTimeStep)
-//		{
-//			// Only update interior points; we use zero boundary conditions.
-//			concurrency::parallel_for(1, mNumRows - 1, [this](int i)
-//				//for(int i = 1; i < mNumRows-1; ++i)
-//				{
-//					for (int j = 1; j < mNumCols - 1; ++j)
-//					{
-//						// After this update we will be discarding the old previous
-//						// buffer, so overwrite that buffer with the new update.
-//						// Note how we can do this inplace (read/write to same element) 
-//						// because we won't need prev_ij again and the assignment happens last.
-//
-//						// Note j indexes x and i indexes z: h(x_j, z_i, t_k)
-//						// Moreover, our +z axis goes "down"; this is just to 
-//						// keep consistent with our row indices going down.
-//
-//						mPrevSolution[static_cast<size_t>(i) * mNumCols + j].y =
-//							mK1 * mPrevSolution[static_cast<size_t>(i) * mNumCols + j].y +
-//							mK2 * mCurrSolution[static_cast<size_t>(i) * mNumCols + j].y +
-//							mK3 * (mCurrSolution[(static_cast<size_t>(i) + 1) * mNumCols + j].y +
-//								mCurrSolution[(static_cast<size_t>(i) - 1) * mNumCols + j].y +
-//								mCurrSolution[static_cast<size_t>(i) * mNumCols + j + 1].y +
-//								mCurrSolution[static_cast<size_t>(i) * mNumCols + j - 1].y);
-//					}
-//				});
-//
-//			// We just overwrote the previous buffer with the new data, so
-//			// this data needs to become the current solution and the old
-//			// current solution becomes the new previous solution.
-//			std::swap(mPrevSolution, mCurrSolution);
-//
-//			t = 0.0f; // reset time
-//
-//			//
-//			// Compute normals using finite difference scheme.
-//			//
-//			concurrency::parallel_for(1, mNumRows - 1, [this](int i)
-//				//for(int i = 1; i < mNumRows - 1; ++i)
-//				{
-//					for (int j = 1; j < mNumCols - 1; ++j)
-//					{
-//						float l = mCurrSolution[static_cast<size_t>(i) * mNumCols + j - 1].y;
-//						float r = mCurrSolution[static_cast<size_t>(i) * mNumCols + j + 1].y;
-//						float t = mCurrSolution[(static_cast<size_t>(i) - 1) * mNumCols + j].y;
-//						float b = mCurrSolution[(static_cast<size_t>(i) + 1) * mNumCols + j].y;
-//						mNormals[static_cast<size_t>(i) * mNumCols + j].x = -r + l;
-//						mNormals[static_cast<size_t>(i) * mNumCols + j].y = 2.0f * mSpatialStep;
-//						mNormals[static_cast<size_t>(i) * mNumCols + j].z = b - t;
-//
-//						XMVECTOR n = XMVector3Normalize(XMLoadFloat3(&mNormals[static_cast<size_t>(i) * mNumCols + j]));
-//						XMStoreFloat3(&mNormals[static_cast<size_t>(i) * mNumCols + j], n);
-//
-//						mTangentX[static_cast<size_t>(i) * mNumCols + j] = XMFLOAT3(2.0f * mSpatialStep, r - l, 0.0f);
-//						XMVECTOR T = XMVector3Normalize(XMLoadFloat3(&mTangentX[static_cast<size_t>(i) * mNumCols + j]));
-//						XMStoreFloat3(&mTangentX[static_cast<size_t>(i) * mNumCols + j], T);
-//					}
-//				});
-//		}
-//	}
-//
-//	void Waves::Disturb(int i, int j, float magnitude)
-//	{
-//		// Don't disturb boundaries.
-//		assert(i > 1 && i < mNumRows - 2);
-//		assert(j > 1 && j < mNumCols - 2);
-//
-//		float halfMag = 0.5f * magnitude;
-//
-//		// Disturb the ijth vertex height and its neighbors.
-//		mCurrSolution[static_cast<size_t>(i) * mNumCols + j].y += magnitude;
-//		mCurrSolution[static_cast<size_t>(i) * mNumCols + j + 1].y += halfMag;
-//		mCurrSolution[static_cast<size_t>(i) * mNumCols + j - 1].y += halfMag;
-//		mCurrSolution[(static_cast<size_t>(i) + 1) * mNumCols + j].y += halfMag;
-//		mCurrSolution[(static_cast<size_t>(i) - 1) * mNumCols + j].y += halfMag;
-//	}
-
-	// ---------------------------------------------------------------------------
-
 	GPUWaves::GPUWaves(std::shared_ptr<tiny::DeviceResources> deviceResources,
 		UINT m, UINT n,
 		float dx, float dt,

@@ -226,7 +226,7 @@ void TreeBillboardsScene::BuildLandAndWaterScene()
 	gridRI->submeshIndex = 0; // Only using a single mesh, so automatically it is at index 0
 
 	auto& gridDT = gridRI->DescriptorTables.emplace_back(0, m_textures[(int)TEXTURE::GRASS]->GetSRVHandle());
-	gridDT.Update = [](const Timer& timer, int frameIndex)
+	gridDT.Update = [](RootDescriptorTable* dt, const Timer& timer, int frameIndex)
 	{
 		// No update here because the texture is static
 	};
@@ -280,7 +280,7 @@ void TreeBillboardsScene::BuildLandAndWaterScene()
 	boxRI->submeshIndex = 0; // Only using a single mesh, so automatically it is at index 0
 
 	auto& boxDT = boxRI->DescriptorTables.emplace_back(0, m_textures[(int)TEXTURE::WIRE_FENCE]->GetSRVHandle());
-	boxDT.Update = [](const Timer& timer, int frameIndex)
+	boxDT.Update = [](RootDescriptorTable* dt, const Timer& timer, int frameIndex)
 	{
 		// No update here because the texture is static
 	};
@@ -375,7 +375,7 @@ void TreeBillboardsScene::BuildLandAndWaterScene()
 	treeSpritesRI->submeshIndex = 0;
 
 	auto& treeSpritesDT = treeSpritesRI->DescriptorTables.emplace_back(0, m_textures[(int)TEXTURE::TREE_ARRAY_2]->GetSRVHandle());
-	treeSpritesDT.Update = [](const Timer& timer, int frameIndex)
+	treeSpritesDT.Update = [](RootDescriptorTable* dt, const Timer& timer, int frameIndex)
 	{
 		// No update here because the texture is static
 	};
@@ -463,7 +463,7 @@ void TreeBillboardsScene::BuildLandAndWaterScene()
 	wavesRI->submeshIndex = 0; // Only using a single mesh, so automatically it is at index 0
 
 	auto& wavesDT = wavesRI->DescriptorTables.emplace_back(0, m_textures[(int)TEXTURE::WATER1]->GetSRVHandle());
-	wavesDT.Update = [](const Timer& timer, int frameIndex)
+	wavesDT.Update = [](RootDescriptorTable* dt, const Timer& timer, int frameIndex)
 	{
 		// No update here because the texture is static
 	};
