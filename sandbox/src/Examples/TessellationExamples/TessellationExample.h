@@ -5,7 +5,7 @@
 
 namespace sandbox
 {
-	namespace landandwavescs
+	namespace tessellationexample
 	{
 		struct Vertex
 		{
@@ -57,69 +57,13 @@ namespace sandbox
 			Light Lights[MaxLights];
 		};
 
-		struct WavesUpdateSettings
-		{
-			float WaveConstant0 = 0.0f;
-			float WaveConstant1 = 0.0f;
-			float WaveConstant2 = 0.0f;
-
-			float DisturbMag = 0.0f;
-			DirectX::XMINT2 DisturbIndex = DirectX::XMINT2(0, 0);
-		};
-
-		class GPUWaves
-		{
-		public:
-			GPUWaves(std::shared_ptr<tiny::DeviceResources> deviceResources,
-					 UINT m, UINT n,
-					 float dx, float dt, 
-					 float speed, float damping);
-			GPUWaves(const GPUWaves& rhs) = delete;
-			GPUWaves(GPUWaves&& rhs) = delete;
-			GPUWaves& operator=(const GPUWaves& rhs) = delete;
-			GPUWaves& operator=(GPUWaves&& rhs) = delete;
-			~GPUWaves() {}
-
-			void PreUpdate();
-			void PostUpdate();
-
-			ND inline float WaveConstant(unsigned int iii) const noexcept { return m_k[iii]; }
-
-			ND inline tiny::Texture* PrevSol() const noexcept { return m_prevSol; }
-			ND inline tiny::Texture* CurrSol() const noexcept { return m_currSol; }
-			ND inline tiny::Texture* NextSol() const noexcept { return m_nextSol; }
-
-			ND inline UINT NumRows() const noexcept { return m_numRows; }
-			ND inline UINT NumColumns() const noexcept { return m_numColumns; }
-
-			ND inline float SpatialStep() const noexcept { return m_spatialStep; }
-
-		private:
-			std::shared_ptr<tiny::DeviceResources> m_deviceResources;
-			tiny::TextureVector m_textureVector;
-
-			UINT m_numRows; 
-			UINT m_numColumns;
-
-			UINT m_vertexCount;
-			UINT m_TriangleCount;
-
-			float m_k[3] = { 0.0f, 0.0f, 0.0f };
-
-			float m_timeStep;
-			float m_spatialStep;
-
-			tiny::Texture* m_prevSol = nullptr;
-			tiny::Texture* m_currSol = nullptr;
-			tiny::Texture* m_nextSol = nullptr;
-		};
 	}
 
-class LandAndWavesSceneCS
+class TessellationExample
 {
 public:
-	LandAndWavesSceneCS(std::shared_ptr<tiny::DeviceResources> deviceResources);
-	~LandAndWavesSceneCS() noexcept = default;
+	TessellationExample(std::shared_ptr<tiny::DeviceResources> deviceResources);
+	~TessellationExample() noexcept = default;
 
 	void Update(const tiny::Timer& timer);
 	void Render() { tiny::Engine::Render(); }
@@ -138,7 +82,7 @@ public:
 
 private:
 	void LoadTextures();
-	void BuildLandAndWaterScene();
+	void BuildScene();
 
 	std::shared_ptr<tiny::DeviceResources> m_deviceResources;
 
@@ -154,38 +98,33 @@ private:
 	// Textures
 	std::array<tiny::Texture*, (int)TEXTURE::Count> m_textures;
 
-	// Land and Water Scene ------------------------------------------------------------------
-	// 
-	float GetHillsHeight(float x, float z) const;
-	DirectX::XMFLOAT3 GetHillsNormal(float x, float z) const;
-	//void UpdateWavesVertices(const tiny::Timer&);
-	void UpdateWavesMaterials(const tiny::Timer& timer);
+
 
 
 
 	// Render Data
 	tiny::RenderPass m_mainRenderPass;
-	std::unique_ptr<tiny::ConstantBufferT<landandwavescs::PassConstants>> m_mainRenderPassConstantsCB = nullptr;
-	std::unique_ptr<tiny::Shader> m_standardVS = nullptr;
-	std::unique_ptr<tiny::Shader> m_opaquePS = nullptr;
-	std::unique_ptr<tiny::Shader> m_alphaTestedPS = nullptr;
+	std::unique_ptr<tiny::ConstantBufferT<tessellationexample::PassConstants>> m_mainRenderPassConstantsCB = nullptr;
+	std::unique_ptr<tiny::Shader> m_tessellationVS = nullptr;
+	std::unique_ptr<tiny::Shader> m_tessellationHS = nullptr;
+	std::unique_ptr<tiny::Shader> m_tessellationDS = nullptr;
+	std::unique_ptr<tiny::Shader> m_tessellationPS = nullptr;
 	std::unique_ptr<tiny::InputLayout> m_inputLayout = nullptr;
 
 	// Grid
 	std::unique_ptr<GameObject> m_gridObject = nullptr;
 
-	// Box
-	std::unique_ptr<GameObject> m_boxObject = nullptr;
-
-	// Waves
-	std::unique_ptr<landandwavescs::GPUWaves> m_gpuWaves = nullptr;
-	std::unique_ptr<tiny::Shader> m_wavesVS = nullptr;
-	std::unique_ptr<tiny::Shader> m_wavesDisturbCS = nullptr;
-	std::unique_ptr<tiny::Shader> m_wavesUpdateCS = nullptr;
-	std::unique_ptr<tiny::ConstantBufferT<landandwavescs::WavesUpdateSettings>> m_waveUpdateSettingsCB = nullptr;
-	int m_waveUpdateNumFramesDirty = tiny::gNumFrameResources;
-	std::unique_ptr<GridGameObject> m_wavesObject = nullptr;
-	std::unique_ptr<tiny::ComputeLayer> m_wavesComputeLayerDisturb = nullptr;
+//	// Box
+//	std::unique_ptr<GameObject> m_boxObject = nullptr;
+//
+//	// Waves
+//	std::unique_ptr<tiny::Shader> m_wavesVS = nullptr;
+//	std::unique_ptr<tiny::Shader> m_wavesDisturbCS = nullptr;
+//	std::unique_ptr<tiny::Shader> m_wavesUpdateCS = nullptr;
+//	std::unique_ptr<tiny::ConstantBufferT<tessellationexample::WavesUpdateSettings>> m_waveUpdateSettingsCB = nullptr;
+//	int m_waveUpdateNumFramesDirty = tiny::gNumFrameResources;
+//	std::unique_ptr<GridGameObject> m_wavesObject = nullptr;
+//	std::unique_ptr<tiny::ComputeLayer> m_wavesComputeLayerDisturb = nullptr;
 
 	std::unique_ptr<tiny::RasterizerState> m_rasterizerState = nullptr;
 	std::unique_ptr<tiny::BlendState> m_blendState = nullptr;

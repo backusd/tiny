@@ -7,6 +7,7 @@
 #include "Examples/StencilExample/StencilExample.h"
 #include "Examples/TreeBillboards/TreeBillboardsScene.h"
 #include "Examples/ComputeShader/LandAndWavesSceneCS.h"
+#include "Examples/TessellationExamples/TessellationExample.h"
 
 
 
@@ -61,7 +62,8 @@ private:
 	//std::unique_ptr<LandAndWavesScene> m_scene;
 	//std::unique_ptr<StencilExample> m_scene; 
 	//std::unique_ptr<TreeBillboardsScene> m_scene;
-	std::unique_ptr<LandAndWavesSceneCS> m_scene;
+	//std::unique_ptr<LandAndWavesSceneCS> m_scene;
+	std::unique_ptr<TessellationExample> m_scene;
 
 };
 }

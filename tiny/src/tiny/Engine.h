@@ -34,7 +34,6 @@ public:
 	ND static inline int GetCurrentFrameIndex() noexcept { return Get().GetCurrentFrameIndexImpl(); }
 
 	static inline void AddComputeUpdateLayer(ComputeLayer* layer) noexcept { Get().AddComputeUpdateLayerImpl(layer); }
-	static inline void RemoveComputeUpdateLayer(ComputeLayer* layer) noexcept { Get().RemoveComputeUpdateLayerImpl(layer); }
 
 private:
 	Engine() noexcept = default;
@@ -79,6 +78,7 @@ private:
 	void AddDynamicMeshGroupImpl(DynamicMeshGroup* mesh) noexcept;
 	void RemoveDynamicMeshGroupImpl(DynamicMeshGroup* mesh) noexcept;
 
+	static inline void RemoveComputeUpdateLayer(ComputeLayer* layer) noexcept { Get().RemoveComputeUpdateLayerImpl(layer); }
 	void AddComputeUpdateLayerImpl(ComputeLayer* layer) noexcept;
 	void RemoveComputeUpdateLayerImpl(ComputeLayer* layer) noexcept;
 

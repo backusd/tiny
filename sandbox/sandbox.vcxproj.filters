@@ -39,6 +39,9 @@
     <ClCompile Include="src\Examples\ComputeShader\LandAndWavesSceneCS.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\Examples\TessellationExamples\TessellationExample.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\SandboxApp.h">
@@ -62,6 +65,9 @@
     <ClInclude Include="src\Examples\ComputeShader\LandAndWavesSceneCS.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\Examples\TessellationExamples\TessellationExample.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="src\shaders\color_vs.hlsl" />
@@ -76,6 +82,10 @@
     <FxCompile Include="src\shaders\WavesDisturbCS.hlsl" />
     <FxCompile Include="src\shaders\WavesUpdateCS.hlsl" />
     <FxCompile Include="src\shaders\WavesVS.hlsl" />
+    <FxCompile Include="src\shaders\TessellationBasicHS.hlsl" />
+    <FxCompile Include="src\shaders\TessellationBasicVS.hlsl" />
+    <FxCompile Include="src\shaders\TessellationBasicDS.hlsl" />
+    <FxCompile Include="src\shaders\TessellationBasicPS.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <None Include="src\shaders\Lighting.hlsli" />

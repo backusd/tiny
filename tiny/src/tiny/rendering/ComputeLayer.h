@@ -6,7 +6,7 @@
 #include "ComputeItem.h"
 #include "RootSignature.h"
 #include "tiny/utils/Timer.h"
-
+#include "tiny/Engine.h"
 
 namespace tiny
 {
@@ -34,7 +34,12 @@ public:
 		Name = std::move(rhs.Name);
 		return *this;
 	}
-	~ComputeLayer() noexcept = default;
+	~ComputeLayer() noexcept
+	{
+		// Attempt to remove the compute layer from the engine (Note, this will only remove "compute update" layers,
+		// NOT compute layers that are part of a render pass)
+		Engine::RemoveComputeUpdateLayer(this);
+	}
 
 	inline void SetPSO(const D3D12_COMPUTE_PIPELINE_STATE_DESC& desc)
 	{
